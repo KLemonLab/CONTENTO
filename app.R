@@ -100,7 +100,12 @@ server <- function(input, output, session) {
       filter(contrast == input$contrast) %>%
       mutate(
         tooltip = paste0(symbol, " (", Geneid, ")\nlog2FC: ", round(log2FoldChange_shrunk, 2), "\nFDR: ", signif(padj, 3)),
-        DE = padj < 0.05 & abs(log2FoldChange_shrunk) > input$fc_cutoff
+        DE = padj < 0.05 & abs(log2FoldChange_shrunk) > input$fc_cutoff,
+        regulated = case_when(
+          padj < 0.05 & log2FoldChange_shrunk > input$fc_cutoff  ~ "up",
+          padj < 0.05 & log2FoldChange_shrunk < -input$fc_cutoff ~ "down",
+          TRUE ~ NA_character_
+        )
       )
   })
   
