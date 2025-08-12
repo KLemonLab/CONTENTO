@@ -10,11 +10,10 @@ library(RColorBrewer)
 ui <- fluidPage(
   titlePanel("DESeq2 Interactive Viewer"),
   
-  # Upload panel at the top
   fluidRow(
     column(4, fileInput("ddsFile", "Upload dds (.rds)", accept = ".rds")),
-    column(4, fileInput("deFile", "Upload ContrastData (.rds)", accept = ".rds")),
-    column(4, fileInput("varPartFile", "Upload VarPart (.rds)", accept = ".rds"))
+    column(4, fileInput("deFile", "Upload Contrasts (.rds)", accept = ".rds")),
+    column(4, fileInput("varPartFile", "Upload VarPart (.rds) — Optional", accept = ".rds"))
   ),
   
   sidebarLayout(
@@ -40,18 +39,13 @@ ui <- fluidPage(
       tabsetPanel(id = "mainTab",
                   tabPanel(title = "Explore Contrast", value = "Explore Contrast",
                            tabsetPanel(
-                             tabPanel("Table", DTOutput("deTable")),
+                             tabPanel("Table", DTOutput("DETable")),
                              tabPanel("Volcano", plotlyOutput("volcanoPlot", height = "600px")),
                              tabPanel("Heatmap", plotOutput("heatmapPlot", height = "700px"))
                            )
                   ),
                   tabPanel(title = "Explore Gene", value = "Explore Gene",
-                           uiOutput("geneTitle"),
-                           tabsetPanel(
-                             tabPanel("Expression Plot", plotOutput("genePlot", height = "600px", width = "1000px")),
-                             tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px", width = "1000px")),
-                             tabPanel("Gene Table", DTOutput("geneDetails"))
-                           )
+                           uiOutput("geneSubTabs")
                   )
       )
     )
@@ -109,7 +103,7 @@ server <- function(input, output, session) {
       )
   })
   
-  output$deTable <- renderDT({
+  output$DETable <- renderDT({
     req(selected_data())
     selected_data() %>%
       filter(DE) %>%
@@ -171,6 +165,22 @@ server <- function(input, output, session) {
     }
   })
   
+  output$geneSubTabs <- renderUI({
+    tabs <- list(
+      tabPanel("Expression Plot", plotOutput("genePlot", height = "600px", width = "1000px")),
+      tabPanel("Gene Table", DTOutput("geneDetails"))
+    )
+    
+    if (!is.null(varpart_obj())) {
+      tabs <- append(
+        tabs,
+        list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px", width = "1000px")))
+      )
+    }
+    
+    do.call(tabsetPanel, tabs)
+  })
+  
   output$genePlot <- renderPlot({
     req(input$gene_select, input$x_col, dds_obj())
     
@@ -184,7 +194,6 @@ server <- function(input, output, session) {
     meta <- as.data.frame(colData(dds_obj()))
     meta$expression <- expr_values
     
-    # Dynamically generate color palette based on number of levels
     n_colors <- length(unique(meta[[input$color_col]]))
     palette_colors <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
     
@@ -193,31 +202,6 @@ server <- function(input, output, session) {
       geom_jitter(aes_string(color = input$color_col, shape = input$shape_col), width = 0.2, size = 3, alpha = 0.9) +
       scale_color_manual(values = palette_colors) +
       labs(title = NULL, y = "VST expression", x = input$x_col) +
-      theme_bw(base_size = 20) +
-      theme(
-        axis.text = element_text(angle = 45, hjust = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank()
-      )
-  })
-  
-  output$varPartPlot <- renderPlot({
-    req(input$gene_select, varpart_obj())
-    
-    gene_id <- input$gene_select
-    result <- varpart_obj()
-    
-    vp_gene <- result$varPart[gene_id, ]
-    
-    vp_df <- data.frame(
-      Factor = names(vp_gene),
-      Variance = as.numeric(vp_gene)
-    )
-    
-    ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
-      geom_col(fill = "steelblue") +
-      scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-      labs(title = NULL, x = NULL, y = "Fraction of Variance") +
       theme_bw(base_size = 20) +
       theme(
         axis.text = element_text(angle = 45, hjust = 1),
@@ -254,6 +238,32 @@ server <- function(input, output, session) {
         )
       )
   })
+  
+  output$varPartPlot <- renderPlot({
+    req(input$gene_select, varpart_obj())
+    
+    gene_id <- input$gene_select
+    result <- varpart_obj()
+    
+    vp_gene <- result$varPart[gene_id, ]
+    
+    vp_df <- data.frame(
+      Factor = names(vp_gene),
+      Variance = as.numeric(vp_gene)
+    )
+    
+    ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
+      geom_col(fill = "steelblue") +
+      scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+      labs(title = NULL, x = NULL, y = "Fraction of Variance") +
+      theme_bw(base_size = 20) +
+      theme(
+        axis.text = element_text(angle = 45, hjust = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()
+      )
+  })
+
 }
 shinyApp(ui, server)
 
