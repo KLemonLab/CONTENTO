@@ -6,6 +6,11 @@ library(DESeq2)
 library(plotly)
 library(DT)
 library(RColorBrewer)
+library(shinycssloaders)
+
+###==========###
+###====UI====###
+###==========###
 
 ui <- fluidPage(
   titlePanel("DESeq2 Interactive Viewer"),
@@ -39,9 +44,9 @@ ui <- fluidPage(
       tabsetPanel(id = "mainTab",
                   tabPanel(title = "Explore Contrast", value = "Explore Contrast",
                            tabsetPanel(
-                             tabPanel("Table", DTOutput("DETable")),
-                             tabPanel("Volcano", plotlyOutput("volcanoPlot", height = "600px")),
-                             tabPanel("Heatmap", plotOutput("heatmapPlot", height = "700px"))
+                             tabPanel("Table", withSpinner(DTOutput("DETable"), type = 5)),
+                             tabPanel("Volcano", withSpinner(plotlyOutput("volcanoPlot", height = "600px"), type = 5)),
+                             tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
                            )
                   ),
                   tabPanel(title = "Explore Gene", value = "Explore Gene",
@@ -52,21 +57,52 @@ ui <- fluidPage(
   )
 )
 
+###==============###
+###====SERVER====###
+###==============###
+
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 200 * 1024^2)  
   
+  #==============================
+  # Reactive objects
+  #==============================
   dds_obj <- reactiveVal()
   de_df <- reactiveVal()
   varpart_obj <- reactiveVal()
   
+  #------------------------------
+  # Load files with validation
+  #------------------------------
   observeEvent(input$ddsFile, {
     req(input$ddsFile)
-    dds_obj(readRDS(input$ddsFile$datapath))
+    obj <- readRDS(input$ddsFile$datapath)
+    if (!("DESeqDataSet" %in% class(obj))) {
+      showModal(modalDialog(
+        title = "File error",
+        "Uploaded DDS file is not a DESeqDataSet object.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return(NULL)
+    }
+    dds_obj(obj)
   })
   
   observeEvent(input$deFile, {
     req(input$deFile)
-    de_df(readRDS(input$deFile$datapath))
+    df <- readRDS(input$deFile$datapath)
+    required_cols <- c("contrast", "Geneid", "symbol", "padj", "log2FoldChange", "log2FoldChange_shrunk")
+    if (!all(required_cols %in% colnames(df))) {
+      showModal(modalDialog(
+        title = "File error",
+        paste0("File missing required columns: ", paste(setdiff(required_cols, colnames(df)), collapse = ", ")),
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return(NULL)
+    }
+    de_df(df)
   })
   
   observeEvent(input$varPartFile, {
@@ -74,6 +110,9 @@ server <- function(input, output, session) {
     varpart_obj(readRDS(input$varPartFile$datapath))
   })
   
+  #------------------------------
+  # Update gene plot selectInputs when DDS loaded
+  #------------------------------
   observe({
     req(dds_obj())
     col_vars <- colnames(colData(dds_obj()))
@@ -82,33 +121,50 @@ server <- function(input, output, session) {
     updateSelectInput(session, "shape_col", choices = col_vars)
   })
   
+  #------------------------------
+  # Contrast selector
+  #------------------------------
   output$contrastSelect <- renderUI({
     req(de_df())
     contrast_choices <- unique(de_df()$contrast)
     selectInput("contrast", "Select Contrast", choices = contrast_choices)
   })
   
+  #------------------------------
+  # Selected data — single source of truth
+  #------------------------------
   selected_data <- reactive({
-    req(de_df(), input$contrast)
+    req(de_df(), input$contrast, input$fc_cutoff)
+    
     de_df() %>%
       filter(contrast == input$contrast) %>%
       mutate(
-        tooltip = paste0(symbol, " (", Geneid, ")\nlog2FC: ", round(log2FoldChange_shrunk, 2), "\nFDR: ", signif(padj, 3)),
-        DE = padj < 0.05 & abs(log2FoldChange_shrunk) > input$fc_cutoff,
+        tooltip = paste0(
+          symbol, " (", Geneid, ")",
+          "\nlog2FC: ", round(log2FoldChange_shrunk, 2),
+          "\nFDR: ", signif(padj, 3)
+        ),
         regulated = case_when(
           padj < 0.05 & log2FoldChange_shrunk > input$fc_cutoff  ~ "up",
           padj < 0.05 & log2FoldChange_shrunk < -input$fc_cutoff ~ "down",
           TRUE ~ NA_character_
-        )
+        ),
+        DE = !is.na(regulated)
       )
   })
+  
+  #==============================
+  # Explore Contrast tab
+  #==============================
   
   output$DETable <- renderDT({
     req(selected_data())
     selected_data() %>%
       filter(DE) %>%
-      mutate(across(c(log2FoldChange, log2FoldChange_shrunk), ~ round(.x, 2))) %>%
-      mutate(padj = formatC(padj, format = "e", digits = 2)) %>%
+      mutate(
+        across(c(log2FoldChange, log2FoldChange_shrunk), ~ round(.x, 2)),
+        padj = formatC(padj, format = "e", digits = 2)
+      ) %>%
       arrange(desc(abs(log2FoldChange_shrunk))) %>%
       select(Geneid, symbol, biotype, log2FoldChange, log2FoldChange_shrunk, padj, sign, DE, regulated)
   })
@@ -121,7 +177,6 @@ server <- function(input, output, session) {
       geom_vline(xintercept = c(-input$fc_cutoff, input$fc_cutoff), linetype = "dashed") +
       geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
       theme_minimal()
-    
     ggplotly(gg, tooltip = "text")
   })
   
@@ -135,33 +190,31 @@ server <- function(input, output, session) {
     vsd_mat <- assay(dds_obj(), "vst")[rownames(dds_obj()) %in% top_genes$Geneid, ]
     vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
     
-    validate(
-      need(nrow(vsd_mat) > 1, "No DE genes pass filter or match rownames in dds")
-    )
-    
     rownames(vsd_mat) <- top_genes$symbol
     
     Heatmap(
       scale(vsd_mat),
       col = viridis(100),
-      column_names_gp = gpar(fontsize = 12, rot = 45),  
+      column_names_gp = gpar(fontsize = 12, rot = 45),
       row_names_gp = gpar(fontsize = 12),
       heatmap_legend_param = list(title = "Z-scores")
     )
   })
   
+  #==============================
+  # Explore Gene tab
+  #==============================
+  
   output$geneSymbol <- renderText({
     req(input$gene_select, de_df())
-    
     gene_symbol <- de_df() %>%
       filter(Geneid == input$gene_select) %>%
       pull(symbol) %>%
       unique()
-    
     if (length(gene_symbol) > 0 && !is.na(gene_symbol)) {
-      paste("Symbol:", gene_symbol)
+      paste("Gene:", gene_symbol)
     } else {
-      "Symbol: not found"
+      "Gene name: not found"
     }
   })
   
@@ -170,20 +223,17 @@ server <- function(input, output, session) {
       tabPanel("Expression Plot", plotOutput("genePlot", height = "600px", width = "1000px")),
       tabPanel("Gene Table", DTOutput("geneDetails"))
     )
-    
     if (!is.null(varpart_obj())) {
       tabs <- append(
         tabs,
         list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px", width = "1000px")))
       )
     }
-    
     do.call(tabsetPanel, tabs)
   })
   
   output$genePlot <- renderPlot({
     req(input$gene_select, input$x_col, dds_obj())
-    
     vst_mat <- assay(dds_obj(), "vst")
     
     validate(
@@ -201,7 +251,7 @@ server <- function(input, output, session) {
       geom_boxplot(aes_string(color = input$color_col), outliers = FALSE, show.legend = FALSE) +
       geom_jitter(aes_string(color = input$color_col, shape = input$shape_col), width = 0.2, size = 3, alpha = 0.9) +
       scale_color_manual(values = palette_colors) +
-      labs(title = NULL, y = "VST expression", x = input$x_col) +
+      labs(y = "VST expression", x = input$x_col) +
       theme_bw(base_size = 20) +
       theme(
         axis.text = element_text(angle = 45, hjust = 1),
@@ -212,7 +262,6 @@ server <- function(input, output, session) {
   
   output$geneDetails <- renderDT({
     req(input$gene_select, de_df())
-    
     gene_table <- de_df() %>%
       filter(Geneid == input$gene_select) %>%
       mutate(across(c(log2FoldChange, log2FoldChange_shrunk), ~ round(.x, 2))) %>%
@@ -222,40 +271,29 @@ server <- function(input, output, session) {
     
     datatable(
       gene_table,
-      options = list(
-        dom = 't',        
-        ordering = TRUE,
-        pageLength = nrow(gene_table)
-      ),
+      options = list(dom = 't', ordering = TRUE, pageLength = nrow(gene_table)),
       rownames = FALSE
     ) %>%
       formatStyle(
         'regulated',
         target = 'row',
-        backgroundColor = styleEqual(
-          c("up", "down"),
-          c("#d0f0c0", "#f4cccc")
-        )
+        backgroundColor = styleEqual(c("up", "down"), c("#d0f0c0", "#f4cccc"))
       )
   })
   
   output$varPartPlot <- renderPlot({
     req(input$gene_select, varpart_obj())
-    
     gene_id <- input$gene_select
     result <- varpart_obj()
-    
     vp_gene <- result$varPart[gene_id, ]
-    
     vp_df <- data.frame(
       Factor = names(vp_gene),
       Variance = as.numeric(vp_gene)
     )
-    
     ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
       geom_col(fill = "steelblue") +
       scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-      labs(title = NULL, x = NULL, y = "Fraction of Variance") +
+      labs(x = NULL, y = "Fraction of Variance") +
       theme_bw(base_size = 20) +
       theme(
         axis.text = element_text(angle = 45, hjust = 1),
@@ -263,7 +301,7 @@ server <- function(input, output, session) {
         panel.grid.minor.x = element_blank()
       )
   })
-
 }
+
 shinyApp(ui, server)
 
