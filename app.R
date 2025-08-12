@@ -28,6 +28,9 @@ ui <- fluidPage(
         condition = "input.mainTab == 'Explore Contrast'",
         sliderInput("fc_cutoff", "Fold Change cutoff", min = 0, max = 10, value = 3, step = 0.5),
         numericInput("top_n", "Top DE genes (heatmap)", value = 25, min = 15, step = 5),
+        selectInput("viridis_palette", "Color palette (heatmap)",
+                    choices = c("viridis", "magma", "plasma", "inferno", "cividis"),
+                    selected = "viridis"),
         uiOutput("contrastSelect")
       ),
       conditionalPanel(
@@ -194,7 +197,7 @@ server <- function(input, output, session) {
     
     Heatmap(
       scale(vsd_mat),
-      col = viridis(100, option = "plasma"),
+      col = viridis(100, option = input$viridis_palette),
       column_names_gp = gpar(fontsize = 12, rot = 45),
       row_names_gp = gpar(fontsize = 12),
       heatmap_legend_param = list(title = "Z-scores")
