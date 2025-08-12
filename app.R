@@ -23,7 +23,7 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      width = 2,
+      width = 3,
       conditionalPanel(
         condition = "input.mainTab == 'Explore Contrast'",
         sliderInput("fc_cutoff", "Fold Change cutoff", min = 0, max = 10, value = 3, step = 0.5),
@@ -194,7 +194,7 @@ server <- function(input, output, session) {
     
     Heatmap(
       scale(vsd_mat),
-      col = viridis(100),
+      col = viridis(100, option = "plasma"),
       column_names_gp = gpar(fontsize = 12, rot = 45),
       row_names_gp = gpar(fontsize = 12),
       heatmap_legend_param = list(title = "Z-scores")
