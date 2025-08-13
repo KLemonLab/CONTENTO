@@ -24,15 +24,26 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       width = 3,
+      
+      # --- Explore Contrast Sidebar ---
       conditionalPanel(
         condition = "input.mainTab == 'Explore Contrast'",
-        sliderInput("fc_cutoff", "Fold Change cutoff", min = 0, max = 10, value = 3, step = 0.5),
+        sliderInput("fc_cutoff", "Fold Change cutoff", min = 0, max = 8, value = 3, step = 0.5),
         numericInput("top_n", "Top DE genes (heatmap)", value = 25, min = 15, step = 5),
         selectInput("viridis_palette", "Color palette (heatmap)",
                     choices = c("viridis", "magma", "plasma", "inferno", "cividis"),
                     selected = "viridis"),
         uiOutput("contrastSelect")
       ),
+      
+      # --- Compare Contrast Sidebar ---
+      conditionalPanel(
+        condition = "input.mainTab == 'Compare Contrast'",
+        sliderInput("compare_fc_cutoff", "Fold Change cutoff", min = 0, max = 8, value = 3, step = 0.5),
+        uiOutput("multiContrastSelect")
+      ),
+      
+      # --- Explore Gene Sidebar ---
       conditionalPanel(
         condition = "input.mainTab == 'Explore Gene'",
         textInput("gene_select", "Enter Gene ID", placeholder = "e.g., ENSG00000141510"),
@@ -45,6 +56,8 @@ ui <- fluidPage(
     
     mainPanel(
       tabsetPanel(id = "mainTab",
+                  
+                  # --- Explore Contrast Tab ---
                   tabPanel(title = "Explore Contrast", value = "Explore Contrast",
                            tabsetPanel(
                              tabPanel("Table", withSpinner(DTOutput("DETable"), type = 5)),
@@ -52,6 +65,16 @@ ui <- fluidPage(
                              tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
                            )
                   ),
+                  
+                  # --- Compare Contrast Tab ---
+                  tabPanel(title = "Compare Contrast", value = "Compare Contrast",
+                           tabsetPanel(
+                             tabPanel("Upset Plot", withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5)),
+                             tabPanel("Table", withSpinner(DTOutput("compareTable"), type = 5))
+                           )
+                  ),
+                  
+                  # --- Explore Gene Tab ---
                   tabPanel(title = "Explore Gene", value = "Explore Gene",
                            uiOutput("geneSubTabs")
                   )
@@ -201,6 +224,77 @@ server <- function(input, output, session) {
       column_names_gp = gpar(fontsize = 12, rot = 45),
       row_names_gp = gpar(fontsize = 12),
       heatmap_legend_param = list(title = "Z-scores")
+    )
+  })
+  
+  #==============================
+  # Compare Contrast tab
+  #==============================
+  
+  # Populate multiContrastSelect
+  output$multiContrastSelect <- renderUI({
+    req(de_df())
+    contrast_choices <- unique(de_df()$contrast)
+    selectInput("compare_contrasts", "Select Contrasts (2 or more)",
+                choices = contrast_choices,
+                selected = head(contrast_choices, 2),
+                multiple = TRUE)
+  })
+  
+  # Prepare data for upset plot & table
+  compare_data <- reactive({
+    req(de_df(), input$compare_contrasts, length(input$compare_contrasts) >= 2)
+    
+    # Filter DEGs for each contrast
+    deg_list <- map(input$compare_contrasts, function(ct) {
+      de_df() %>%
+        filter(contrast == ct,
+               padj < 0.05,
+               abs(log2FoldChange) > input$compare_fc_cutoff) %>%
+        pull(Geneid)
+    }) %>%
+      set_names(input$compare_contrasts)
+    
+    # Convert to wide binary format for ComplexUpset
+    deg_long <- enframe(deg_list, name = "contrast", value = "Geneid") %>%
+      unnest(Geneid)
+    
+    deg_wide <- deg_long %>%
+      mutate(value = TRUE) %>%
+      pivot_wider(names_from = contrast, values_from = value, values_fill = FALSE)
+    
+    deg_wide
+  })
+  
+  # Upset Plot
+  output$compareUpsetPlot <- renderPlot({
+    req(compare_data())
+    
+    library(ComplexUpset)
+    
+    contrasts <- input$compare_contrasts
+    
+    upset(
+      compare_data(),
+      contrasts,
+      name = "DEGs",
+      min_size = 1,
+      base_annotations = list(
+        'Intersection size' = intersection_size(
+          text = list(size = 3)
+        )
+      )
+    )
+  })
+  
+  # Table of DEGs for selected contrasts
+  output$compareTable <- renderDT({
+    req(compare_data())
+    
+    datatable(
+      compare_data(),
+      options = list(pageLength = 20, scrollX = TRUE),
+      rownames = FALSE
     )
   })
   
