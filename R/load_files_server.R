@@ -21,12 +21,9 @@ load_files_server <- function(input, output, session, state) {
     req(input$deFile)
     df <- readRDS(input$deFile$datapath)
     
-    # Rename columns
-    if ("log2FoldChange" %in% colnames(df)) df <- rename(df, log2FC = log2FoldChange)
-    if ("log2FoldChange_shrunk" %in% colnames(df)) df <- rename(df, log2FC_shrunk = log2FoldChange_shrunk)
     
     required_cols <- c("contrast", "Geneid", "symbol", "padj",
-                       "log2FC", "log2FC_shrunk")
+                       "log2FoldChange", "log2FoldChange_shrunk")
     
     if (!all(required_cols %in% colnames(df))) {
       showModal(modalDialog(
@@ -37,6 +34,15 @@ load_files_server <- function(input, output, session, state) {
       ))
       return(NULL)
     }
+    
+    # Rename columns
+    if ("log2FoldChange" %in% colnames(df)) {
+      df <- dplyr::rename(df, log2FC = "log2FoldChange")
+    }
+    if ("log2FoldChange_shrunk" %in% colnames(df)) {
+      df <- dplyr::rename(df, log2FC_shrunk = "log2FoldChange_shrunk")
+    }
+    
     state$de_df(df)
   })
   
