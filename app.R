@@ -41,8 +41,8 @@ ui <- dashboardPage(
     ),
     hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
-    fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "DESeq2 object"),
-    fileInput("deFile", "Contrasts", accept = ".rds", placeholder = "Contrast results"),
+    fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "dds object"),
+    fileInput("deFile", "Contrasts", accept = ".rds", placeholder = "Contrast object"),
     fileInput("varPartFile", "VarPart", accept = ".rds", placeholder = "Optional VarPart")
   ),
   

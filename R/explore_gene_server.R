@@ -33,13 +33,13 @@ explore_gene_server <- function(input, output, session, state) {
   #==============================
   output$geneSubTabs <- renderUI({
     tabs <- list(
-      tabPanel("Expression Plot", plotOutput("genePlot", height = "600px", width = "1000px")),
+      tabPanel("Expression Plot", plotOutput("genePlot", height = "600px")),
       tabPanel("Gene Table", DTOutput("geneDetails"))
     )
     if (!is.null(state$varpart_obj())) {
       tabs <- append(
         tabs,
-        list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px", width = "1000px")))
+        list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px")))
       )
     }
     do.call(tabsetPanel, tabs)
