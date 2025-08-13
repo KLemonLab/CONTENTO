@@ -35,18 +35,51 @@ explore_contrast_server <- function(input, output, session, state) {
   #==============================
   # Output: DE Table
   #==============================
-  output$DETable <- DT::renderDT({
-    req(selected_data())
-    selected_data() %>%
-      filter(DE) %>%
-      mutate(
-        across(c(log2FC, log2FC_shrunk), ~ round(.x, 2)),
-        padj = formatC(padj, format = "e", digits = 2)
-      ) %>%
-      arrange(desc(abs(log2FC_shrunk))) %>%
-      select(Geneid, symbol, biotype, log2FC, log2FC_shrunk, padj, sign, DE, regulated) %>%
-      datatable(options = list(pageLength = 25, scrollX = TRUE), rownames = FALSE)
-  })
+  output$DETable <- renderDT(
+    {
+      req(selected_data())
+      
+      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
+        file_path_sans_ext(basename(input$deFile$name))
+      } else {
+        "contrasts"
+      }
+      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
+      file_name <- paste(file_base, contrast_str, fc_str, sep = "__")
+      
+      df <- selected_data() %>%
+        filter(DE) %>%
+        mutate(
+          across(c(log2FC, log2FC_shrunk), ~ round(.x, 2)),
+          padj = formatC(padj, format = "e", digits = 2)
+        ) %>%
+        arrange(desc(abs(log2FC_shrunk))) %>%
+        select(Geneid, symbol, biotype, log2FC, log2FC_shrunk, padj, regulated)
+      
+      datatable(
+        df,
+        extensions = 'Buttons',
+        rownames = FALSE,
+        filter = 'top',
+        options = list(
+          pageLength = 15,
+          scrollX = TRUE,
+          dom = 'Bfrtip',
+          buttons = list(
+            list(
+              extend = 'csv',
+              text = 'Download CSV',
+              filename = file_name,
+              exportOptions = list(modifier = list(page = "all"))
+            )
+          )
+        )
+      )
+    },
+    server = FALSE   
+  )
   
   #==============================
   # Output: Volcano Plot

@@ -117,24 +117,59 @@ compare_contrast_server <- function(input, output, session, state) {
   })
   
   #==============================
-  # Output: Table of DEGs
+  # Output: Comparison Table
   #==============================
-  output$compareTable <- renderDT({
-    req(compare_table_data())
-    df <- compare_table_data()
-    lfc_cols <- setdiff(colnames(df), c("Geneid", "symbol"))
-    
-    # Determine min and max
-    lfc_min <- min(df[lfc_cols], na.rm = TRUE)
-    lfc_max <- max(df[lfc_cols], na.rm = TRUE)
-    
-    datatable(df, options = list(pageLength = 20, scrollX = TRUE), rownames = FALSE) %>%
-      formatStyle(
-        columns = lfc_cols,
-        backgroundColor = styleInterval(
-          0,
-          c("lightblue", "pink")
+  output$compareTable <- renderDT(
+    {
+      req(compare_table_data())
+      
+      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
+        file_path_sans_ext(basename(input$deFile$name))
+      } else {
+        "contrasts"
+      }
+      
+      contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
+        paste(input$compare_contrasts, collapse = "-")
+      } else {
+        "contrasts"
+      }
+      contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
+      
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
+      
+      file_name <- paste(file_base, contrasts_str, fc_str, sep = "__")
+      
+      df <- compare_table_data()
+      lfc_cols <- setdiff(colnames(df), c("Geneid", "symbol"))
+      
+      datatable(
+        df,
+        extensions = 'Buttons',
+        options = list(
+          pageLength = 20,
+          scrollX = TRUE,
+          dom = 'Bfrtip',
+          buttons = list(
+            list(
+              extend = 'csv',
+              text = 'Download CSV',
+              filename = file_name,
+              exportOptions = list(modifier = list(page = "all"))
+            )
+          )
+        ),
+        rownames = FALSE
+      ) %>%
+        formatStyle(
+          columns = lfc_cols,
+          backgroundColor = styleInterval(
+            0,
+            c("lightblue", "pink")
+          )
         )
-      )
-  })
+    },
+    server = FALSE
+  )
+  
 }

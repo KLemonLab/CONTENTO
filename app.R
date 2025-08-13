@@ -17,6 +17,7 @@ library(DT)
 library(RColorBrewer)
 library(ComplexUpset) 
 library(scales)
+library(tools)
 
 # Source helper server modules
 source("R/load_files_server.R")
