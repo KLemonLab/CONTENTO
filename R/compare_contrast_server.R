@@ -97,13 +97,21 @@ compare_contrast_server <- function(input, output, session, state) {
   #==============================
   output$compareUpsetPlot <- renderPlot({
     req(compare_data())
+    
     upset(
       compare_data(),
       input$compare_contrasts,
       name = "DEGs",
       min_size = 1,
       base_annotations = list(
-        'Intersection size' = intersection_size(text = list(size = 3))
+        'Intersection size' = intersection_size(
+          text = list(size = 5)  
+        )
+      ),
+      themes = upset_default_themes(
+        text = element_text(size = 16),       # general text
+        axis.title = element_text(size = 16), # axis titles
+        axis.text = element_text(size = 14)   # axis labels
       )
     )
   })
@@ -111,8 +119,6 @@ compare_contrast_server <- function(input, output, session, state) {
   #==============================
   # Output: Table of DEGs
   #==============================
-  library(circlize)
-  
   output$compareTable <- renderDT({
     req(compare_table_data())
     df <- compare_table_data()
