@@ -13,6 +13,21 @@ explore_gene_server <- function(input, output, session, state) {
   })
   
   #==============================
+  # Reactive: Filter gene data and calculate DE based on FC cutoff
+  #==============================
+  selected_gene_data <- reactive({
+    req(input$gene_select, state$de_df(), input$gene_fc_cutoff)
+    
+    state$de_df() %>%
+      subset(Geneid == input$gene_select) %>%
+      transform(
+        regulated = ifelse(padj < 0.05 & log2FC_shrunk >  input$gene_fc_cutoff, "up",
+                           ifelse(padj < 0.05 & log2FC_shrunk < -input$gene_fc_cutoff, "down", NA)),
+        DE = !is.na(regulated)
+      )
+  })
+  
+  #==============================
   # UI: Display gene symbol
   #==============================
   output$geneSymbol <- renderText({
@@ -29,19 +44,22 @@ explore_gene_server <- function(input, output, session, state) {
   })
   
   #==============================
-  # UI: Conditional Sub-tab for varPartPlot
+  # UI: Conditional Sub-tabs
   #==============================
   output$geneSubTabs <- renderUI({
     tabs <- list(
       tabPanel("Expression Plot", plotOutput("genePlot", height = "600px")),
       tabPanel("Gene Table", DTOutput("geneDetails"))
     )
+    
     if (!is.null(state$varpart_obj())) {
-      tabs <- append(
-        tabs,
-        list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px")))
-      )
+      tabs <- append(tabs, list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px"))))
     }
+    
+    if (input$organism == "Bacteria") {
+      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", plotOutput("neighbourhoodPlot", height = "600px"))))
+    }
+    
     do.call(tabsetPanel, tabs)
   })
   
@@ -61,7 +79,7 @@ explore_gene_server <- function(input, output, session, state) {
     meta$expression <- expr_values
     
     n_colors <- length(unique(meta[[input$color_col]]))
-    palette_colors <- colorRampPalette(RColorBrewer::brewer.pal(8, "Dark2"))(n_colors)
+    palette_colors <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
     
     ggplot(meta, aes_string(x = input$x_col, y = "expression")) +
       geom_boxplot(aes_string(color = input$color_col), outliers = FALSE, show.legend = FALSE) +
@@ -81,12 +99,12 @@ explore_gene_server <- function(input, output, session, state) {
   # Output: Gene table for all contrasts
   #==============================
   output$geneDetails <- renderDT({
-    req(input$gene_select, state$de_df())
-    gene_table <- state$de_df() %>%
-      filter(Geneid == input$gene_select) %>%
+    req(selected_gene_data())
+    
+    gene_table <- selected_gene_data() %>%
       mutate(across(c(log2FC, log2FC_shrunk), ~ round(.x, 2))) %>%
       mutate(padj = formatC(padj, format = "e", digits = 2)) %>%
-      arrange(desc(abs(log2FC))) %>%
+      arrange(desc(abs(log2FC_shrunk))) %>%
       select(contrast, log2FC, log2FC_shrunk, padj, sign, DE, regulated)
     
     datatable(
@@ -124,4 +142,19 @@ explore_gene_server <- function(input, output, session, state) {
         panel.grid.minor.x = element_blank()
       )
   })
+  
+  #==============================
+  # Output: Neighbourhood Analysis placeholder
+  #==============================
+  output$neighbourhoodPlot <- renderPlot({
+    req(input$gene_select, input$organism == "Bacteria")
+    threshold <- input$gene_fc_cutoff
+    gene_data <- selected_gene_data()
+    
+    plot(1, 1,
+         main = paste("Neighbourhood analysis for", input$gene_select),
+         sub = paste("Using FC cutoff =", threshold),
+         xlab = "X placeholder", ylab = "Y placeholder")
+  })
+  
 }

@@ -43,7 +43,7 @@ ui <- dashboardPage(
     ),
     hr(),
     h4("Select Organism", style = "padding-left: 20px;"),
-    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Human"),
+    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Bacteria"),
     hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
     fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "dds object"),
@@ -97,7 +97,8 @@ ui <- dashboardPage(
                     tags$ul(
                       tags$li(strong("Expression Plot:"), " Shows the VST-normalized expression for the selected gene. You can select the variables used for the X-axis, color and shapes from the metadata columns in your DESeq2 object."),
                       tags$li(strong("Gene Table:"), " Displays DE results for the selected gene across all contrasts, with rows colored by up/down regulation."),
-                      tags$li(strong("Variance Decomposition:"), " If a variance partition object is loaded, this plot shows the fraction of expression variance explained by different factors for the selected gene.")
+                      tags$li(strong("Variance Decomposition:"), " If a variance partition object is loaded, this plot shows the fraction of expression variance explained by different factors for the selected gene."),
+                      tags$li(strong("Neighbourhood Analysis:"), " Allows exploration of the genes up/downstreams the selected one in bacterial datasets.")
                     )
                 )
               )
@@ -108,7 +109,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("contrastSelect"),
-                    sliderInput("fc_cutoff", "Fold Change cutoff", min = 0, max = 8, value = 3, step = 0.5),
+                    sliderInput("fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     numericInput("top_n", "Top DE genes (heatmap)", value = 25, min = 15, step = 5),
                     selectInput("viridis_palette", "Color palette (heatmap)",
                                 choices = c("viridis", "magma", "plasma", "inferno", "cividis"), selected = "viridis")
@@ -128,7 +129,7 @@ ui <- dashboardPage(
       tabItem(tabName = "compare",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    sliderInput("compare_fc_cutoff", "Fold Change cutoff", min = 0, max = 8, value = 3, step = 0.5),
+                    sliderInput("compare_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("multiContrastSelect")
                 ),
 
@@ -149,7 +150,8 @@ ui <- dashboardPage(
                     tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
-                    selectInput("shape_col", "Shape", choices = NULL)
+                    selectInput("shape_col", "Shape", choices = NULL),
+                    sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5)
                 ),
                 
                 box(title = "Explore Results by Gene", width = 9, status = "primary", collapsible = TRUE,
