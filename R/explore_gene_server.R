@@ -57,10 +57,19 @@ explore_gene_server <- function(input, output, session, state) {
     }
     
     if (input$organism == "Bacteria") {
-      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", plotOutput("neighbourhoodPlot", height = "600px"))))
+      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", plotlyOutput("neighbourhoodPlot", height = "600px"))))
     }
     
     do.call(tabsetPanel, tabs)
+  })
+  
+  #==============================
+  # UI: Contrast dropdown 
+  #==============================
+  output$contrastSelectGene <- renderUI({
+    req(state$de_df())
+    contrast_choices <- unique(state$de_df()$contrast)
+    selectInput("contrast", "Select Contrast", choices = contrast_choices)
   })
   
   #==============================
@@ -146,51 +155,90 @@ explore_gene_server <- function(input, output, session, state) {
   #==============================
   # Output: Neighbourhood Analysis
   #==============================
-  output$neighbourhoodPlot <- renderPlot({
-    req(selected_gene_data(), state$de_df(), input$gene_select, input$neigh_window)
+  output$neighbourhoodPlot <- renderPlotly({
+    req(state$de_df(), input$contrast, input$gene_select, input$neigh_window)
     
-    # Define window around central gene
-    central_gene <- selected_gene_data()
+    de <- state$de_df()
+    
+    # Find central gene
+    central_gene <- de %>% 
+      filter(contrast == input$contrast, Geneid == input$gene_select)
+    req(nrow(central_gene) >= 1)
+    
+    # Define genomic window
     window_start <- central_gene$start[1] - input$neigh_window
     window_end   <- central_gene$end[1] + input$neigh_window
     
-    # Filter all DE data in window
-    de_df <- state$de_df()
-    neigh_genes <- de_df %>%
-      subset(start <= window_end & end >= window_start) %>%
-      # Apply FC cutoff dynamically
-      transform(
-        regulated = ifelse(padj < 0.05 & log2FC_shrunk > input$gene_fc_cutoff, "up",
-                           ifelse(padj < 0.05 & log2FC_shrunk < -input$gene_fc_cutoff, "down", NA))
+    # Filter genes in window
+    plot_df <- de %>%
+      filter(contrast == input$contrast) %>%
+      filter(start <= window_end & end >= window_start) %>%
+      mutate(
+        is_central = Geneid == input$gene_select,
+        tooltip = paste0(
+          "GeneID: ", Geneid, "<br>",
+          "Symbol: ", symbol, "<br>",
+          "log2FC: ", round(log2FC_shrunk, 2)
+        )
       )
     
-    req(nrow(neigh_genes) > 0)  # Ensure there is data
+    # Assign tracks separately per strand
+    plot_df <- plot_df %>%
+      arrange(strand, start) %>%
+      group_by(strand) %>%
+      mutate(track = NA_integer_)
     
-    # Order genes by start
-    neigh_genes <- neigh_genes[order(neigh_genes$start), ]
+    for (s in c("+", "-")) {
+      strand_rows <- which(plot_df$strand == s)
+      tracks <- list()
+      for (i in strand_rows) {
+        placed <- FALSE
+        for (t in seq_along(tracks)) {
+          if (plot_df$start[i] > tracks[[t]]) {
+            plot_df$track[i] <- t
+            tracks[[t]] <- plot_df$end[i]
+            placed <- TRUE
+            break
+          }
+        }
+        if (!placed) {
+          tracks[[length(tracks) + 1]] <- plot_df$end[i]
+          plot_df$track[i] <- length(tracks)
+        }
+      }
+    }
     
-    # Rectangle aesthetics
-    neigh_genes$xmin <- neigh_genes$start
-    neigh_genes$xmax <- neigh_genes$end
-    neigh_genes$ymin <- as.numeric(factor(neigh_genes$contrast)) - 0.4
-    neigh_genes$ymax <- as.numeric(factor(neigh_genes$contrast)) + 0.4
+    plot_df <- ungroup(plot_df) %>%
+      mutate(
+        strand = factor(strand, levels = c("+", "-"),
+                        labels = c("Forward Strand", "Reverse Strand"))
+      )
     
-    # Arrow coordinates based on strand
-    neigh_genes$arrow_x <- ifelse(neigh_genes$strand == "+", neigh_genes$xmax, neigh_genes$xmin)
-    neigh_genes$arrow_dir <- ifelse(neigh_genes$strand == "+", 1, -1)
+    # Make track a factor with consistent levels across strands
+    max_tracks <- max(plot_df$track)
+    plot_df <- plot_df %>%
+      mutate(track = factor(track, levels = 1:max_tracks))
     
-    ggplot(neigh_genes) +
-      geom_rect(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = log2FC_shrunk), color = "black") +
-      geom_segment(aes(x = arrow_x, xend = arrow_x + arrow_dir*50, y = (ymin + ymax)/2, yend = (ymin + ymax)/2),
-                   arrow = arrow(length = unit(0.1, "inches")), color = "black") +
-      scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name = "log2FC") +
-      scale_y_continuous(breaks = 1:length(unique(neigh_genes$contrast)),
-                         labels = unique(neigh_genes$contrast),
-                         expand = expansion(add = 0.5)) +
-      labs(x = "Genomic Position", y = "Contrast", title = paste("Neighbourhood around", input$gene_select)) +
-      theme_bw(base_size = 16)
+    # Plot
+    p <- ggplot(plot_df) +
+      geom_rect(aes(
+        xmin = start, xmax = end,
+        ymin = as.numeric(track) - 0.4, ymax = as.numeric(track) + 0.4,
+        fill = log2FC_shrunk,
+        text = tooltip
+      ), color = "black") +
+      scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+      labs(y = NULL, x = "Genomic Position", fill = "log2FC") +
+      facet_grid(strand ~ ., scales = "free_y", space = "free_y", drop = TRUE) +
+      theme_minimal() +
+      theme(
+        panel.grid = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()
+      )
+    
+    ggplotly(p, tooltip = "text", dynamicTicks = TRUE)
   })
-  
- 
   
 }

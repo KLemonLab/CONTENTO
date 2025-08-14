@@ -147,12 +147,13 @@ ui <- dashboardPage(
       tabItem(tabName = "gene",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    textInput("gene_select", "Enter Gene ID", placeholder = "e.g., ENSG00000141510"),
+                    textInput("gene_select", "Enter Gene ID", placeholder = "e.g., ENSG00000141510", value = "HMPREF1290_RS08565"),
                     tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
                     selectInput("shape_col", "Shape", choices = NULL),
                     sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
+                    uiOutput("contrastSelectGene"),
                     numericInput("neigh_window", "Neighbourhood window (nt)", value = 1000, step = 100, min = 0)
                 ),
                 
