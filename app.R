@@ -18,6 +18,7 @@ library(RColorBrewer)
 library(ComplexUpset) 
 library(scales)
 library(tools)
+library(grid)
 
 # Source helper server modules
 source("R/load_files_server.R")
@@ -151,7 +152,8 @@ ui <- dashboardPage(
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
                     selectInput("shape_col", "Shape", choices = NULL),
-                    sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5)
+                    sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
+                    numericInput("neigh_window", "Neighbourhood window (nt)", value = 1000, step = 100, min = 0)
                 ),
                 
                 box(title = "Explore Results by Gene", width = 9, status = "primary", collapsible = TRUE,

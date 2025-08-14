@@ -144,17 +144,53 @@ explore_gene_server <- function(input, output, session, state) {
   })
   
   #==============================
-  # Output: Neighbourhood Analysis placeholder
+  # Output: Neighbourhood Analysis
   #==============================
   output$neighbourhoodPlot <- renderPlot({
-    req(input$gene_select, input$organism == "Bacteria")
-    threshold <- input$gene_fc_cutoff
-    gene_data <- selected_gene_data()
+    req(selected_gene_data(), state$de_df(), input$gene_select, input$neigh_window)
     
-    plot(1, 1,
-         main = paste("Neighbourhood analysis for", input$gene_select),
-         sub = paste("Using FC cutoff =", threshold),
-         xlab = "X placeholder", ylab = "Y placeholder")
+    # Define window around central gene
+    central_gene <- selected_gene_data()
+    window_start <- central_gene$start[1] - input$neigh_window
+    window_end   <- central_gene$end[1] + input$neigh_window
+    
+    # Filter all DE data in window
+    de_df <- state$de_df()
+    neigh_genes <- de_df %>%
+      subset(start <= window_end & end >= window_start) %>%
+      # Apply FC cutoff dynamically
+      transform(
+        regulated = ifelse(padj < 0.05 & log2FC_shrunk > input$gene_fc_cutoff, "up",
+                           ifelse(padj < 0.05 & log2FC_shrunk < -input$gene_fc_cutoff, "down", NA))
+      )
+    
+    req(nrow(neigh_genes) > 0)  # Ensure there is data
+    
+    # Order genes by start
+    neigh_genes <- neigh_genes[order(neigh_genes$start), ]
+    
+    # Rectangle aesthetics
+    neigh_genes$xmin <- neigh_genes$start
+    neigh_genes$xmax <- neigh_genes$end
+    neigh_genes$ymin <- as.numeric(factor(neigh_genes$contrast)) - 0.4
+    neigh_genes$ymax <- as.numeric(factor(neigh_genes$contrast)) + 0.4
+    
+    # Arrow coordinates based on strand
+    neigh_genes$arrow_x <- ifelse(neigh_genes$strand == "+", neigh_genes$xmax, neigh_genes$xmin)
+    neigh_genes$arrow_dir <- ifelse(neigh_genes$strand == "+", 1, -1)
+    
+    ggplot(neigh_genes) +
+      geom_rect(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = log2FC_shrunk), color = "black") +
+      geom_segment(aes(x = arrow_x, xend = arrow_x + arrow_dir*50, y = (ymin + ymax)/2, yend = (ymin + ymax)/2),
+                   arrow = arrow(length = unit(0.1, "inches")), color = "black") +
+      scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name = "log2FC") +
+      scale_y_continuous(breaks = 1:length(unique(neigh_genes$contrast)),
+                         labels = unique(neigh_genes$contrast),
+                         expand = expansion(add = 0.5)) +
+      labs(x = "Genomic Position", y = "Contrast", title = paste("Neighbourhood around", input$gene_select)) +
+      theme_bw(base_size = 16)
   })
+  
+ 
   
 }
