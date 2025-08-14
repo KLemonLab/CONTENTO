@@ -165,7 +165,7 @@ compare_contrast_server <- function(input, output, session, state) {
           columns = lfc_cols,
           backgroundColor = styleInterval(
             0,
-            c("lightblue", "pink")
+            c("pink", "lightblue")
           )
         )
     },
