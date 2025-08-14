@@ -57,7 +57,7 @@ explore_gene_server <- function(input, output, session, state) {
     }
     
     if (input$organism == "Bacteria") {
-      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", plotlyOutput("neighbourhoodPlot", height = "600px"))))
+      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", girafeOutput("neighbourhoodPlot", height = "600px"))))
     }
     
     do.call(tabsetPanel, tabs)
@@ -155,7 +155,7 @@ explore_gene_server <- function(input, output, session, state) {
   #==============================
   # Output: Neighbourhood Analysis
   #==============================
-  output$neighbourhoodPlot <- renderPlotly({
+  output$neighbourhoodPlot <- renderGirafe({
     req(state$de_df(), input$contrast, input$gene_select, input$neigh_window)
     
     de <- state$de_df()
@@ -211,21 +211,19 @@ explore_gene_server <- function(input, output, session, state) {
     plot_df <- ungroup(plot_df) %>%
       mutate(
         strand = factor(strand, levels = c("+", "-"),
-                        labels = c("Forward Strand", "Reverse Strand"))
+                        labels = c("Forward", "Reverse")),
+        # Make track a factor with consistent levels
+        track = factor(track)
       )
     
-    # Make track a factor with consistent levels across strands
-    max_tracks <- max(plot_df$track)
-    plot_df <- plot_df %>%
-      mutate(track = factor(track, levels = 1:max_tracks))
-    
-    # Plot
-    p <- ggplot(plot_df) +
-      geom_rect(aes(
+    # Create ggplot with interactive rectangles
+    gg <- ggplot(plot_df) +
+      geom_rect_interactive(aes(
         xmin = start, xmax = end,
-        ymin = as.numeric(track) - 0.4, ymax = as.numeric(track) + 0.4,
+        ymin = as.numeric(track) - 0.4,
+        ymax = as.numeric(track) + 0.4,
         fill = log2FC_shrunk,
-        text = tooltip
+        tooltip = tooltip
       ), color = "black") +
       scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
       labs(y = NULL, x = "Genomic Position", fill = "log2FC") +
@@ -235,10 +233,21 @@ explore_gene_server <- function(input, output, session, state) {
         panel.grid = element_blank(),
         axis.title.y = element_blank(),
         axis.text.y = element_blank(),
-        axis.ticks.y = element_blank()
+        axis.ticks.y = element_blank(),
+        strip.background = element_rect(fill = "grey90", color = "black", size = 1),
+        strip.text = element_text(face = "bold", size = 12),
+        #panel.border = element_rect(color = "black", fill = NA, size = 1),
+        panel.spacing = unit(0.5, "lines")  
       )
     
-    ggplotly(p, tooltip = "text", dynamicTicks = TRUE)
+    # Render interactive plot with tooltips
+    girafe(
+      ggobj = gg,
+      options = list(
+        opts_tooltip(opacity = 0.9, offx = 10, offy = -10),
+        opts_sizing(rescale = TRUE)
+      )
+    )
   })
   
 }

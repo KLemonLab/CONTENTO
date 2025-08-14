@@ -19,6 +19,7 @@ library(ComplexUpset)
 library(scales)
 library(tools)
 library(grid)
+library(ggiraph)
 
 # Source helper server modules
 source("R/load_files_server.R")
