@@ -1,5 +1,12 @@
 load_files_server <- function(input, output, session, state) {
   
+  # Required columns
+  required_cols_bacteria <- c("contrast", "Geneid", "symbol", "padj",
+                              "log2FoldChange", "log2FoldChange_shrunk", 
+                              "start", "end", "strand")
+  required_cols_human <- c("contrast", "Geneid", "symbol", "padj",
+                           "log2FoldChange", "log2FoldChange_shrunk")
+  
   # DDS (.rds)
   observeEvent(input$ddsFile, {
     req(input$ddsFile)
@@ -21,21 +28,26 @@ load_files_server <- function(input, output, session, state) {
     req(input$deFile)
     df <- readRDS(input$deFile$datapath)
     
+    # Select required columns based on organism
+    cols_to_check <- if (input$organism == "Bacteria") {
+      required_cols_bacteria
+    } else {
+      required_cols_human
+    }
     
-    required_cols <- c("contrast", "Geneid", "symbol", "padj",
-                       "log2FoldChange", "log2FoldChange_shrunk")
-    
-    if (!all(required_cols %in% colnames(df))) {
+    # Check columns
+    if (!all(cols_to_check %in% colnames(df))) {
       showModal(modalDialog(
         title = "File error",
-        paste0("File missing required columns: ", paste(setdiff(required_cols, colnames(df)), collapse = ", ")),
+        paste0("File missing required columns: ", 
+               paste(setdiff(cols_to_check, colnames(df)), collapse = ", ")),
         easyClose = TRUE,
         footer = NULL
       ))
       return(NULL)
     }
     
-    # Rename columns
+    # Rename columns if needed
     if ("log2FoldChange" %in% colnames(df)) {
       df <- dplyr::rename(df, log2FC = "log2FoldChange")
     }

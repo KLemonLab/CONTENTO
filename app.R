@@ -42,6 +42,9 @@ ui <- dashboardPage(
       menuItem("Explore by Gene", tabName = "gene", icon = icon("dna"))
     ),
     hr(),
+    h4("Select Organism", style = "padding-left: 20px;"),
+    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Human"),
+    hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
     fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "dds object"),
     fileInput("deFile", "Contrasts", accept = ".rds", placeholder = "Contrast object"),
@@ -60,6 +63,7 @@ ui <- dashboardPage(
                 box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12, status = "info", solidHeader = TRUE,
                     tags$h4("Required Inputs (Upload .rds files on the left sidebar):"),
                     tags$ul(
+                      tags$li(strong("Organism type :"), " Select based on the RNASeq reads analyzed by DESeq2."),
                       tags$li(strong("DESeq2 file:"), " Contains the DESeqDataSet object with count data and metadata."),
                       tags$li(strong("Contrasts file:"), " Contains results for one or more contrasts from the DESeq2 analysis."),
                       tags$li(strong("VarPart file:"), " Optional — contains variance partition analysis results.")
