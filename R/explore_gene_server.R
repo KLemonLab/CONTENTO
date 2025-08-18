@@ -21,8 +21,8 @@ explore_gene_server <- function(input, output, session, state) {
     state$de_df() %>%
       subset(Geneid == input$gene_select) %>%
       transform(
-        regulated = ifelse(padj < 0.05 & log2FC_shrunk >  input$gene_fc_cutoff, "up",
-                           ifelse(padj < 0.05 & log2FC_shrunk < -input$gene_fc_cutoff, "down", NA)),
+        regulated = ifelse(padj < 0.05 & log2FC >  input$gene_fc_cutoff, "up",
+                           ifelse(padj < 0.05 & log2FC < -input$gene_fc_cutoff, "down", NA)),
         DE = !is.na(regulated)
       )
   })
@@ -113,7 +113,7 @@ explore_gene_server <- function(input, output, session, state) {
     gene_table <- selected_gene_data() %>%
       mutate(across(c(log2FC, log2FC_shrunk), ~ round(.x, 2))) %>%
       mutate(padj = formatC(padj, format = "e", digits = 2)) %>%
-      arrange(desc(abs(log2FC_shrunk))) %>%
+      arrange(desc(abs(log2FC))) %>%
       select(contrast, log2FC, log2FC_shrunk, padj, sign, DE, regulated)
     
     datatable(
@@ -178,7 +178,7 @@ explore_gene_server <- function(input, output, session, state) {
         tooltip = paste0(
           "GeneID: ", Geneid, "<br>",
           "Symbol: ", symbol, "<br>",
-          "log2FC: ", round(log2FC_shrunk, 2)
+          "log2FC: ", round(log2FC, 2)
         )
       )
     
@@ -222,7 +222,7 @@ explore_gene_server <- function(input, output, session, state) {
         xmin = start, xmax = end,
         ymin = as.numeric(track) - 0.4,
         ymax = as.numeric(track) + 0.4,
-        fill = log2FC_shrunk,
+        fill = log2FC,
         tooltip = tooltip
       ), color = "black") +
       scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
