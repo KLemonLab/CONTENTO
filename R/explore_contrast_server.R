@@ -20,12 +20,12 @@ explore_contrast_server <- function(input, output, session, state) {
       mutate(
         tooltip = paste0(
           symbol, " (", Geneid, ")",
-          "\nlog2FC: ", round(log2FC_shrunk, 2),
+          "\nlog2FC: ", round(log2FC, 2),
           "\nFDR: ", signif(padj, 3)
         ),
-        regulated = dplyr::case_when(
-          padj < 0.05 & log2FC_shrunk >  input$fc_cutoff  ~ "up",
-          padj < 0.05 & log2FC_shrunk < -input$fc_cutoff ~ "down",
+        regulated = case_when(
+          padj < 0.05 & log2FC >  input$fc_cutoff  ~ "up",
+          padj < 0.05 & log2FC < -input$fc_cutoff ~ "down",
           TRUE ~ NA_character_
         ),
         DE = !is.na(regulated)
@@ -55,7 +55,7 @@ explore_contrast_server <- function(input, output, session, state) {
           across(c(log2FC, log2FC_shrunk), ~ round(.x, 2)),
           padj = formatC(padj, format = "e", digits = 2)
         ) %>%
-        arrange(desc(abs(log2FC_shrunk))) %>%
+        arrange(desc(abs(log2FC))) %>%
         select(Geneid, symbol, biotype, log2FC, log2FC_shrunk, padj, regulated)
       
       datatable(
@@ -103,7 +103,7 @@ explore_contrast_server <- function(input, output, session, state) {
     
     top_genes <- selected_data() %>%
       filter(DE) %>%
-      slice_max(order_by = abs(log2FC_shrunk), n = input$top_n)
+      slice_max(order_by = abs(log2FC), n = input$top_n)
     
     vsd_mat <- assay(state$dds_obj(), "vst")[rownames(state$dds_obj()) %in% top_genes$Geneid, ]
     vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
