@@ -48,8 +48,9 @@ explore_gene_server <- function(input, output, session, state) {
   #==============================
   output$geneSubTabs <- renderUI({
     tabs <- list(
+      tabPanel("Gene Info", DTOutput("geneDetails")),
       tabPanel("Expression Plot", plotOutput("genePlot", height = "600px")),
-      tabPanel("Gene Table", DTOutput("geneDetails"))
+      tabPanel("Gene Table", DTOutput("geneContrasts"))
     )
     
     if (!is.null(state$varpart_obj())) {
@@ -62,6 +63,31 @@ explore_gene_server <- function(input, output, session, state) {
     
     do.call(tabsetPanel, tabs)
   })
+  
+  #==============================
+  # Output: Gene table Info
+  #==============================
+  output$geneDetails <- renderDT({
+    req(selected_gene_data())
+    
+    gene_table <- selected_gene_data() %>%
+      select(match("biotype", names(.)):match("symbol", names(.))) %>%
+      select(symbol, everything()) %>%
+      distinct()
+    
+    # Transpose and convert to data frame
+    transposed <- as.data.frame(t(gene_table))
+    colnames(transposed) <- "Value"
+    transposed$Field <- rownames(transposed)
+    transposed <- transposed[, c("Field", "Value")]
+    
+    datatable(
+      transposed,
+      options = list(dom = 't', ordering = FALSE, pageLength = nrow(transposed)),
+      rownames = FALSE
+    )
+  })
+  
   
   #==============================
   # UI: Contrast dropdown 
@@ -107,18 +133,18 @@ explore_gene_server <- function(input, output, session, state) {
   #==============================
   # Output: Gene table for all contrasts
   #==============================
-  output$geneDetails <- renderDT({
+  output$geneContrasts <- renderDT({
     req(selected_gene_data())
     
-    gene_table <- selected_gene_data() %>%
+    gene_contrasts <- selected_gene_data() %>%
       mutate(across(c(log2FC, log2FC_shrunk), ~ round(.x, 2))) %>%
       mutate(padj = formatC(padj, format = "e", digits = 2)) %>%
       arrange(desc(abs(log2FC))) %>%
       select(contrast, log2FC, log2FC_shrunk, padj, sign, DE, regulated)
     
     datatable(
-      gene_table,
-      options = list(dom = 't', ordering = TRUE, pageLength = nrow(gene_table)),
+      gene_contrasts,
+      options = list(dom = 't', ordering = TRUE, pageLength = nrow(gene_contrasts)),
       rownames = FALSE
     ) %>%
       formatStyle(
