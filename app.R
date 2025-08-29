@@ -155,7 +155,7 @@ ui <- dashboardPage(
                     selectInput("shape_col", "Shape", choices = NULL),
                     sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("contrastSelectGene"),
-                    numericInput("neigh_window", "Neighbourhood window (nt)", value = 1000, step = 100, min = 0)
+                    numericInput("neigh_window", "Neighbourhood window (nt)", value = 10000, step = 100, min = 0)
                 ),
                 
                 box(title = "Explore Results by Gene", width = 9, status = "primary", collapsible = TRUE,
