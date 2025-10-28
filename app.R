@@ -20,6 +20,8 @@ library(scales)
 library(tools)
 library(grid)
 library(ggiraph)
+library(fgsea)
+library(msigdbr)
 
 # Source helper server modules
 source("R/load_files_server.R")
@@ -45,7 +47,7 @@ ui <- dashboardPage(
     ),
     hr(),
     h4("Select Organism", style = "padding-left: 20px;"),
-    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Bacteria"),
+    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Human"),
     hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
     fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "dds object"),
@@ -80,16 +82,18 @@ ui <- dashboardPage(
                     tags$ul(
                       tags$li(strong("Selected Genes:"), " Table of differential expression results. You can save a .csv file with the filtered results."),
                       tags$li(strong("Volcano Plot:"), " Interactive plot of significance vs. fold-change. The log2 fold-changes are shrinked to stabilize variance across genes."),
-                      tags$li(strong("Heatmap:"), " Visualizes top DE genes across samples. Expression values are normalized using a variance-stabilizing transformation (VST) and scaled to Z-scores for visualization.")
+                      tags$li(strong("Heatmap:"), " Visualizes top DE genes across samples. Expression values are normalized using a variance-stabilizing transformation (VST) and scaled to Z-scores for visualization."),
+                      tags$li(strong("GSEA:"), " Gene Set Enrichment Analysis for human datasets. Ranks genes by their DE statistics and identifies enriched pathways using data sets from MSigDB."),
+                      tags$li(strong("GESECA:"), " Gene Set Co-expression Analysis for human datasets. Identifies co-expressed gene sets based on VST-normalized expression values.")
                     )
                 )
               ),
               fluidRow(
                 box(title = tagList(icon("exchange-alt"), "Compare Contrast"), width = 12, status = "warning", solidHeader = TRUE,
-                    p("Compare multiple contrasts simultaneously. Use the fold-change cutoff and contrast selector to control displayed results."),
+                    p("Compare multiple contrasts simultaneously. Use contrast selector to control displayed results."),
                     tags$ul(
-                      tags$li(strong("Upset Plot:"), " Shows overlap of significant genes between selected contrasts."),
-                      tags$li(strong("Selected Contrasts:"), " Table of results filtered by your settings and colored by up/down regulation. You can save a .csv file.")
+                      tags$li(strong("DEG Overlap:"), " Shows overlap of significant genes between selected contrasts using the fold-change cutoff."),
+                      tags$li(strong("Gene Sets Overlap:"), " Shows overlap of enriched gene sets between selected contrasts (only for human datasets).")
                     )
                 )
               ),
@@ -112,17 +116,17 @@ ui <- dashboardPage(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("contrastSelect"),
                     sliderInput("fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
-                    numericInput("top_n", "Top DE genes (heatmap)", value = 25, min = 15, step = 5),
-                    selectInput("viridis_palette", "Color palette (heatmap)",
-                                choices = c("viridis", "magma", "plasma", "inferno", "cividis"), selected = "viridis")
+                    numericInput("top_n", "Top DE genes (Heatmap)", value = 25, min = 15, step = 5),
+                    selectInput("viridis_palette", "Color palette (Heatmap)",
+                                choices = c("viridis", "magma", "plasma", "inferno", "cividis"), selected = "viridis"),
+                    selectInput("gs_collection", "Gene Set (GSEA/GESECA)",
+                                choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
+                    conditionalPanel(condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
+                                     textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME"))
                 ),
                 
                 box(title = "Explore Results by Contrast", width = 9, status = "primary", collapsible = TRUE,
-                    tabsetPanel(
-                      tabPanel("Selected Genes", withSpinner(DTOutput("DETable"), type = 5)),
-                      tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5)),
-                      tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
-                    )
+                    uiOutput("contrastSubTabs")
                 )
               )
       ),
@@ -134,14 +138,12 @@ ui <- dashboardPage(
                     sliderInput("compare_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("multiContrastSelect")
                 ),
-
+                
                 box(title = "Compare Contrast Results", width = 9, status = "primary", collapsible = TRUE,
-                    tabsetPanel(
-                      tabPanel("Upset Plot", withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5)),
-                      tabPanel("Selected Contrasts", withSpinner(DTOutput("compareTable"), type = 5))
-                    )
+                    uiOutput("compareSubTabs")
                 )
               )
+              
       ),
       
       # --- Explore by Gene ---

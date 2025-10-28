@@ -10,26 +10,294 @@ explore_contrast_server <- function(input, output, session, state) {
   })
   
   #==============================
+  # UI: Conditional Sub-tabs
+  #==============================
+  output$contrastSubTabs <- renderUI({
+    tabs <- list(
+      tabPanel("Selected Genes", withSpinner(DTOutput("DETable"), type = 5)),
+      tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5)),
+      tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
+    )
+    
+    if (input$organism == "Human") {
+      tabs <- append(tabs, 
+                     list(
+                       tabPanel("GSEA",
+                                tabsetPanel(
+                                  tabPanel("Overview",
+                                           h4("Top 20 GSEA Results"),
+                                           withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
+                                           hr(),
+                                           h4("All GSEA Results"),
+                                           withSpinner(DTOutput("gseaResultsTable"), type = 5)
+                                  ),
+                                  tabPanel("Pathway Detail",
+                                           fluidRow(
+                                             column(12,
+                                                    uiOutput("pathwaySelectUI_gsea"),
+                                                    hr(),
+                                                    withSpinner(plotOutput("enrichmentPlot", height = "400px"), type = 5)
+                                             )
+                                           )
+                                  )
+                                )
+                       ),
+                       tabPanel("GESECA",
+                                tabsetPanel(
+                                  tabPanel("Overview",
+                                           h4("Top 20 GESECA Results"),
+                                           withSpinner(plotOutput("gesecaTablePlot", height = "600px"), type = 5),
+                                           hr(),
+                                           h4("All GESECA Results"),
+                                           withSpinner(DTOutput("gesecaResultsTable"), type = 5)
+                                  ),
+                                  tabPanel("Pathway Detail",
+                                           fluidRow(
+                                             column(12,
+                                                    uiOutput("pathwaySelectUI_geseca"),
+                                                    uiOutput("conditionSelectUI_geseca"),
+                                                    hr(),
+                                                    withSpinner(plotOutput("CoregulationPlot", height = "400px"), type = 5)
+                                             )
+                                           )
+                                  )
+                                )
+                       )
+                     )
+      )
+    }
+    
+    do.call(tabsetPanel, tabs)
+  }) 
+  
+  #==============================
+  # UI: Selectors for GSEA
+  #==============================
+  output$pathwaySelectUI_gsea <- renderUI({
+    req(gsea_result())
+    
+    pathways <- gsea_result()$fgseaRes %>%
+      filter(padj < 0.05) %>%
+      arrange(padj) %>%
+      pull(pathway)
+    
+    if (length(pathways) > 0) {
+      selectInput("selected_pathway_gsea", "Select Pathway:", 
+                  choices = pathways, 
+                  selected = pathways[1],
+                  width = "100%")
+    } else {
+      div(
+        class = "alert alert-warning",
+        icon("exclamation-triangle"),
+        "No significant pathways found (FDR < 0.05)"
+      )
+    }
+  })
+  
+  #==============================
+  # UI: Selectors for GESECA
+  #==============================
+  output$pathwaySelectUI_geseca <- renderUI({
+    req(geseca_result())
+    
+    pathways <- geseca_result()$gesecaRes %>%
+      filter(padj < 0.05) %>%
+      arrange(padj) %>%
+      pull(pathway)
+    
+    if (length(pathways) > 0) {
+      selectInput("selected_pathway_geseca", "Select Pathway:", 
+                  choices = pathways, 
+                  selected = pathways[1],
+                  width = "100%")
+    } else {
+      div(
+        class = "alert alert-warning",
+        icon("exclamation-triangle"),
+        "No significant pathways found (FDR < 0.05)"
+      )
+    }
+  })
+  
+  output$conditionSelectUI_geseca <- renderUI({
+    req(state$dds_obj())
+    
+    available_vars <- colnames(colData(state$dds_obj()))
+    selectInput("geseca_condition_var", "Color by:", 
+                choices = available_vars,
+                selected = all.vars(design(state$dds_obj()))[1])
+  })
+  
+  #==============================
   # Reactive: Filtered and annotated DE data
   #==============================
   selected_data <- reactive({
     req(state$de_df(), input$contrast, input$fc_cutoff)
     
-    state$de_df() %>%
-      filter(contrast == input$contrast) %>%
-      mutate(
-        tooltip = paste0(
-          symbol, " (", Geneid, ")",
-          "\nlog2FC: ", round(log2FC, 2),
-          "\nFDR: ", signif(padj, 3)
-        ),
-        regulated = case_when(
-          padj < 0.05 & log2FC >  input$fc_cutoff  ~ "up",
-          padj < 0.05 & log2FC < -input$fc_cutoff ~ "down",
-          TRUE ~ NA_character_
-        ),
-        DE = !is.na(regulated)
-      )
+    tryCatch({
+      state$de_df() %>%
+        filter(contrast == input$contrast) %>%
+        mutate(
+          tooltip = paste0(
+            symbol, " (", Geneid, ")",
+            "\nlog2FC: ", round(log2FC, 2),
+            "\nFDR: ", signif(padj, 3)
+          ),
+          regulated = case_when(
+            padj < 0.05 & log2FC >  input$fc_cutoff  ~ "up",
+            padj < 0.05 & log2FC < -input$fc_cutoff ~ "down",
+            TRUE ~ NA_character_
+          ),
+          DE = !is.na(regulated)
+        )
+    }, error = function(e) {
+      showNotification(paste("Error filtering data:", e$message), type = "error")
+      NULL
+    })
+  })
+  
+  #==============================
+  # Reactive: Gene sets from MSigDB
+  #==============================
+  genesets <- reactive({
+    req(input$gs_collection)
+    
+    tryCatch({
+      if (nzchar(input$gs_subcollection)) {
+        msigdbr(species = "Homo sapiens", collection = input$gs_collection, subcollection = input$gs_subcollection)
+      } else {
+        msigdbr(species = "Homo sapiens", collection = input$gs_collection)
+      }
+    }, error = function(e) {
+      showNotification(paste("Error loading gene sets:", e$message), type = "error")
+      NULL
+    })
+  })
+  
+  #==============================
+  # Reactive: GSEA Analysis
+  #==============================
+  gsea_result <- reactive({
+    req(state$de_df(), input$contrast, genesets())
+    
+    tryCatch({
+      # Prepare ranked gene list
+      ranks <- state$de_df() %>%
+        filter(contrast == input$contrast) %>%
+        filter(!is.na(stat))
+      
+      if (nrow(ranks) == 0) {
+        showNotification("No valid statistics found for GSEA", type = "warning")
+        return(NULL)
+      }
+      
+      ranks_vec <- setNames(ranks$stat, ranks$Geneid)
+      
+      # Convert msigdbr format to named list of gene vectors
+      pathways_list <- genesets() %>%
+        split(.$gs_name) %>%
+        lapply(function(x) x$ensembl_gene)
+      
+      if (length(pathways_list) == 0) {
+        showNotification("No pathways found in selected gene set", type = "warning")
+        return(NULL)
+      }
+      
+      # Run GSEA
+      fgseaRes <- fgseaMultilevel(
+        pathways = pathways_list,
+        stats = ranks_vec,
+        minSize = 15,
+        maxSize = 500
+      ) %>%
+        arrange(padj, pval)
+      
+      # Select top pathways by absolute NES
+      topPathways <- fgseaRes %>%
+        filter(padj < 0.05) %>%
+        arrange(desc(abs(NES))) %>%
+        slice_head(n = 20) %>%
+        pull(pathway)
+      
+      # Generate table plot (only if there are significant pathways)
+      tableplot <- if (length(topPathways) > 0) {
+        plotGseaTable(
+          pathways = pathways_list[topPathways], 
+          stats = ranks_vec, 
+          fgseaRes = fgseaRes, 
+          gseaParam = 0.5
+        )
+      } else {
+        NULL
+      }
+      
+      list(tableplot = tableplot, fgseaRes = fgseaRes, ranks_vec = ranks_vec, pathways_list = pathways_list)
+      
+    }, error = function(e) {
+      showNotification(paste("Error running GSEA:", e$message), type = "error")
+      NULL
+    })
+  })
+  
+  #==============================
+  # Reactive: GESECA Analysis
+  #==============================
+  geseca_result <- reactive({
+    req(state$dds_obj(), genesets())
+    
+    tryCatch({
+      # Get VST-transformed matrix
+      vst_matrix <- assays(state$dds_obj())[["vst"]]
+      
+      if (is.null(vst_matrix)) {
+        showNotification("VST matrix not found in DESeq2 object", type = "error")
+        return(NULL)
+      }
+      
+      # Convert msigdbr format to named list
+      pathways_list <- genesets() %>%
+        split(.$gs_name) %>%
+        lapply(function(x) x$ensembl_gene)
+      
+      if (length(pathways_list) == 0) {
+        showNotification("No pathways found in selected gene set", type = "warning")
+        return(NULL)
+      }
+      
+      # Run GESECA 
+      gesecaRes <- geseca(
+        pathways = pathways_list,
+        E = vst_matrix,
+        minSize = 15,
+        maxSize = 500
+      ) %>%
+        arrange(padj, pval)
+      
+      # Select top pathways by pctVar
+      topPathways <- gesecaRes %>%
+        filter(padj < 0.05) %>%
+        arrange(desc(abs(pctVar))) %>%
+        slice_head(n = 20) %>%
+        pull(pathway)
+      
+      # Generate table plot (only if there are significant pathways)
+      tableplot <- if (length(topPathways) > 0) {
+        plotGesecaTable(
+          gesecaRes = gesecaRes,
+          pathways = pathways_list[topPathways], 
+          E = vst_matrix
+        )
+      } else {
+        NULL
+      }
+      
+      list(tableplot = tableplot, gesecaRes = gesecaRes, vst_matrix = vst_matrix, pathways_list = pathways_list)
+      
+    }, error = function(e) {
+      showNotification(paste("Error running GESECA:", e$message), type = "error")
+      NULL
+    })
   })
   
   #==============================
@@ -58,6 +326,10 @@ explore_contrast_server <- function(input, output, session, state) {
         arrange(desc(abs(log2FC))) %>%
         select(Geneid, symbol, biotype, log2FC, log2FC_shrunk, padj, regulated)
       
+      if (nrow(df) == 0) {
+        showNotification("No differentially expressed genes found with current cutoffs", type = "warning")
+      }
+      
       datatable(
         df,
         extensions = 'Buttons',
@@ -70,7 +342,7 @@ explore_contrast_server <- function(input, output, session, state) {
           buttons = list(
             list(
               extend = 'csv',
-              text = 'Download CSV',
+              text = 'Download DE Genes',
               filename = file_name,
               exportOptions = list(modifier = list(page = "all"))
             )
@@ -82,16 +354,19 @@ explore_contrast_server <- function(input, output, session, state) {
   )
   
   #==============================
-  # Output: Volcano Plot
+  # Output: Volcano Plot of Top DE Genes
   #==============================
   output$volcanoPlot <- renderPlotly({
     req(selected_data())
+    
     gg <- ggplot(selected_data(), aes(x = log2FC_shrunk, y = -log10(padj), text = tooltip)) +
       geom_point(aes(color = DE), alpha = 0.6) +
       scale_color_manual(values = c("TRUE" = "red", "FALSE" = "gray"), guide = "none") +
       geom_vline(xintercept = c(-input$fc_cutoff, input$fc_cutoff), linetype = "dashed") +
       geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+      labs(x = "log2 Fold Change (shrunken)", y = "-log10(FDR)") +
       theme_minimal()
+    
     ggplotly(gg, tooltip = "text")
   })
   
@@ -105,6 +380,12 @@ explore_contrast_server <- function(input, output, session, state) {
       filter(DE) %>%
       slice_max(order_by = abs(log2FC), n = input$top_n)
     
+    if (nrow(top_genes) == 0) {
+      plot.new()
+      text(0.5, 0.5, "No DE genes found for heatmap", cex = 1.5)
+      return()
+    }
+    
     vsd_mat <- assay(state$dds_obj(), "vst")[rownames(state$dds_obj()) %in% top_genes$Geneid, ]
     vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
     
@@ -113,9 +394,216 @@ explore_contrast_server <- function(input, output, session, state) {
     Heatmap(
       scale(vsd_mat),
       col = viridis(100, option = input$viridis_palette),
-      column_names_gp = grid::gpar(fontsize = 12, rot = 45),
-      row_names_gp = grid::gpar(fontsize = 12),
-      heatmap_legend_param = list(title = "Z-scores")
+      column_names_gp = grid::gpar(fontsize = 12),
+      row_names_gp = grid::gpar(fontsize = 10),
+      heatmap_legend_param = list(title = "Z-scores"),
+      cluster_rows = TRUE,
+      cluster_columns = TRUE,
+      show_row_dend = TRUE,
+      show_column_dend = TRUE
     )
+  })
+  
+  #==============================
+  # Output: GSEA Table Plot
+  #==============================
+  output$gseaTablePlot <- renderPlot({
+    req(gsea_result())
+    
+    if (is.null(gsea_result()$tableplot)) {
+      plot.new()
+      text(0.5, 0.5, "No significant pathways found (FDR < 0.05)", cex = 1.5)
+    } else {
+      gsea_result()$tableplot
+    }
+  })
+  
+  #==============================
+  # Output: GSEA Results Table
+  #==============================
+  output$gseaResultsTable <- renderDT(
+    {
+      req(gsea_result())
+      
+      # Prepare file name
+      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
+        file_path_sans_ext(basename(input$deFile$name))
+      } else {
+        "contrasts"
+      }
+      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
+      gs_str <- paste0(input$gs_collection, if (nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
+      file_name <- paste(file_base, contrast_str, "GSEA", gs_str, sep = "__")
+      
+      # Format the dataframe
+      df <- gsea_result()$fgseaRes %>%
+        mutate(
+          across(c(pval, padj), ~ formatC(.x, format = "e", digits = 2)),
+          across(c(ES, NES), ~ round(.x, 3)),
+          leadingEdge = sapply(leadingEdge, function(x) paste(head(x, 10), collapse = "; "))
+        ) %>%
+        select(pathway, pval, padj, ES, NES, size, leadingEdge)
+      
+      datatable(
+        df,
+        extensions = 'Buttons',
+        rownames = FALSE,
+        filter = 'top',
+        options = list(
+          pageLength = 15,
+          scrollX = TRUE,
+          dom = 'Bfrtip',
+          columnDefs = list(
+            list(
+              targets = 6,  # leadingEdge column (0-indexed)
+              width = '300px',
+              render = JS(
+                "function(data, type, row, meta) {",
+                "  return '<div style=\"max-width:300px; overflow-x:auto; white-space:nowrap;\">' + data + '</div>';",
+                "}"
+              )
+            )
+          ),
+          buttons = list(
+            list(
+              extend = 'csv',
+              text = 'Download Full GSEA Results',
+              filename = file_name,
+              exportOptions = list(modifier = list(page = "all"))
+            )
+          )
+        )
+      )
+    },
+    server = FALSE
+  )
+
+  
+  #==============================
+  # Output: GSEA Enrichment Plot
+  #==============================
+  output$enrichmentPlot <- renderPlot({
+    req(gsea_result(), input$selected_pathway_gsea)
+    
+    tryCatch({
+      # Get pathway genes
+      pathway_genes <- gsea_result()$pathways_list[[input$selected_pathway_gsea]]
+      
+      if (is.null(pathway_genes) || length(pathway_genes) == 0) {
+        plot.new()
+        text(0.5, 0.5, "Pathway not found", cex = 1.2)
+        return()
+      }
+      
+      # Create enrichment plot
+      plotEnrichment(pathway_genes, gsea_result()$ranks_vec) +
+        labs(title = input$selected_pathway_gsea) +
+        theme_minimal() +
+        theme(plot.title = element_text(size = 10))
+      
+    }, error = function(e) {
+      plot.new()
+      text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
+    })
+  })
+  
+  #==============================
+  # Output: GESECA Table Plot
+  #==============================
+  output$gesecaTablePlot <- renderPlot({
+    req(geseca_result())
+    
+    if (is.null(geseca_result()$tableplot)) {
+      plot.new()
+      text(0.5, 0.5, "No significant pathways found (FDR < 0.05)", cex = 1.5)
+    } else {
+      geseca_result()$tableplot
+    }
+  })
+  #==============================
+  # Output: GESECA Results Table
+  #==============================
+  output$gesecaResultsTable <- renderDT(
+    {
+      req(geseca_result())
+      
+      # Prepare file name
+      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
+        file_path_sans_ext(basename(input$deFile$name))
+      } else {
+        "contrasts"
+      }
+      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
+      gs_str <- paste0(input$gs_collection, if (nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
+      file_name <- paste(file_base, contrast_str, "GESECA", gs_str, sep = "__")
+      
+      # Format the dataframe
+      df <- geseca_result()$gesecaRes %>%
+        mutate(
+          across(c(pval, padj), ~ formatC(.x, format = "e", digits = 2)),
+          across(c(pctVar, log2err), ~ round(.x, 3))
+        ) 
+      
+      datatable(
+        df,
+        extensions = 'Buttons',
+        rownames = FALSE,
+        filter = 'top',
+        options = list(
+          pageLength = 15,
+          scrollX = TRUE,
+          dom = 'Bfrtip',
+          buttons = list(
+            list(
+              extend = 'csv',
+              text = 'Download Full GESECA Results',
+              filename = file_name,
+              exportOptions = list(modifier = list(page = "all"))
+            )
+          )
+        )
+      )
+    },
+    server = FALSE
+  )
+  
+  #==============================
+  # Output: GESECA Co-regulation Plot
+  #==============================
+  output$CoregulationPlot <- renderPlot({
+    req(geseca_result(), input$selected_pathway_geseca)
+    
+    tryCatch({
+      # Get pathway genes
+      pathway_genes <- geseca_result()$pathways_list[[input$selected_pathway_geseca]]
+      
+      if (is.null(pathway_genes) || length(pathway_genes) == 0) {
+        plot.new()
+        text(0.5, 0.5, "Pathway not found", cex = 1.2)
+        return()
+      }
+      # Get grouping variable
+      group_variable <- if (!is.null(input$geseca_condition_var) && nzchar(input$geseca_condition_var)) {
+        input$geseca_condition_var
+      } else {
+        all.vars(design(state$dds_obj()))[1]
+      }
+      
+      # Extract the actual condition values from colData
+      conditions <- colData(state$dds_obj())[[group_variable]]
+      
+      # Create co-regulation plot
+      plotCoregulationProfile(pathway_genes, geseca_result()$vst_matrix, conditions = conditions) +
+        labs(title = input$selected_pathway_geseca) +
+        theme_minimal() +
+        theme(plot.title = element_text(size = 10),
+              axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+      
+    }, error = function(e) {
+      plot.new()
+      text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
+    })
   })
 }
