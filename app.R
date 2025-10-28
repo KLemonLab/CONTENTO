@@ -22,6 +22,7 @@ library(grid)
 library(ggiraph)
 library(fgsea)
 library(msigdbr)
+library(pheatmap)
 
 # Source helper server modules
 source("R/load_files_server.R")
@@ -136,7 +137,11 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     sliderInput("compare_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
-                    uiOutput("multiContrastSelect")
+                    uiOutput("multiContrastSelect"),
+                    selectInput("compare_gs_collection", "Gene Set (GSEA/GESECA)",
+                                choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
+                    conditionalPanel(condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
+                                     textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME"))
                 ),
                 
                 box(title = "Compare Contrast Results", width = 9, status = "primary", collapsible = TRUE,
