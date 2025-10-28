@@ -24,6 +24,28 @@ compare_contrast_server <- function(input, output, session, state) {
   })
   
   #==============================
+  # UI: Conditional Sub-tabs
+  #==============================
+  output$compareSubTabs <- renderUI({
+    tabs <- list(
+      tabPanel("DEG Overlap", 
+               withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5),  
+               h4("Table of DEGs in All Selected Contrasts"),
+               withSpinner(DTOutput("compareTable"), type = 5))
+    )
+    
+    if (input$organism == "Human") {
+      tabs <- append(tabs, 
+                     list(
+                       tabPanel("Gene Sets Overlap", withSpinner(plotOutput("compareGSEAPlot", height = "500px"), type = 5))
+                     )
+      )
+    }
+    
+    do.call(tabsetPanel, tabs)
+  }) 
+    
+  #==============================
   # Select All / Clear All actions
   #==============================
   observeEvent(input$select_all_contrasts, {
