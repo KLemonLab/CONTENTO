@@ -41,7 +41,7 @@ compare_contrast_server <- function(input, output, session, state) {
                                 tabsetPanel(
                                   tabPanel("Overview",
                                            h4("GSEA Heatmap: Pathways Significant in At Least One Contrast"),
-                                           withSpinner(plotOutput("compareGSEAPlot", height = "700px"), type = 5),
+                                           withSpinner(plotOutput("compareGSEAPlot", height = "1000px"), type = 5),
                                            hr(),
                                            h4("NES Values for Significant Pathways"),
                                            withSpinner(DTOutput("compareGSEATable"), type = 5)
@@ -170,7 +170,7 @@ compare_contrast_server <- function(input, output, session, state) {
     
     tryCatch({
       # Load gene sets
-      genesets <- if (nzchar(input$compare_gs_subcollection)) {
+      genesets <- if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) {
         msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection, subcollection = input$compare_gs_subcollection)
       } else {
         msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection)
@@ -240,6 +240,20 @@ compare_contrast_server <- function(input, output, session, state) {
         pivot_wider(names_from = contrast, values_from = padj, values_fill = 1) %>%
         column_to_rownames("pathway") %>%
         as.matrix()
+      
+      # Calculate range of NES for sorting (highlights pathways with most variation)
+      nes_range <- apply(nes_matrix, 1, function(x) max(x) - min(x))
+      sort_order <- order(nes_range, decreasing = TRUE)
+      
+      # Sort both matrices
+      nes_matrix <- nes_matrix[sort_order, , drop = FALSE]
+      padj_matrix <- padj_matrix[sort_order, , drop = FALSE]
+      
+      # Limit to top N pathways if specified
+      if (!is.null(input$max_pathways) && nrow(nes_matrix) > input$max_pathways) {
+        nes_matrix <- nes_matrix[1:input$max_pathways, , drop = FALSE]
+        padj_matrix <- padj_matrix[1:input$max_pathways, , drop = FALSE]
+      }
       
       list(
         nes_matrix = nes_matrix,
@@ -430,30 +444,89 @@ compare_contrast_server <- function(input, output, session, state) {
     nes_mat <- compare_gsea_data()$nes_matrix
     padj_mat <- compare_gsea_data()$padj_matrix
     
-    # Create significance markers
-    sig_markers <- ifelse(padj_mat < 0.05, "*", "")
+    # Truncate pathway names if needed
+    original_names <- rownames(nes_mat)
+    if (!is.null(input$pathway_name_length) && input$pathway_name_length > 0) {
+      display_names <- ifelse(
+        nchar(original_names) > input$pathway_name_length,
+        paste0(substr(original_names, 1, input$pathway_name_length), "..."),
+        original_names
+      )
+      rownames(nes_mat) <- display_names
+      rownames(padj_mat) <- display_names
+    }
     
-    # Create custom color palette
-    my_colors <- colorRampPalette(c("#009ad1", "#fefbea", "#AD1457"))(100)
+    # Create significance markers as text matrix
+    sig_text <- matrix("", nrow = nrow(padj_mat), ncol = ncol(padj_mat))
+    sig_text[padj_mat < 0.05] <- "*"
     
-    pheatmap::pheatmap(
-      nes_mat,
-      color = my_colors,
-      breaks = seq(-3, 3, length.out = 101),
-      cluster_cols = FALSE,
-      cluster_rows = FALSE,
-      fontsize_row = 10,
-      fontsize_col = 12,
-      main = paste0("GSEA: ", input$compare_gs_collection, 
-                    if (nzchar(input$compare_gs_subcollection)) paste0(" - ", input$compare_gs_subcollection) else "",
-                    " (FDR < 0.05)"),
-      border_color = "grey60",
-      display_numbers = sig_markers,
-      number_color = "black",
-      fontsize_number = 14
+    # Create color function
+    col_fun <- circlize::colorRamp2(
+      c(-3, 0, 3),
+      c("#009ad1", "#fefbea", "#AD1457")
     )
+    
+    # Calculate dynamic font size based on number of pathways
+    n_pathways <- nrow(nes_mat)
+    row_fontsize <- max(8, min(12, 400 / n_pathways))
+    
+    # Calculate column width based on number of contrasts
+    n_contrasts <- ncol(nes_mat)
+    col_width <- unit(15 / n_contrasts, "cm")  # Total 15cm divided among contrasts
+    
+    # Create heatmap
+    ht <- Heatmap(
+      nes_mat,
+      name = "NES",
+      col = col_fun,
+      
+      # Column width control
+      width = unit(15, "cm"),
+      column_gap = unit(2, "mm"),
+      
+      # Clustering
+      cluster_rows = FALSE,
+      cluster_columns = FALSE,
+      show_row_dend = FALSE,
+      show_column_dend = FALSE,
+      
+      # Labels
+      row_names_side = "left",
+      row_names_gp = grid::gpar(fontsize = row_fontsize),
+      row_names_max_width = unit(12, "cm"),
+      column_names_gp = grid::gpar(fontsize = 11),
+      column_names_rot = 45,
+      column_names_centered = FALSE,
+      
+      # Cell annotations for significance
+      cell_fun = function(j, i, x, y, width, height, fill) {
+        if (sig_text[i, j] == "*") {
+          grid::grid.text("*", x, y, gp = grid::gpar(fontsize = 14, col = "black"))
+        }
+      },
+      
+      # Legend
+      heatmap_legend_param = list(
+        title = "NES",
+        direction = "vertical",
+        title_position = "topcenter",
+        legend_height = unit(4, "cm")
+      ),
+      
+      # Borders
+      border = TRUE,
+      rect_gp = grid::gpar(col = "grey60", lwd = 0.5),
+      
+      # Title
+      column_title = paste0("GSEA: ", input$compare_gs_collection, 
+                            if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) 
+                              paste0(" - ", input$compare_gs_subcollection) else "",
+                            " (FDR < 0.05)"),
+      column_title_gp = grid::gpar(fontsize = 14, fontface = "bold")
+    )
+    
+    draw(ht, heatmap_legend_side = "right")
   })
-  
   #==============================
   # Output: GSEA Comparison Table
   #==============================
@@ -580,7 +653,7 @@ compare_contrast_server <- function(input, output, session, state) {
       df <- leading_edge_data()$leading_edge_matrix %>%
         as.data.frame() %>%
         rownames_to_column("gene") %>%
-        mutate(across(-gene, ~ ifelse(. == 1, "✓", "")))
+        mutate(across(-gene, ~ ifelse(. == 1, "TRUE", "FALSE")))
       
       datatable(
         df,

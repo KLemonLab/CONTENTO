@@ -23,6 +23,8 @@ library(ggiraph)
 library(fgsea)
 library(msigdbr)
 library(pheatmap)
+library(circlize)
+
 
 # Source helper server modules
 source("R/load_files_server.R")
@@ -79,7 +81,7 @@ ui <- dashboardPage(
               # --- Second row: three main app sections ---
               fluidRow(
                 box(title = tagList(icon("chart-line"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
-                    p("Select a contrast to explore its results and adjust fold-change cutoff for both table and plots. Controls also allow adjusting number of top genes and colors for the heatmap."),
+                    p("Select a contrast to explore its results and adjust fold-change cutoff for both table and plots. Controls also allow adjusting number of top genes and colors for the heat as well as gene set collections for enrichment analyses."),
                     tags$ul(
                       tags$li(strong("Selected Genes:"), " Table of differential expression results. You can save a .csv file with the filtered results."),
                       tags$li(strong("Volcano Plot:"), " Interactive plot of significance vs. fold-change. The log2 fold-changes are shrinked to stabilize variance across genes."),
@@ -123,7 +125,12 @@ ui <- dashboardPage(
                     selectInput("gs_collection", "Gene Set (GSEA/GESECA)",
                                 choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
                     conditionalPanel(condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
-                                     textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME"))
+                                     textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
+                    tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
+                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp", 
+                                    target = "_blank", 
+                                    icon("external-link-alt"), 
+                                    "MSigDB"))
                 ),
                 
                 box(title = "Explore Results by Contrast", width = 9, status = "primary", collapsible = TRUE,
@@ -141,7 +148,14 @@ ui <- dashboardPage(
                     selectInput("compare_gs_collection", "Gene Set (GSEA/GESECA)",
                                 choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
                     conditionalPanel(condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
-                                     textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME"))
+                                     textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
+                    tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
+                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp", 
+                                    target = "_blank", 
+                                    icon("external-link-alt"), 
+                                    "MSigDB")),
+                    numericInput("max_pathways", "Max pathways to show", value = 100, min = 10, max = 500, step = 10),
+                    numericInput("pathway_name_length", "Max pathway name length", value = 50, min = 25, max = 500, step = 10)
                 ),
                 
                 box(title = "Compare Contrast Results", width = 9, status = "primary", collapsible = TRUE,
