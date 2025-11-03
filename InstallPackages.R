@@ -7,7 +7,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE)) {
 cran_packages <- c(
   "shiny", "shinydashboard", "shinycssloaders", "DT", "plotly", 
   "tidyverse", "purrr", "viridis", "RColorBrewer", 
-  "scales", "tools", "grid", "ggiraph"
+  "scales", "tools", "grid", "ggiraph", "fgsea", "msigdbr", "pheatmap", "circlize"
 )
 
 # Install missing CRAN packages
