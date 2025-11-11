@@ -143,22 +143,31 @@ compare_contrast_server <- function(input, output, session, state) {
       ) %>%
       select(Geneid, symbol, contrast, log2FC)
     
-    # Keep only genes that appear in all selected contrasts
-    genes_in_all <- filtered %>%
-      group_by(Geneid) %>%
-      summarize(n_contrasts = n_distinct(contrast), .groups = "drop") %>%
-      filter(n_contrasts == length(input$compare_contrasts)) %>%
-      pull(Geneid)
-    
-    # Filter again and pivot to wide format
-    filtered %>%
-      filter(Geneid %in% genes_in_all) %>%
+    # Pivot to wide format
+    wide_data <- filtered %>%
       pivot_wider(
         id_cols = c(Geneid, symbol),  
         names_from = contrast,
         values_from = log2FC
       ) %>%
-      mutate(across(-c(Geneid, symbol), ~ round(., 2))) %>%
+      mutate(across(-c(Geneid, symbol), ~ round(., 2)))
+    
+    # Get contrast column names
+    contrast_cols <- setdiff(names(wide_data), c("Geneid", "symbol"))
+    
+    # Add TRUE/FALSE indicator columns for each contrast
+    for(col in contrast_cols) {
+      wide_data[[paste0(col, "_DE")]] <- !is.na(wide_data[[col]])
+    }
+    
+    # Arrange and reorder columns to group each contrast with its indicator
+    col_order <- c("Geneid", "symbol")
+    for(col in contrast_cols) {
+      col_order <- c(col_order, col, paste0(col, "_DE"))
+    }
+    
+    wide_data %>%
+      select(all_of(col_order)) %>%
       arrange(Geneid)
   })
   
@@ -409,6 +418,7 @@ compare_contrast_server <- function(input, output, session, state) {
       datatable(
         df,
         extensions = 'Buttons',
+        filter = 'top',
         options = list(
           pageLength = 20,
           scrollX = TRUE,
@@ -637,7 +647,7 @@ compare_contrast_server <- function(input, output, session, state) {
   #==============================
   output$leadingEdgeTable <- renderDT(
     {
-      req(leading_edge_data())
+      req(leading_edge_data(), state$de_df())
       
       # Prepare file name
       file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
@@ -649,11 +659,18 @@ compare_contrast_server <- function(input, output, session, state) {
       pathway_str <- gsub("[^A-Za-z0-9._-]+", "__", input$selected_pathway_compare)
       file_name <- paste(file_base, pathway_str, "LeadingEdge", sep = "__")
       
-      # Create display table with presence markers
+      # Get gene symbols from DE results
+      gene_symbols <- state$de_df() %>%
+        select(Geneid, symbol) %>%
+        distinct()
+      
+      # Create display table with presence markers and symbols
       df <- leading_edge_data()$leading_edge_matrix %>%
         as.data.frame() %>%
         rownames_to_column("gene") %>%
-        mutate(across(-gene, ~ ifelse(. == 1, "TRUE", "FALSE")))
+        left_join(gene_symbols, by = c("gene" = "Geneid")) %>%
+        select(gene, symbol, everything()) %>%
+        mutate(across(-c(gene, symbol), ~ ifelse(. == 1, "TRUE", "FALSE")))
       
       datatable(
         df,
