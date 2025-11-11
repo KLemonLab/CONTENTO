@@ -102,7 +102,7 @@ explore_contrast_server <- function(input, output, session, state) {
     req(geseca_result())
     
     pathways <- geseca_result()$gesecaRes %>%
-      filter(padj < 0.05) %>%
+      #filter(padj < 0.05) %>%
       arrange(padj) %>%
       pull(pathway)
     
@@ -595,7 +595,7 @@ explore_contrast_server <- function(input, output, session, state) {
       conditions <- colData(state$dds_obj())[[group_variable]]
       
       # Create co-regulation plot
-      plotCoregulationProfile(pathway_genes, geseca_result()$vst_matrix, conditions = conditions) +
+      plotCoregulationProfile(pathway_genes, geseca_result()$vst_matrix, conditions = conditions, scale = TRUE) +
         labs(title = input$selected_pathway_geseca) +
         theme_minimal() +
         theme(plot.title = element_text(size = 10),
