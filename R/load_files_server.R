@@ -3,7 +3,7 @@ load_files_server <- function(input, output, session, state) {
   # Required columns
   required_cols_bacteria <- c("contrast", "Geneid", "symbol", "padj",
                               "log2FoldChange", "log2FoldChange_shrunk", 
-                              "start", "end", "strand")
+                              "start", "end", "strand", "biotype")
   required_cols_human <- c("contrast", "Geneid", "symbol", "padj",
                            "log2FoldChange", "log2FoldChange_shrunk")
   
