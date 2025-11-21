@@ -170,7 +170,6 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     textInput("gene_select", "Enter Gene ID", placeholder = "e.g., ENSG00000141510"),
-                    tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
                     selectInput("shape_col", "Shape", choices = NULL),

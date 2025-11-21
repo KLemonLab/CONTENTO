@@ -49,7 +49,9 @@ explore_gene_server <- function(input, output, session, state) {
   output$geneSubTabs <- renderUI({
     tabs <- list(
       tabPanel("Gene Info", DTOutput("geneDetails")),
-      tabPanel("Expression Plot", plotOutput("genePlot", height = "600px")),
+      tabPanel("Expression Plot", 
+               tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
+               plotOutput("genePlot", height = "600px")),
       tabPanel("Gene Table", DTOutput("geneContrasts"))
     )
     
