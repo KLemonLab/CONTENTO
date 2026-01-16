@@ -172,6 +172,26 @@ compare_contrast_server <- function(input, output, session, state) {
   })
   
   #==============================
+  # Reactive: Export table with full annotations for Compare
+  #==============================
+  compare_table_export <- reactive({
+    req(compare_table_data(), state$annotation_df())
+    
+    # Get the display table
+    display_data <- compare_table_data()
+    
+    # Merge with full annotations
+    display_data %>%
+      select(Geneid) %>%
+      distinct() %>%
+      left_join(
+        display_data %>% select(-any_of("symbol")),
+        by = "Geneid"
+      ) %>%
+      left_join(state$annotation_df(), by = "Geneid")
+  })
+  
+  #==============================
   # Reactive: GSEA Results for Multiple Contrasts
   #==============================
   compare_gsea_data <- reactive({
@@ -443,6 +463,91 @@ compare_contrast_server <- function(input, output, session, state) {
         )
     },
     server = FALSE
+  )
+  
+  #==============================
+  # Output: DEGs Comparison Table
+  #==============================
+  output$compareTable <- renderDT(
+    {
+      req(compare_table_data())
+      
+      # Display table (simplified)
+      df_display <- compare_table_data()
+      lfc_cols <- setdiff(colnames(df_display), c("Geneid", "symbol"))
+      
+      datatable(
+        df_display,
+        extensions = 'Buttons',
+        filter = 'top',
+        options = list(
+          pageLength = 20,
+          scrollX = TRUE,
+          dom = 'Bfrtip',
+          buttons = list(
+            list(
+              extend = 'csv',
+              text = 'Download Filtered (Simple)',
+              exportOptions = list(modifier = list(page = "all"))
+            )
+          )
+        ),
+        rownames = FALSE
+      ) %>%
+        formatStyle(
+          columns = lfc_cols,
+          backgroundColor = styleInterval(
+            0,
+            c("pink", "lightblue")
+          )
+        )
+    },
+    server = FALSE
+  )
+  
+  #==============================
+  # Download Handler: Full annotations with user's filter
+  #==============================
+  output$downloadCompareTableFull <- downloadHandler(
+    filename = function() {
+      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
+        file_path_sans_ext(basename(input$deFile$name))
+      } else {
+        "contrasts"
+      }
+      
+      contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
+        paste(input$compare_contrasts, collapse = "-")
+      } else {
+        "contrasts"
+      }
+      contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
+      
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
+      
+      paste(file_base, contrasts_str, fc_str, "full.csv", sep = "__")
+    },
+    content = function(file) {
+      req(input$compareTable_rows_all)
+      
+      # Get full export data
+      full_data <- compare_table_export()
+      
+      # Get filtered row indices from DT
+      filtered_indices <- input$compareTable_rows_all
+      
+      # Get the display data to match filtering
+      display_data <- compare_table_data()
+      
+      # Extract Geneids from filtered rows
+      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
+      
+      # Filter full data to match user's selection
+      filtered_full <- full_data %>%
+        filter(Geneid %in% filtered_geneids)
+      
+      write.csv(filtered_full, file, row.names = FALSE)
+    }
   )
   
   #==============================

@@ -56,6 +56,18 @@ load_files_server <- function(input, output, session, state) {
     }
     
     state$de_df(df)
+    
+    # Create annotation dataframe
+    deseq_cols <- c("contrast", "baseMean", "log2FC", "lfcSE", "stat", 
+                    "pvalue", "padj", "log2FC_shrunk", "sign", "DE", "regulated")
+    
+    annotation_cols <- setdiff(names(df), deseq_cols)
+    
+    annotation_df <- df %>%
+      select(all_of(annotation_cols)) %>%
+      distinct()
+    
+    state$annotation_df(annotation_df)
   })
   
   # VarPart (.rds)

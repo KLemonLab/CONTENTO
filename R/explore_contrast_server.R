@@ -130,7 +130,7 @@ explore_contrast_server <- function(input, output, session, state) {
   })
   
   #==============================
-  # Reactive: Filtered and annotated DE data
+  # Reactive: Filtered DE data
   #==============================
   selected_data <- reactive({
     req(state$de_df(), input$contrast, input$fc_cutoff)
@@ -155,6 +155,24 @@ explore_contrast_server <- function(input, output, session, state) {
       showNotification(paste("Error filtering data:", e$message), type = "error")
       NULL
     })
+  })
+  
+  #==============================
+  # Reactive: Export table with full annotations for single contrast
+  #==============================
+  selected_data_export <- reactive({
+    req(selected_data(), state$annotation_df())
+    
+    # Get DE genes with their stats
+    de_data <- selected_data() %>%
+      filter(DE) %>%
+      select(Geneid, log2FC, log2FC_shrunk, padj, regulated) %>%
+      arrange(desc(abs(log2FC)))
+    
+    # Merge with full annotations
+    de_data %>%
+      left_join(state$annotation_df(), by = "Geneid") %>%
+      select(Geneid, symbol, everything())
   })
   
   #==============================
@@ -351,6 +369,51 @@ explore_contrast_server <- function(input, output, session, state) {
       )
     },
     server = FALSE   
+  )
+  
+  #==============================
+  # Download Handler: Full annotations with user's filter
+  #==============================
+  output$downloadDETableFull <- downloadHandler(
+    filename = function() {
+      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
+        file_path_sans_ext(basename(input$deFile$name))
+      } else {
+        "contrasts"
+      }
+      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
+      
+      paste(file_base, contrast_str, fc_str, "full.csv", sep = "__")
+    },
+    content = function(file) {
+      req(input$DETable_rows_all)
+      
+      # Get full export data
+      full_data <- selected_data_export() %>%
+        mutate(
+          across(c(log2FC, log2FC_shrunk), ~ round(.x, 2)),
+          padj = formatC(padj, format = "e", digits = 2)
+        )
+      
+      # Get filtered row indices from DT
+      filtered_indices <- input$DETable_rows_all
+      
+      # Get the display data to extract Geneids
+      display_data <- selected_data() %>%
+        filter(DE) %>%
+        arrange(desc(abs(log2FC)))
+      
+      # Extract Geneids from filtered rows
+      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
+      
+      # Filter full data to match user's selection
+      filtered_full <- full_data %>%
+        filter(Geneid %in% filtered_geneids)
+      
+      write.csv(filtered_full, file, row.names = FALSE)
+    }
   )
   
   #==============================

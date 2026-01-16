@@ -134,7 +134,13 @@ ui <- dashboardPage(
                 ),
                 
                 box(title = "Explore Results by Contrast", width = 9, status = "primary", collapsible = TRUE,
-                    uiOutput("contrastSubTabs")
+                    uiOutput("contrastSubTabs"),
+                    hr(),
+                    tags$div(style = "text-align: center;",
+                             downloadButton("downloadDETableFull", 
+                                            "Download Filtered DE Genes (Full Annotations)", 
+                                            class = "btn-primary")
+                    )
                 )
               )
       ),
@@ -159,7 +165,13 @@ ui <- dashboardPage(
                 ),
                 
                 box(title = "Compare Contrast Results", width = 9, status = "primary", collapsible = TRUE,
-                    uiOutput("compareSubTabs")
+                    uiOutput("compareSubTabs"),
+                    hr(),
+                    tags$div(style = "text-align: center;",
+                             downloadButton("downloadCompareTableFull", 
+                                            "Download Filtered DEGs (Full Annotations)", 
+                                            class = "btn-primary")
+                    )
                 )
               )
               
@@ -198,7 +210,8 @@ server <- function(input, output, session) {
   state <- list(
     dds_obj = reactiveVal(NULL),
     de_df = reactiveVal(NULL),
-    varpart_obj = reactiveVal(NULL)
+    varpart_obj = reactiveVal(NULL),
+    annotation_df = reactiveVal(NULL)
   )
   
   # Wire helpers
