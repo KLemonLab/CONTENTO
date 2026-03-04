@@ -176,66 +176,70 @@ load_files_server <- function(input, output, session, state) {
       NULL
     }
 
-    if (is.null(annotation)) {
-      state$de_df(de_df)
-      output$annotationStatus <- renderUI({
+    # Track annotation status for UI rendering after de_df is set.
+    annot_status  <- "none"
+    annot_message <- NULL
+
+    if (!is.null(annotation)) {
+      # Try to load built-in annotation.
+      annot_path <- find_annotation_path(annotation)
+
+      if (!is.null(annot_path)) {
+        annot <- tryCatch(
+          readRDS(annot_path),
+          error = function(e) {
+            showNotification(paste("Annotation load error:", e$message),
+                             type = "error")
+            NULL
+          }
+        )
+        if (!is.null(annot)) {
+          de_df         <- merge_annotation(de_df, annot)
+          annot_status  <- "loaded"
+          annot_message <- paste("Annotation loaded:", basename(annot_path))
+        }
+      } else {
+        annot_status  <- "not_found"
+        annot_message <- paste("No built-in annotation found for:", annotation)
+      }
+    }
+
+    # Set de_df exactly once, after all annotation logic is complete.
+    state$de_df(de_df)
+
+    info_panel <- tags$div(
+      style = "padding-left: 15px; margin-bottom: 8px;",
+      tags$p(style = "color: steelblue; margin: 0;",
+             icon("info-circle"), strong("SE loaded")),
+      se_info_ui(se, organism = organism, annotation = annotation)
+    )
+
+    output$annotationStatus <- renderUI({
+      if (annot_status == "loaded") {
         tagList(
-          tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
-                   tags$p(style = "color: steelblue; margin: 0;",
-                          icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se, organism = organism)),
+          info_panel,
+          tags$p(icon("check-circle"), annot_message,
+                 style = "color: green; padding-left: 15px; margin: 2px 0;")
+        )
+      } else if (annot_status == "not_found") {
+        tagList(
+          info_panel,
+          tags$p(icon("exclamation-triangle"),
+                 HTML(paste0(annot_message, ". Upload an annotation file or fix the annotation name in your SE object metadata.")),
+                 style = "color: orange; padding-left: 15px;"),
+          fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
+        )
+      } else {
+        # annot_status == "none": no annotation in SE metadata
+        tagList(
+          info_panel,
           tags$p(icon("exclamation-triangle"),
                  HTML("Annotation not found in SE metadata. Upload an annotation file or add the annotation to your SE object metadata."),
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
-      })
-      return(NULL)
-    }
-
-    # Try to load built-in annotation.
-    annot_path <- find_annotation_path(annotation)
-
-    if (!is.null(annot_path)) {
-      annot <- tryCatch(
-        readRDS(annot_path),
-        error = function(e) {
-          showNotification(paste("Annotation load error:", e$message),
-                           type = "error")
-          NULL
-        }
-      )
-      if (!is.null(annot)) {
-        de_df <- merge_annotation(de_df, annot)
       }
-      state$de_df(de_df)
-      output$annotationStatus <- renderUI({
-        tagList(
-          tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
-                   tags$p(style = "color: steelblue; margin: 0;",
-                          icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se, organism = organism, annotation = annotation)),
-          tags$p(icon("check-circle"),
-                 paste("Annotation loaded:", basename(annot_path)),
-                 style = "color: green; padding-left: 15px; margin: 2px 0;")
-        )
-      })
-    } else {
-      # No built-in annotation found -- show upload UI.
-      state$de_df(de_df)
-      output$annotationStatus <- renderUI({
-        tagList(
-          tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
-                   tags$p(style = "color: steelblue; margin: 0;",
-                          icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se, organism = organism, annotation = annotation)),
-          tags$p(icon("exclamation-triangle"),
-                 paste("No built-in annotation found for:", annotation, ". Upload an annotation file or fix the annotation name in your SE object metadata"),
-                 style = "color: orange; padding-left: 15px;"),
-          fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
-        )
-      })
-    }
+    })
   })
 
   # ---- Custom annotation upload -----------------------------------------------
