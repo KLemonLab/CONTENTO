@@ -6,13 +6,13 @@ load_files_server <- function(input, output, session, state) {
   find_annotation_path <- function(annotation) {
     # Try installed-package path first.
     path <- system.file("annotations",
-                        paste0(annotation, "_annot.rds"),
+                        paste0(annotation, ".rds"),
                         package = "RNASeqApp")
     if (nchar(path) > 0) return(path)
 
     # Fall back to relative path when running the app directly from source.
     local_path <- file.path("inst", "annotations",
-                            paste0(annotation, "_annot.rds"))
+                            paste0(annotation, ".rds"))
     if (file.exists(local_path)) return(local_path)
 
     return(NULL)
