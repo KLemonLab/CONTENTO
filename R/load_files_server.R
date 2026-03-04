@@ -130,7 +130,7 @@ load_files_server <- function(input, output, session, state) {
 
     # Determine organism: prefer SE metadata, fall back to text input.
     se_organism <- tryCatch(
-      SummarizedExperiment::metadata(se)$organism,
+      metadata(se)$organism,
       error = function(e) NULL
     )
     organism <- if (!is.null(se_organism) && nzchar(trimws(se_organism))) {

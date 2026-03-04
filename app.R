@@ -24,6 +24,7 @@ library(fgsea)
 library(msigdbr)
 library(pheatmap)
 library(circlize)
+library(SummarizedExperiment)
 
 
 # Source helper server modules
@@ -49,15 +50,12 @@ ui <- dashboardPage(
       menuItem("Explore by Gene", tabName = "gene", icon = icon("dna"))
     ),
     hr(),
-    h4("Select Organism", style = "padding-left: 20px;"),
-    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Human"),
-    hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
     textInput("organism_name", "Organism Name:",
               placeholder = "e.g., Human, Sau_KPL4403"),
     fileInput("seFile", "SummarizedExperiment (.rds)",
               accept = ".rds",
-              placeholder = "SE object with counts + contrasts"),
+              placeholder = "SE object"),
     uiOutput("annotationStatus")
   ),
   
