@@ -24,6 +24,7 @@ library(fgsea)
 library(msigdbr)
 library(pheatmap)
 library(circlize)
+library(SummarizedExperiment)
 
 
 # Source helper server modules
@@ -49,13 +50,15 @@ ui <- dashboardPage(
       menuItem("Explore by Gene", tabName = "gene", icon = icon("dna"))
     ),
     hr(),
-    h4("Select Organism", style = "padding-left: 20px;"),
-    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Human"),
-    hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
-    fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "dds object"),
-    fileInput("deFile", "Contrasts", accept = ".rds", placeholder = "Contrast object"),
-    fileInput("varPartFile", "VarPart", accept = ".rds", placeholder = "Optional VarPart")
+    fileInput("seFile", "Summarized Experiment",
+              accept = ".rds",
+              placeholder = "SE object (.rds)"),
+    uiOutput("annotationStatus"),
+    hr(),
+    h4("DE Cutoffs", style = "padding-left: 20px;"),
+    sliderInput("global_log2FC_cutoff", "log2FC cutoff", min = 0, max = 8, value = 2, step = 0.5),
+    numericInput("global_padj_cutoff", "FDR cutoff", value = 0.05, min = 0, max = 1, step = 0.01)
   ),
   
   dashboardBody(
@@ -68,12 +71,10 @@ ui <- dashboardPage(
               # --- First box: Required Inputs ---
               fluidRow(
                 box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12, status = "info", solidHeader = TRUE,
-                    tags$h4("Required Inputs (Upload .rds files on the left sidebar):"),
+                    tags$h4("Required Inputs (Upload on the left sidebar):"),
                     tags$ul(
-                      tags$li(strong("Organism type :"), " Select based on the RNASeq reads analyzed by DESeq2."),
-                      tags$li(strong("DESeq2 file:"), " Contains the DESeqDataSet object with count data and metadata."),
-                      tags$li(strong("Contrasts file:"), " Contains results for one or more contrasts from the DESeq2 analysis."),
-                      tags$li(strong("VarPart file:"), " Optional — contains variance partition analysis results.")
+                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
+                      tags$li(strong("Annotation:"), " Automatically loaded from your annotations folder to match the metadata in your SE object. Upload if needed.")
                     )
                 )
               ),
@@ -118,7 +119,6 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("contrastSelect"),
-                    sliderInput("fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     numericInput("top_n", "Top DE genes (Heatmap)", value = 25, min = 15, step = 5),
                     selectInput("viridis_palette", "Color palette (Heatmap)",
                                 choices = c("viridis", "magma", "plasma", "inferno", "cividis"), selected = "viridis"),
@@ -149,7 +149,6 @@ ui <- dashboardPage(
       tabItem(tabName = "compare",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    sliderInput("compare_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("multiContrastSelect"),
                     selectInput("compare_gs_collection", "Gene Set (GSEA/GESECA)",
                                 choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
@@ -185,7 +184,6 @@ ui <- dashboardPage(
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
                     selectInput("shape_col", "Shape", choices = NULL),
-                    sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("contrastSelectGene"),
                     numericInput("neigh_window", "Neighbourhood window (nt)", value = 10000, step = 100, min = 0)
                 ),
@@ -211,14 +209,33 @@ server <- function(input, output, session) {
     dds_obj = reactiveVal(NULL),
     de_df = reactiveVal(NULL),
     varpart_obj = reactiveVal(NULL),
-    annotation_df = reactiveVal(NULL)
+    annotation_df = reactiveVal(NULL),
+    # Pending annotation data for interactive column selection
+    pending_annotation = reactiveVal(NULL),
+    pending_de_df = reactiveVal(NULL),
+    se_organism = reactiveVal(NULL),
+    filtered_de_df = reactive({ NULL })
   )
+  
+  # Reactive organism type from SE metadata
+  organism <- reactive({
+    req(state$dds_obj())
+    meta_organism <- tryCatch(
+      metadata(state$dds_obj())$organism,
+      error = function(e) NULL
+    )
+    if (!is.null(meta_organism) && nzchar(trimws(meta_organism))) {
+      meta_organism
+    } else {
+      NULL
+    }
+  })
   
   # Wire helpers
   load_files_server(input, output, session, state)
-  explore_contrast_server(input, output, session, state)
-  compare_contrast_server(input, output, session, state)
-  explore_gene_server(input, output, session, state)
+  explore_contrast_server(input, output, session, state, organism)
+  compare_contrast_server(input, output, session, state, organism)
+  explore_gene_server(input, output, session, state, organism)
 }
 
 # ==========================

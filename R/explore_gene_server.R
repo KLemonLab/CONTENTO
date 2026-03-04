@@ -1,4 +1,4 @@
-explore_gene_server <- function(input, output, session, state) {
+explore_gene_server <- function(input, output, session, state, organism) {
   
   #==============================
   # UI: Update gene plot selectInputs when DDS loaded
@@ -13,16 +13,27 @@ explore_gene_server <- function(input, output, session, state) {
   })
   
   #==============================
-  # Reactive: Filter gene data and calculate DE based on FC cutoff
+  # Reactive: Filter gene data and calculate DE based on global cutoffs
   #==============================
   selected_gene_data <- reactive({
-    req(input$gene_select, state$de_df(), input$gene_fc_cutoff)
+    req(input$gene_select, state$de_df())
     
-    state$de_df() %>%
-      subset(Geneid == input$gene_select) %>%
-      transform(
-        regulated = ifelse(padj < 0.05 & log2FC >  input$gene_fc_cutoff, "up",
-                           ifelse(padj < 0.05 & log2FC < -input$gene_fc_cutoff, "down", NA)),
+    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
+    
+    df <- state$de_df() %>%
+      filter(Geneid == input$gene_select)
+    
+    if (!"log2FC" %in% colnames(df)) df$log2FC <- NA_real_
+    if (!"padj"   %in% colnames(df)) df$padj   <- NA_real_
+    
+    df %>%
+      mutate(
+        regulated = case_when(
+          !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
+          !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
+          TRUE ~ NA_character_
+        ),
         DE = !is.na(regulated)
       )
   })
@@ -32,12 +43,13 @@ explore_gene_server <- function(input, output, session, state) {
   #==============================
   output$geneSymbol <- renderText({
     req(input$gene_select, state$de_df())
+    if (!"symbol" %in% colnames(state$de_df())) return(paste("Gene:", input$gene_select))
     gene_symbol <- state$de_df() %>%
       filter(Geneid == input$gene_select) %>%
       pull(symbol) %>%
       unique()
-    if (length(gene_symbol) > 0 && !is.na(gene_symbol)) {
-      paste("Gene:", gene_symbol)
+    if (length(gene_symbol) > 0 && !all(is.na(gene_symbol))) {
+      paste("Gene:", gene_symbol[!is.na(gene_symbol)][1])
     } else {
       "Gene name: not found"
     }
@@ -59,7 +71,7 @@ explore_gene_server <- function(input, output, session, state) {
       tabs <- append(tabs, list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px"))))
     }
     
-    if (input$organism == "Bacteria") {
+    if (!is.null(organism()) && organism() == "Bacteria") {
       tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", girafeOutput("neighbourhoodPlot", height = "600px"))))
     }
     
@@ -72,9 +84,13 @@ explore_gene_server <- function(input, output, session, state) {
   output$geneDetails <- renderDT({
     req(selected_gene_data())
     
+    # Select annotation columns defensively
+    annot_cols <- intersect(c("symbol", "biotype", "description", "gene_biotype", "gene"),
+                            colnames(selected_gene_data()))
+    if (length(annot_cols) == 0) annot_cols <- "Geneid"
+    
     gene_table <- selected_gene_data() %>%
-      select(match("biotype", names(.)):match("symbol", names(.))) %>%
-      select(symbol, everything()) %>%
+      select(all_of(annot_cols)) %>%
       distinct()
     
     # Transpose and convert to data frame
@@ -138,22 +154,30 @@ explore_gene_server <- function(input, output, session, state) {
   output$geneContrasts <- renderDT({
     req(selected_gene_data())
     
+    display_cols <- intersect(c("contrast", "log2FC", "log2FC_shrunk", "padj", "DE", "regulated"),
+                              colnames(selected_gene_data()))
+    
     gene_contrasts <- selected_gene_data() %>%
-      mutate(across(c(log2FC, log2FC_shrunk), ~ round(.x, 2))) %>%
+      mutate(across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2))) %>%
       mutate(padj = formatC(padj, format = "e", digits = 2)) %>%
       arrange(desc(abs(log2FC))) %>%
-      select(contrast, log2FC, log2FC_shrunk, padj, sign, DE, regulated)
+      select(all_of(display_cols))
     
-    datatable(
+    dt <- datatable(
       gene_contrasts,
       options = list(dom = 't', ordering = TRUE, pageLength = nrow(gene_contrasts)),
       rownames = FALSE
-    ) %>%
-      formatStyle(
-        'regulated',
-        target = 'row',
-        backgroundColor = DT::styleEqual(c("up", "down"), c("lightblue", "pink"))
-      )
+    )
+    
+    if ("regulated" %in% colnames(gene_contrasts)) {
+      dt <- dt %>%
+        formatStyle(
+          'regulated',
+          target = 'row',
+          backgroundColor = DT::styleEqual(c("up", "down"), c("lightblue", "pink"))
+        )
+    }
+    dt
   })
   
   #==============================
