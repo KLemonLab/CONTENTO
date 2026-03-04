@@ -54,7 +54,11 @@ ui <- dashboardPage(
     fileInput("seFile", "Summarized Experiment",
               accept = ".rds",
               placeholder = "SE object (.rds)"),
-    uiOutput("annotationStatus")
+    uiOutput("annotationStatus"),
+    hr(),
+    h4("DE Cutoffs", style = "padding-left: 20px;"),
+    sliderInput("global_log2FC_cutoff", "log2FC cutoff", min = 0, max = 8, value = 2, step = 0.5),
+    numericInput("global_padj_cutoff", "FDR cutoff", value = 0.05, min = 0, max = 1, step = 0.01)
   ),
   
   dashboardBody(
@@ -115,7 +119,6 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("contrastSelect"),
-                    sliderInput("fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     numericInput("top_n", "Top DE genes (Heatmap)", value = 25, min = 15, step = 5),
                     selectInput("viridis_palette", "Color palette (Heatmap)",
                                 choices = c("viridis", "magma", "plasma", "inferno", "cividis"), selected = "viridis"),
@@ -146,7 +149,6 @@ ui <- dashboardPage(
       tabItem(tabName = "compare",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    sliderInput("compare_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("multiContrastSelect"),
                     selectInput("compare_gs_collection", "Gene Set (GSEA/GESECA)",
                                 choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
@@ -182,7 +184,6 @@ ui <- dashboardPage(
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
                     selectInput("shape_col", "Shape", choices = NULL),
-                    sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("contrastSelectGene"),
                     numericInput("neigh_window", "Neighbourhood window (nt)", value = 10000, step = 100, min = 0)
                 ),
@@ -212,7 +213,8 @@ server <- function(input, output, session) {
     # Pending annotation data for interactive column selection
     pending_annotation = reactiveVal(NULL),
     pending_de_df = reactiveVal(NULL),
-    se_organism = reactiveVal(NULL)
+    se_organism = reactiveVal(NULL),
+    filtered_de_df = reactive({ NULL })
   )
   
   # Reactive organism type from SE metadata
