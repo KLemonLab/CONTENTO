@@ -3,10 +3,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   #==============================
   # UI: Contrast selection
   #==============================
+  # Stable contrast selector: render the container and a checkboxGroupInput with empty choices (will be updated below)
   output$multiContrastSelect <- renderUI({
-    req(state$de_df())
-    contrast_choices <- unique(state$de_df()$contrast)
-    
     tagList(
       div(
         style = "display: flex; align-items: center; gap: 10px;",
@@ -14,13 +12,25 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         actionLink("select_all_contrasts", "Select All"),
         actionLink("clear_all_contrasts", "Clear All")
       ),
-      checkboxGroupInput(
-        inputId = "compare_contrasts",
-        label = NULL,
-        choices = contrast_choices,
-        selected = NULL 
-      )
+      # Create the input once with no choices; updateCheckboxGroupInput will populate it
+      checkboxGroupInput("compare_contrasts", label = NULL, choices = character(0), selected = character(0))
     )
+  })
+  
+  # Keep the checkbox element stable and update choices when contrasts change
+  observeEvent(state$de_df(), {
+    req(state$de_df())
+    choices <- unique(state$de_df()$contrast)
+    
+    # Keep current selection if still valid, otherwise default to selecting all contrasts
+    current <- isolate(input$compare_contrasts)
+    new_selected <- if (!is.null(current) && length(intersect(current, choices)) > 0) {
+      intersect(current, choices)
+    } else {
+      choices
+    }
+    
+    updateCheckboxGroupInput(session, "compare_contrasts", choices = choices, selected = new_selected)
   })
   
   #==============================
@@ -128,7 +138,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # Reactive: Table of DEGs in all selected contrasts
   #==============================
   compare_table_data <- reactive({
-    req(state$filtered_de_df(), input$compare_contrasts)
+    req(state$filtered_de_df())
+    if (is.null(input$compare_contrasts) || length(input$compare_contrasts) == 0) {
+      return(tibble())
+    }
     
     has_symbol <- "symbol" %in% colnames(state$filtered_de_df())
     
@@ -408,10 +421,22 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   #==============================
   output$compareTable <- renderDT(
     {
-      req(compare_table_data())
+      tbl <- tryCatch(compare_table_data(), error = function(e) {
+        showNotification(paste("Error building compare table:", e$message), type = "error")
+        return(NULL)
+      })
+      req(tbl)
+      
+      if (nrow(tbl) == 0) {
+        return(datatable(
+          data.frame(Message = "No data available for selected contrasts/cutoffs"),
+          options = list(dom = 't'),
+          rownames = FALSE
+        ))
+      }
       
       # Display table (simplified)
-      df_display <- compare_table_data()
+      df_display <- tbl
       id_cols    <- intersect(c("Geneid", "symbol"), colnames(df_display))
       lfc_cols   <- setdiff(colnames(df_display), id_cols)
       
