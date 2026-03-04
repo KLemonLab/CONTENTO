@@ -51,11 +51,9 @@ ui <- dashboardPage(
     ),
     hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
-    textInput("organism_name", "Organism Name:",
-              placeholder = "e.g., Human, Sau_KPL4403"),
     fileInput("seFile", "SummarizedExperiment (.rds)",
               accept = ".rds",
-              placeholder = "SE object"),
+              placeholder = "SE object with counts + contrasts"),
     uiOutput("annotationStatus")
   ),
   
@@ -72,8 +70,7 @@ ui <- dashboardPage(
                     tags$h4("Required Inputs (Upload .rds files on the left sidebar):"),
                     tags$ul(
                       tags$li(strong("Organism type:"), " Select Human or Bacteria based on analysis type."),
-                      tags$li(strong("Organism name:"), " Specific organism identifier (e.g., 'Human', 'Sau_KPL4403')."),
-                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
+                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data. Organism is read from ", code("metadata(se)$organism"), "."),
                       tags$li(strong("Annotation:"), " Automatically loaded for known organisms. Upload if needed for new organisms.")
                     )
                 )

@@ -71,7 +71,34 @@ load_files_server <- function(input, output, session, state) {
     dplyr::left_join(de_df, annot, by = "Geneid")
   }
 
-  # ---- SE file upload ---------------------------------------------------------
+  # Build an info panel from SE metadata and basic dimension info.
+  se_info_ui <- function(se) {
+    meta  <- tryCatch(SummarizedExperiment::metadata(se), error = function(e) list())
+    rd    <- as.data.frame(SummarizedExperiment::rowData(se))
+    n_contrasts <- length(grep("^log2FoldChange_", colnames(rd), value = TRUE))
+
+    # Core stats always shown
+    info_rows <- tagList(
+      tags$li(icon("dna"),      strong("Genes: "),    nrow(se)),
+      tags$li(icon("vials"),    strong("Samples: "),  ncol(se)),
+      tags$li(icon("layer-group"), strong("Contrasts: "), n_contrasts)
+    )
+
+    # Add any named metadata fields (skip 'organism', shown separately)
+    extra <- meta[setdiff(names(meta), "organism")]
+    extra_items <- Filter(Negate(is.null), lapply(names(extra), function(k) {
+      val <- extra[[k]]
+      if (is.character(val) || is.numeric(val)) {
+        tags$li(strong(paste0(k, ": ")), as.character(val))
+      }
+    }))
+
+    tagList(
+      tags$ul(style = "list-style: none; padding-left: 15px; margin: 5px 0;",
+              info_rows,
+              if (length(extra_items) > 0) extra_items)
+    )
+  }
 
   observeEvent(input$seFile, {
     req(input$seFile)
@@ -128,26 +155,27 @@ load_files_server <- function(input, output, session, state) {
       state$varpart_obj(list(varPart = vp_mat))
     }
 
-    # Determine organism: prefer SE metadata, fall back to text input.
+    # Determine organism from SE metadata only.
     se_organism <- tryCatch(
-      metadata(se)$organism,
+      SummarizedExperiment::metadata(se)$organism,
       error = function(e) NULL
     )
     organism <- if (!is.null(se_organism) && nzchar(trimws(se_organism))) {
       se_organism
     } else {
-      input$organism_name
+      NULL
     }
 
-    if (is.null(organism) || !nzchar(trimws(organism))) {
-      showNotification(
-        "No organism specified. Enter an organism name to load annotations.",
-        type = "warning", duration = 8
-      )
+    if (is.null(organism)) {
       state$de_df(de_df)
       output$annotationStatus <- renderUI({
         tagList(
-          tags$p(icon("exclamation-triangle"), "No organism specified.",
+          tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
+                   tags$p(style = "color: steelblue; margin: 0;",
+                          icon("info-circle"), strong("SE loaded")),
+                   se_info_ui(se)),
+          tags$p(icon("exclamation-triangle"),
+                 HTML("Organism not found in SE metadata (<code>metadata(se)$organism</code>). Upload an annotation file or add the organism to your SE object."),
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
@@ -172,15 +200,28 @@ load_files_server <- function(input, output, session, state) {
       }
       state$de_df(de_df)
       output$annotationStatus <- renderUI({
-        tags$p(icon("check-circle"),
-               paste("Annotation loaded:", basename(annot_path)),
-               style = "color: green; padding-left: 15px;")
+        tagList(
+          tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
+                   tags$p(style = "color: steelblue; margin: 0;",
+                          icon("info-circle"), strong("SE loaded")),
+                   se_info_ui(se)),
+          tags$p(icon("check-circle"),
+                 paste("Organism:", organism),
+                 style = "color: green; padding-left: 15px; margin: 2px 0;"),
+          tags$p(icon("check-circle"),
+                 paste("Annotation loaded:", basename(annot_path)),
+                 style = "color: green; padding-left: 15px; margin: 2px 0;")
+        )
       })
     } else {
       # No built-in annotation found -- show upload UI.
       state$de_df(de_df)
       output$annotationStatus <- renderUI({
         tagList(
+          tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
+                   tags$p(style = "color: steelblue; margin: 0;",
+                          icon("info-circle"), strong("SE loaded")),
+                   se_info_ui(se)),
           tags$p(icon("exclamation-triangle"),
                  paste("No built-in annotation found for:", organism),
                  style = "color: orange; padding-left: 15px;"),
