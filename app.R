@@ -208,7 +208,11 @@ server <- function(input, output, session) {
     dds_obj = reactiveVal(NULL),
     de_df = reactiveVal(NULL),
     varpart_obj = reactiveVal(NULL),
-    annotation_df = reactiveVal(NULL)
+    annotation_df = reactiveVal(NULL),
+    # Pending annotation data for interactive column selection
+    pending_annotation = reactiveVal(NULL),
+    pending_de_df = reactiveVal(NULL),
+    se_organism = reactiveVal(NULL)
   )
   
   # Reactive organism type from SE metadata
