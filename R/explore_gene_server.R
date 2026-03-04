@@ -1,4 +1,4 @@
-explore_gene_server <- function(input, output, session, state) {
+explore_gene_server <- function(input, output, session, state, organism) {
   
   #==============================
   # UI: Update gene plot selectInputs when DDS loaded
@@ -59,7 +59,7 @@ explore_gene_server <- function(input, output, session, state) {
       tabs <- append(tabs, list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px"))))
     }
     
-    if (input$organism == "Bacteria") {
+    if (!is.null(organism()) && organism() == "Bacteria") {
       tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", girafeOutput("neighbourhoodPlot", height = "600px"))))
     }
     
