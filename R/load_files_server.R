@@ -467,4 +467,19 @@ load_files_server <- function(input, output, session, state) {
       )
     }
   })
+
+  #==============================
+  # Reactive: Global filtered DE dataset (used by all modules)
+  #==============================
+  filtered_de_df <- reactive({
+    req(state$de_df())
+    df <- state$de_df()
+    if (!"log2FC" %in% colnames(df)) df$log2FC <- NA_real_
+    if (!"padj"   %in% colnames(df)) df$padj   <- NA_real_
+    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
+    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+    df %>%
+      dplyr::filter(!is.na(padj) & !is.na(log2FC) & padj < padj_cut & abs(log2FC) > lfc_cut)
+  })
+  state$filtered_de_df <- filtered_de_df
 }
