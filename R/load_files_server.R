@@ -23,13 +23,18 @@ load_files_server <- function(input, output, session, state) {
     rd       <- as.data.frame(SummarizedExperiment::rowData(se))
     gene_ids <- rownames(se)
 
-    lfc_cols <- grep("^log2FoldChange_", colnames(rd), value = TRUE)
-    if (length(lfc_cols) == 0) {
-      stop("No contrast columns found in rowData. ",
-           "Expected columns like 'log2FoldChange_ContrastName'.")
-    }
+    # Get contrast names from metadata (SOURCE OF TRUTH!)
+    meta <- tryCatch(
+      metadata(se),
+      error = function(e) list()
+    )
 
-    contrast_names <- sub("^log2FoldChange_", "", lfc_cols)
+    contrast_names <- meta$contrasts
+
+    if (is.null(contrast_names) || length(contrast_names) == 0) {
+      stop("No contrasts found in metadata(se)$contrasts. ",
+           "Ensure the SE object includes metadata(se)$contrasts as a character vector of contrast names.")
+    }
 
     de_list <- lapply(contrast_names, function(cname) {
       get_col <- function(prefix) {
@@ -75,9 +80,8 @@ load_files_server <- function(input, output, session, state) {
   # If organism is provided it is included in the list with the same style as
   # genes/samples/contrasts.
   se_info_ui <- function(se, organism = NULL) {
-    meta  <- tryCatch(SummarizedExperiment::metadata(se), error = function(e) list())
-    rd    <- as.data.frame(SummarizedExperiment::rowData(se))
-    n_contrasts <- length(grep("^log2FoldChange_", colnames(rd), value = TRUE))
+    meta  <- tryCatch(metadata(se), error = function(e) list())
+    n_contrasts <- length(meta$contrasts)
 
     # Core stats always shown
     info_rows <- tagList(
@@ -88,8 +92,8 @@ load_files_server <- function(input, output, session, state) {
         tags$li(icon("bug"), strong("Organism: "), organism)
     )
 
-    # Add any named metadata fields (skip 'organism', already shown above)
-    extra <- meta[setdiff(names(meta), "organism")]
+    # Add any named metadata fields (skip 'organism' and 'contrasts', already shown above)
+    extra <- meta[setdiff(names(meta), c("organism", "contrasts"))]
     extra_items <- Filter(Negate(is.null), lapply(names(extra), function(k) {
       val <- extra[[k]]
       if (is.character(val) || is.numeric(val)) {
