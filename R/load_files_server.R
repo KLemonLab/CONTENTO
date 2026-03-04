@@ -157,7 +157,7 @@ load_files_server <- function(input, output, session, state) {
 
     # Determine organism from SE metadata only.
     se_organism <- tryCatch(
-      SummarizedExperiment::metadata(se)$organism,
+      metadata(se)$organism,
       error = function(e) NULL
     )
     organism <- if (!is.null(se_organism) && nzchar(trimws(se_organism))) {
@@ -175,7 +175,7 @@ load_files_server <- function(input, output, session, state) {
                           icon("info-circle"), strong("SE loaded")),
                    se_info_ui(se)),
           tags$p(icon("exclamation-triangle"),
-                 HTML("Organism not found in SE metadata (<code>metadata(se)$organism</code>). Upload an annotation file or add the organism to your SE object."),
+                 HTML("Organism not found in SE metadata. Upload an annotation file or add the organism to your SE object metadata."),
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
@@ -223,7 +223,7 @@ load_files_server <- function(input, output, session, state) {
                           icon("info-circle"), strong("SE loaded")),
                    se_info_ui(se)),
           tags$p(icon("exclamation-triangle"),
-                 paste("No built-in annotation found for:", organism),
+                 paste("No built-in annotation found for:", organism, ". Upload an annotation file or fix the organism name in your SE object metadata"),
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )

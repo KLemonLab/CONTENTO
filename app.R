@@ -51,9 +51,9 @@ ui <- dashboardPage(
     ),
     hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
-    fileInput("seFile", "SummarizedExperiment (.rds)",
+    fileInput("seFile", "Summarized Experiment",
               accept = ".rds",
-              placeholder = "SE object with counts + contrasts"),
+              placeholder = "SE object (.rds)"),
     uiOutput("annotationStatus")
   ),
   
@@ -67,11 +67,10 @@ ui <- dashboardPage(
               # --- First box: Required Inputs ---
               fluidRow(
                 box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12, status = "info", solidHeader = TRUE,
-                    tags$h4("Required Inputs (Upload .rds files on the left sidebar):"),
+                    tags$h4("Required Inputs (Upload on the left sidebar):"),
                     tags$ul(
-                      tags$li(strong("Organism type:"), " Select Human or Bacteria based on analysis type."),
-                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data. Organism is read from ", code("metadata(se)$organism"), "."),
-                      tags$li(strong("Annotation:"), " Automatically loaded for known organisms. Upload if needed for new organisms.")
+                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
+                      tags$li(strong("Annotation:"), " Automatically loaded from your annotations folder to match the metadata in your SE object. Upload if needed.")
                     )
                 )
               ),
