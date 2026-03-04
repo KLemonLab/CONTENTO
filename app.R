@@ -53,9 +53,12 @@ ui <- dashboardPage(
     selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Human"),
     hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
-    fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "dds object"),
-    fileInput("deFile", "Contrasts", accept = ".rds", placeholder = "Contrast object"),
-    fileInput("varPartFile", "VarPart", accept = ".rds", placeholder = "Optional VarPart")
+    textInput("organism_name", "Organism Name:",
+              placeholder = "e.g., Human, Sau_KPL4403"),
+    fileInput("seFile", "SummarizedExperiment (.rds)",
+              accept = ".rds",
+              placeholder = "SE object with counts + contrasts"),
+    uiOutput("annotationStatus")
   ),
   
   dashboardBody(
@@ -70,10 +73,10 @@ ui <- dashboardPage(
                 box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12, status = "info", solidHeader = TRUE,
                     tags$h4("Required Inputs (Upload .rds files on the left sidebar):"),
                     tags$ul(
-                      tags$li(strong("Organism type :"), " Select based on the RNASeq reads analyzed by DESeq2."),
-                      tags$li(strong("DESeq2 file:"), " Contains the DESeqDataSet object with count data and metadata."),
-                      tags$li(strong("Contrasts file:"), " Contains results for one or more contrasts from the DESeq2 analysis."),
-                      tags$li(strong("VarPart file:"), " Optional — contains variance partition analysis results.")
+                      tags$li(strong("Organism type:"), " Select Human or Bacteria based on analysis type."),
+                      tags$li(strong("Organism name:"), " Specific organism identifier (e.g., 'Human', 'Sau_KPL4403')."),
+                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
+                      tags$li(strong("Annotation:"), " Automatically loaded for known organisms. Upload if needed for new organisms.")
                     )
                 )
               ),
