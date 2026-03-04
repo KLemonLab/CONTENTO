@@ -25,7 +25,7 @@ load_files_server <- function(input, output, session, state) {
 
     # Get contrast names from metadata (SOURCE OF TRUTH!)
     meta <- tryCatch(
-      SummarizedExperiment::metadata(se),
+      metadata(se),
       error = function(e) list()
     )
 
@@ -80,7 +80,7 @@ load_files_server <- function(input, output, session, state) {
   # If organism is provided it is included in the list with the same style as
   # genes/samples/contrasts.
   se_info_ui <- function(se, organism = NULL) {
-    meta  <- tryCatch(SummarizedExperiment::metadata(se), error = function(e) list())
+    meta  <- tryCatch(metadata(se), error = function(e) list())
     n_contrasts <- length(meta$contrasts)
 
     # Core stats always shown
