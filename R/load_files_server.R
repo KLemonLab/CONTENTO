@@ -92,19 +92,9 @@ load_files_server <- function(input, output, session, state) {
         tags$li(icon("bug"), strong("Organism: "), organism)
     )
 
-    # Add any named metadata fields (skip 'organism' and 'contrasts', already shown above)
-    extra <- meta[setdiff(names(meta), c("organism", "contrasts"))]
-    extra_items <- Filter(Negate(is.null), lapply(names(extra), function(k) {
-      val <- extra[[k]]
-      if (is.character(val) || is.numeric(val)) {
-        tags$li(strong(paste0(k, ": ")), as.character(val))
-      }
-    }))
-
     tagList(
       tags$ul(style = "list-style: none; padding-left: 15px; margin: 5px 0;",
-              info_rows,
-              if (length(extra_items) > 0) extra_items)
+              info_rows)
     )
   }
 
