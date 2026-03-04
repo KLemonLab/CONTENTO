@@ -72,19 +72,23 @@ load_files_server <- function(input, output, session, state) {
   }
 
   # Build an info panel from SE metadata and basic dimension info.
-  se_info_ui <- function(se) {
+  # If organism is provided it is included in the list with the same style as
+  # genes/samples/contrasts.
+  se_info_ui <- function(se, organism = NULL) {
     meta  <- tryCatch(SummarizedExperiment::metadata(se), error = function(e) list())
     rd    <- as.data.frame(SummarizedExperiment::rowData(se))
     n_contrasts <- length(grep("^log2FoldChange_", colnames(rd), value = TRUE))
 
     # Core stats always shown
     info_rows <- tagList(
-      tags$li(icon("dna"),      strong("Genes: "),    nrow(se)),
-      tags$li(icon("vials"),    strong("Samples: "),  ncol(se)),
-      tags$li(icon("layer-group"), strong("Contrasts: "), n_contrasts)
+      tags$li(icon("dna"),         strong("Genes: "),    nrow(se)),
+      tags$li(icon("vials"),       strong("Samples: "),  ncol(se)),
+      tags$li(icon("layer-group"), strong("Contrasts: "), n_contrasts),
+      if (!is.null(organism))
+        tags$li(icon("bug"), strong("Organism: "), organism)
     )
 
-    # Add any named metadata fields (skip 'organism', shown separately)
+    # Add any named metadata fields (skip 'organism', already shown above)
     extra <- meta[setdiff(names(meta), "organism")]
     extra_items <- Filter(Negate(is.null), lapply(names(extra), function(k) {
       val <- extra[[k]]
@@ -204,10 +208,7 @@ load_files_server <- function(input, output, session, state) {
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
                    tags$p(style = "color: steelblue; margin: 0;",
                           icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se)),
-          tags$p(icon("check-circle"),
-                 paste("Organism:", organism),
-                 style = "color: green; padding-left: 15px; margin: 2px 0;"),
+                   se_info_ui(se, organism = organism)),
           tags$p(icon("check-circle"),
                  paste("Annotation loaded:", basename(annot_path)),
                  style = "color: green; padding-left: 15px; margin: 2px 0;")
@@ -221,7 +222,7 @@ load_files_server <- function(input, output, session, state) {
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
                    tags$p(style = "color: steelblue; margin: 0;",
                           icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se)),
+                   se_info_ui(se, organism = organism)),
           tags$p(icon("exclamation-triangle"),
                  paste("No built-in annotation found for:", organism, ". Upload an annotation file or fix the organism name in your SE object metadata"),
                  style = "color: orange; padding-left: 15px;"),
@@ -252,9 +253,18 @@ load_files_server <- function(input, output, session, state) {
 
     de_df <- merge_annotation(state$de_df(), annot)
     state$de_df(de_df)
+
+    # Rebuild the info panel using the stored SE so metadata stays visible.
+    se_current <- state$dds_obj()
     output$annotationStatus <- renderUI({
-      tags$p(icon("check-circle"), "Custom annotation loaded successfully.",
-             style = "color: green; padding-left: 15px;")
+      tagList(
+        tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
+                 tags$p(style = "color: steelblue; margin: 0;",
+                        icon("info-circle"), strong("SE loaded")),
+                 se_info_ui(se_current)),
+        tags$p(icon("check-circle"), "Custom annotation loaded successfully.",
+               style = "color: green; padding-left: 15px;")
+      )
     })
     showNotification("Custom annotation loaded successfully.", type = "message")
   })
