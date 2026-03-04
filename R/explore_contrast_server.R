@@ -342,7 +342,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           padj = formatC(padj, format = "e", digits = 2)
         ) %>%
         arrange(desc(abs(log2FC))) %>%
-        select(Geneid, symbol, biotype, log2FC, log2FC_shrunk, padj, regulated)
+        select(Geneid, symbol, log2FC, log2FC_shrunk, padj, regulated)
       
       if (nrow(df) == 0) {
         showNotification("No differentially expressed genes found with current cutoffs", type = "warning")
