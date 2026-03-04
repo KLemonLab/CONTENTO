@@ -2,17 +2,17 @@ load_files_server <- function(input, output, session, state) {
 
   # ---- Helpers ----------------------------------------------------------------
 
-  # Locate a built-in annotation file for the given organism name.
-  find_annotation_path <- function(organism) {
+  # Locate a built-in annotation file for the given annotation name.
+  find_annotation_path <- function(annotation) {
     # Try installed-package path first.
     path <- system.file("annotations",
-                        paste0(organism, "_annot.rds"),
+                        paste0(annotation, "_annot.rds"),
                         package = "RNASeqApp")
     if (nchar(path) > 0) return(path)
 
     # Fall back to relative path when running the app directly from source.
     local_path <- file.path("inst", "annotations",
-                            paste0(organism, "_annot.rds"))
+                            paste0(annotation, "_annot.rds"))
     if (file.exists(local_path)) return(local_path)
 
     return(NULL)
@@ -77,9 +77,9 @@ load_files_server <- function(input, output, session, state) {
   }
 
   # Build an info panel from SE metadata and basic dimension info.
-  # If organism is provided it is included in the list with the same style as
-  # genes/samples/contrasts.
-  se_info_ui <- function(se, organism = NULL) {
+  # If organism and/or annotation are provided they are included in the list
+  # with the same style as genes/samples/contrasts.
+  se_info_ui <- function(se, organism = NULL, annotation = NULL) {
     meta  <- tryCatch(metadata(se), error = function(e) list())
     n_contrasts <- length(meta$contrasts)
 
@@ -89,7 +89,9 @@ load_files_server <- function(input, output, session, state) {
       tags$li(icon("vials"),       strong("Samples: "),  ncol(se)),
       tags$li(icon("layer-group"), strong("Contrasts: "), n_contrasts),
       if (!is.null(organism))
-        tags$li(icon("bug"), strong("Organism: "), organism)
+        tags$li(icon("bug"), strong("Organism: "), organism),
+      if (!is.null(annotation))
+        tags$li(icon("book"), strong("Annotation: "), annotation)
     )
 
     tagList(
@@ -153,7 +155,7 @@ load_files_server <- function(input, output, session, state) {
       state$varpart_obj(list(varPart = vp_mat))
     }
 
-    # Determine organism from SE metadata only.
+    # Determine organism and annotation from SE metadata only.
     se_organism <- tryCatch(
       metadata(se)$organism,
       error = function(e) NULL
@@ -164,16 +166,26 @@ load_files_server <- function(input, output, session, state) {
       NULL
     }
 
-    if (is.null(organism)) {
+    se_annotation <- tryCatch(
+      metadata(se)$annotation,
+      error = function(e) NULL
+    )
+    annotation <- if (!is.null(se_annotation) && nzchar(trimws(se_annotation))) {
+      se_annotation
+    } else {
+      NULL
+    }
+
+    if (is.null(annotation)) {
       state$de_df(de_df)
       output$annotationStatus <- renderUI({
         tagList(
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
                    tags$p(style = "color: steelblue; margin: 0;",
                           icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se)),
+                   se_info_ui(se, organism = organism)),
           tags$p(icon("exclamation-triangle"),
-                 HTML("Organism not found in SE metadata. Upload an annotation file or add the organism to your SE object metadata."),
+                 HTML("Annotation not found in SE metadata. Upload an annotation file or add the annotation to your SE object metadata."),
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
@@ -182,7 +194,7 @@ load_files_server <- function(input, output, session, state) {
     }
 
     # Try to load built-in annotation.
-    annot_path <- find_annotation_path(organism)
+    annot_path <- find_annotation_path(annotation)
 
     if (!is.null(annot_path)) {
       annot <- tryCatch(
@@ -202,7 +214,7 @@ load_files_server <- function(input, output, session, state) {
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
                    tags$p(style = "color: steelblue; margin: 0;",
                           icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se, organism = organism)),
+                   se_info_ui(se, organism = organism, annotation = annotation)),
           tags$p(icon("check-circle"),
                  paste("Annotation loaded:", basename(annot_path)),
                  style = "color: green; padding-left: 15px; margin: 2px 0;")
@@ -216,9 +228,9 @@ load_files_server <- function(input, output, session, state) {
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
                    tags$p(style = "color: steelblue; margin: 0;",
                           icon("info-circle"), strong("SE loaded")),
-                   se_info_ui(se, organism = organism)),
+                   se_info_ui(se, organism = organism, annotation = annotation)),
           tags$p(icon("exclamation-triangle"),
-                 paste("No built-in annotation found for:", organism, ". Upload an annotation file or fix the organism name in your SE object metadata"),
+                 paste("No built-in annotation found for:", annotation, ". Upload an annotation file or fix the annotation name in your SE object metadata"),
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )

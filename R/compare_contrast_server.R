@@ -1,4 +1,4 @@
-compare_contrast_server <- function(input, output, session, state) {
+compare_contrast_server <- function(input, output, session, state, organism) {
   
   #==============================
   # UI: Contrast selection
@@ -34,7 +34,7 @@ compare_contrast_server <- function(input, output, session, state) {
                withSpinner(DTOutput("compareTable"), type = 5))
     )
     
-    if (input$organism == "Human") {
+    if (!is.null(organism()) && organism() == "Human") {
       tabs <- append(tabs, 
                      list(
                        tabPanel("Gene Sets Overlap",

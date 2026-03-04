@@ -1,4 +1,4 @@
-explore_contrast_server <- function(input, output, session, state) {
+explore_contrast_server <- function(input, output, session, state, organism) {
   
   #==============================
   # UI: Contrast dropdown 
@@ -19,7 +19,7 @@ explore_contrast_server <- function(input, output, session, state) {
       tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
     )
     
-    if (input$organism == "Human") {
+    if (!is.null(organism()) && organism() == "Human") {
       tabs <- append(tabs, 
                      list(
                        tabPanel("GSEA",

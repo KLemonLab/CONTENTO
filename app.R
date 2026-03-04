@@ -211,11 +211,25 @@ server <- function(input, output, session) {
     annotation_df = reactiveVal(NULL)
   )
   
+  # Reactive organism type from SE metadata
+  organism <- reactive({
+    req(state$dds_obj())
+    meta_organism <- tryCatch(
+      metadata(state$dds_obj())$organism,
+      error = function(e) NULL
+    )
+    if (!is.null(meta_organism) && nzchar(trimws(meta_organism))) {
+      meta_organism
+    } else {
+      NULL
+    }
+  })
+  
   # Wire helpers
   load_files_server(input, output, session, state)
-  explore_contrast_server(input, output, session, state)
-  compare_contrast_server(input, output, session, state)
-  explore_gene_server(input, output, session, state)
+  explore_contrast_server(input, output, session, state, organism)
+  compare_contrast_server(input, output, session, state, organism)
+  explore_gene_server(input, output, session, state, organism)
 }
 
 # ==========================
