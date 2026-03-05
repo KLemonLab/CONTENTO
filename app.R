@@ -1,6 +1,6 @@
-# ==========================
-# DESeq2 Explorer Dashboard
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== DESeq2 Explorer App  =======================
+#== == == == == == == == == == == == == == == == ==
 
 library(shiny)
 library(shinydashboard)
@@ -15,7 +15,7 @@ library(DESeq2)
 library(plotly)
 library(DT)
 library(RColorBrewer)
-library(ComplexUpset) 
+library(ComplexUpset)
 library(scales)
 library(tools)
 library(grid)
@@ -33,9 +33,9 @@ source("R/explore_contrast_server.R")
 source("R/compare_contrast_server.R")
 source("R/explore_gene_server.R")
 
-# ==========================
-# UI
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== UI =========================================
+#== == == == == == == == == == == == == == == == ==
 
 ui <- dashboardPage(
   dashboardHeader(title = "RNASeq Explorer"),
@@ -65,10 +65,10 @@ ui <- dashboardPage(
     
     tabItems(
       
-      # --- Getting Started ---
+      ## ---- Getting Started -----
       tabItem(tabName = "intro",
               
-              # --- First box: Required Inputs ---
+              # First box: Required Inputs
               fluidRow(
                 box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12, status = "info", solidHeader = TRUE,
                     tags$h4("Required Inputs (Upload on the left sidebar):"),
@@ -79,7 +79,7 @@ ui <- dashboardPage(
                 )
               ),
               
-              # --- Second row: three main app sections ---
+              # Second row: three main app sections
               fluidRow(
                 box(title = tagList(icon("chart-line"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
                     p("Select a contrast to explore its results and adjust fold-change cutoff for both table and plots. Controls also allow adjusting number of top genes and colors for the heat as well as gene set collections for enrichment analyses."),
@@ -114,7 +114,7 @@ ui <- dashboardPage(
               )
       ),
       
-      # --- Explore by Contrast ---
+      ## ---- Explore by Contrast -----
       tabItem(tabName = "contrast",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
@@ -127,9 +127,9 @@ ui <- dashboardPage(
                     conditionalPanel(condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
                                      textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
                     tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp", 
-                                    target = "_blank", 
-                                    icon("external-link-alt"), 
+                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                                    target = "_blank",
+                                    icon("external-link-alt"),
                                     "MSigDB"))
                 ),
                 
@@ -137,15 +137,15 @@ ui <- dashboardPage(
                     uiOutput("contrastSubTabs"),
                     hr(),
                     tags$div(style = "text-align: center;",
-                             downloadButton("downloadDETableFull", 
-                                            "Download Filtered DE Genes (Full Annotations)", 
+                             downloadButton("downloadDETableFull",
+                                            "Download Filtered DE Genes (Full Annotations)",
                                             class = "btn-primary")
                     )
                 )
               )
       ),
       
-      # --- Compare Contrast ---
+      ## ---- Compare Contrast -----
       tabItem(tabName = "compare",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
@@ -155,9 +155,9 @@ ui <- dashboardPage(
                     conditionalPanel(condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
                                      textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
                     tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp", 
-                                    target = "_blank", 
-                                    icon("external-link-alt"), 
+                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                                    target = "_blank",
+                                    icon("external-link-alt"),
                                     "MSigDB")),
                     numericInput("max_pathways", "Max pathways to show", value = 100, min = 10, max = 500, step = 10),
                     numericInput("pathway_name_length", "Max pathway name length", value = 50, min = 25, max = 500, step = 10)
@@ -167,8 +167,8 @@ ui <- dashboardPage(
                     uiOutput("compareSubTabs"),
                     hr(),
                     tags$div(style = "text-align: center;",
-                             downloadButton("downloadCompareTableFull", 
-                                            "Download Filtered DEGs (Full Annotations)", 
+                             downloadButton("downloadCompareTableFull",
+                                            "Download Filtered DEGs (Full Annotations)",
                                             class = "btn-primary")
                     )
                 )
@@ -176,7 +176,7 @@ ui <- dashboardPage(
               
       ),
       
-      # --- Explore by Gene ---
+      ## ---- Explore by Gene -----
       tabItem(tabName = "gene",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
@@ -197,9 +197,9 @@ ui <- dashboardPage(
   )
 )
 
-# ==========================
-# Server
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== Server =====================================
+#== == == == == == == == == == == == == == == == ==
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 200 * 1024^2)
@@ -210,6 +210,7 @@ server <- function(input, output, session) {
     de_df = reactiveVal(NULL),
     varpart_obj = reactiveVal(NULL),
     annotation_df = reactiveVal(NULL),
+    
     # Pending annotation data for interactive column selection
     pending_annotation = reactiveVal(NULL),
     pending_de_df = reactiveVal(NULL),
@@ -238,8 +239,8 @@ server <- function(input, output, session) {
   explore_gene_server(input, output, session, state, organism)
 }
 
-# ==========================
-# Run App
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== Run App ====================================
+#== == == == == == == == == == == == == == == == ==
 
 shinyApp(ui, server)
