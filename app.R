@@ -1,6 +1,6 @@
-# ==========================
-# DESeq2 Explorer Dashboard
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== DESeq2 Explorer App  =======================
+#== == == == == == == == == == == == == == == == ==
 
 library(shiny)
 library(shinydashboard)
@@ -15,7 +15,7 @@ library(DESeq2)
 library(plotly)
 library(DT)
 library(RColorBrewer)
-library(ComplexUpset) 
+library(ComplexUpset)
 library(scales)
 library(tools)
 library(grid)
@@ -24,6 +24,7 @@ library(fgsea)
 library(msigdbr)
 library(pheatmap)
 library(circlize)
+library(SummarizedExperiment)
 
 
 # Source helper server modules
@@ -32,9 +33,9 @@ source("R/explore_contrast_server.R")
 source("R/compare_contrast_server.R")
 source("R/explore_gene_server.R")
 
-# ==========================
-# UI
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== UI =========================================
+#== == == == == == == == == == == == == == == == ==
 
 ui <- dashboardPage(
   dashboardHeader(title = "RNASeq Explorer"),
@@ -49,36 +50,36 @@ ui <- dashboardPage(
       menuItem("Explore by Gene", tabName = "gene", icon = icon("dna"))
     ),
     hr(),
-    h4("Select Organism", style = "padding-left: 20px;"),
-    selectInput("organism", "Organism type:", choices = c("Human", "Bacteria"), selected = "Human"),
-    hr(),
     h4("Upload Files", style = "padding-left: 20px;"),
-    fileInput("ddsFile", "DESeq2", accept = ".rds", placeholder = "dds object"),
-    fileInput("deFile", "Contrasts", accept = ".rds", placeholder = "Contrast object"),
-    fileInput("varPartFile", "VarPart", accept = ".rds", placeholder = "Optional VarPart")
+    fileInput("seFile", "Summarized Experiment",
+              accept = ".rds",
+              placeholder = "SE object (.rds)"),
+    uiOutput("annotationStatus"),
+    hr(),
+    h4("DE Cutoffs", style = "padding-left: 20px;"),
+    sliderInput("global_log2FC_cutoff", "log2FC cutoff", min = 0, max = 8, value = 2, step = 0.5),
+    numericInput("global_padj_cutoff", "FDR cutoff", value = 0.05, min = 0, max = 1, step = 0.01)
   ),
   
   dashboardBody(
     
     tabItems(
       
-      # --- Getting Started ---
+      ## ---- Getting Started -----
       tabItem(tabName = "intro",
               
-              # --- First box: Required Inputs ---
+              # First box: Required Inputs
               fluidRow(
                 box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12, status = "info", solidHeader = TRUE,
-                    tags$h4("Required Inputs (Upload .rds files on the left sidebar):"),
+                    tags$h4("Required Inputs (Upload on the left sidebar):"),
                     tags$ul(
-                      tags$li(strong("Organism type :"), " Select based on the RNASeq reads analyzed by DESeq2."),
-                      tags$li(strong("DESeq2 file:"), " Contains the DESeqDataSet object with count data and metadata."),
-                      tags$li(strong("Contrasts file:"), " Contains results for one or more contrasts from the DESeq2 analysis."),
-                      tags$li(strong("VarPart file:"), " Optional — contains variance partition analysis results.")
+                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
+                      tags$li(strong("Annotation:"), " Automatically loaded from your annotations folder to match the metadata in your SE object. Upload if needed.")
                     )
                 )
               ),
               
-              # --- Second row: three main app sections ---
+              # Second row: three main app sections
               fluidRow(
                 box(title = tagList(icon("chart-line"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
                     p("Select a contrast to explore its results and adjust fold-change cutoff for both table and plots. Controls also allow adjusting number of top genes and colors for the heat as well as gene set collections for enrichment analyses."),
@@ -113,12 +114,11 @@ ui <- dashboardPage(
               )
       ),
       
-      # --- Explore by Contrast ---
+      ## ---- Explore by Contrast -----
       tabItem(tabName = "contrast",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("contrastSelect"),
-                    sliderInput("fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     numericInput("top_n", "Top DE genes (Heatmap)", value = 25, min = 15, step = 5),
                     selectInput("viridis_palette", "Color palette (Heatmap)",
                                 choices = c("viridis", "magma", "plasma", "inferno", "cividis"), selected = "viridis"),
@@ -127,9 +127,9 @@ ui <- dashboardPage(
                     conditionalPanel(condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
                                      textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
                     tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp", 
-                                    target = "_blank", 
-                                    icon("external-link-alt"), 
+                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                                    target = "_blank",
+                                    icon("external-link-alt"),
                                     "MSigDB"))
                 ),
                 
@@ -137,28 +137,27 @@ ui <- dashboardPage(
                     uiOutput("contrastSubTabs"),
                     hr(),
                     tags$div(style = "text-align: center;",
-                             downloadButton("downloadDETableFull", 
-                                            "Download Filtered DE Genes (Full Annotations)", 
+                             downloadButton("downloadDETableFull",
+                                            "Download Filtered DE Genes (Full Annotations)",
                                             class = "btn-primary")
                     )
                 )
               )
       ),
       
-      # --- Compare Contrast ---
+      ## ---- Compare Contrast -----
       tabItem(tabName = "compare",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    sliderInput("compare_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("multiContrastSelect"),
                     selectInput("compare_gs_collection", "Gene Set (GSEA/GESECA)",
                                 choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
                     conditionalPanel(condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
                                      textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
                     tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp", 
-                                    target = "_blank", 
-                                    icon("external-link-alt"), 
+                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                                    target = "_blank",
+                                    icon("external-link-alt"),
                                     "MSigDB")),
                     numericInput("max_pathways", "Max pathways to show", value = 100, min = 10, max = 500, step = 10),
                     numericInput("pathway_name_length", "Max pathway name length", value = 50, min = 25, max = 500, step = 10)
@@ -168,8 +167,8 @@ ui <- dashboardPage(
                     uiOutput("compareSubTabs"),
                     hr(),
                     tags$div(style = "text-align: center;",
-                             downloadButton("downloadCompareTableFull", 
-                                            "Download Filtered DEGs (Full Annotations)", 
+                             downloadButton("downloadCompareTableFull",
+                                            "Download Filtered DEGs (Full Annotations)",
                                             class = "btn-primary")
                     )
                 )
@@ -177,7 +176,7 @@ ui <- dashboardPage(
               
       ),
       
-      # --- Explore by Gene ---
+      ## ---- Explore by Gene -----
       tabItem(tabName = "gene",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
@@ -185,7 +184,6 @@ ui <- dashboardPage(
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
                     selectInput("shape_col", "Shape", choices = NULL),
-                    sliderInput("gene_fc_cutoff", "log2FC cutoff", min = 0, max = 8, value = 3, step = 0.5),
                     uiOutput("contrastSelectGene"),
                     numericInput("neigh_window", "Neighbourhood window (nt)", value = 10000, step = 100, min = 0)
                 ),
@@ -199,30 +197,48 @@ ui <- dashboardPage(
   )
 )
 
-# ==========================
-# Server
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== Server =====================================
+#== == == == == == == == == == == == == == == == ==
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 200 * 1024^2)
   
   # Shared state across helpers
   state <- list(
-    dds_obj = reactiveVal(NULL),
+    se_obj = reactiveVal(NULL),
     de_df = reactiveVal(NULL),
     varpart_obj = reactiveVal(NULL),
-    annotation_df = reactiveVal(NULL)
+    annotation_df = reactiveVal(NULL),
+    pending_annotation = reactiveVal(NULL),
+    pending_de_df = reactiveVal(NULL),
+    se_organism = reactiveVal(NULL),
+    filtered_de_df = reactiveVal(NULL)
   )
+  
+  # Reactive organism type from SE metadata
+  organism <- reactive({
+    req(state$se_obj())
+    meta_organism <- tryCatch(
+      metadata(state$se_obj())$organism,
+      error = function(e) NULL
+    )
+    if (!is.null(meta_organism) && nzchar(trimws(meta_organism))) {
+      meta_organism
+    } else {
+      NULL
+    }
+  })
   
   # Wire helpers
   load_files_server(input, output, session, state)
-  explore_contrast_server(input, output, session, state)
-  compare_contrast_server(input, output, session, state)
-  explore_gene_server(input, output, session, state)
+  explore_contrast_server(input, output, session, state, organism)
+  compare_contrast_server(input, output, session, state, organism)
+  explore_gene_server(input, output, session, state, organism)
 }
 
-# ==========================
-# Run App
-# ==========================
+#== == == == == == == == == == == == == == == == ==
+#===== Run App ====================================
+#== == == == == == == == == == == == == == == == ==
 
 shinyApp(ui, server)
