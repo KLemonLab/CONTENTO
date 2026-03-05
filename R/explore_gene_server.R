@@ -4,8 +4,8 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # UI: Update gene plot selectInputs when DDS loaded
   #==============================
   observe({
-    req(state$dds_obj())
-    col_vars <- colnames(colData(state$dds_obj()))
+    req(state$se_obj())
+    col_vars <- colnames(colData(state$se_obj()))
     
     updateSelectInput(session, "x_col", choices = col_vars)
     updateSelectInput(session, "color_col", choices = col_vars)
@@ -120,15 +120,15 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # Output: Gene expression plot
   #==============================
   output$genePlot <- renderPlot({
-    req(input$gene_select, input$x_col, state$dds_obj())
-    vst_mat <- assay(state$dds_obj(), "vst")
+    req(input$gene_select, input$x_col, state$se_obj())
+    vst_mat <- assay(state$se_obj(), "vst")
     
     validate(
       need(input$gene_select %in% rownames(vst_mat), "Gene not found in dataset")
     )
     
     expr_values <- vst_mat[input$gene_select, ]
-    meta <- as.data.frame(colData(state$dds_obj()))
+    meta <- as.data.frame(colData(state$se_obj()))
     meta$expression <- expr_values
     
     n_colors <- length(unique(meta[[input$color_col]]))

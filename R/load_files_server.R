@@ -20,7 +20,7 @@ load_files_server <- function(input, output, session, state) {
     rd       <- as.data.frame(SummarizedExperiment::rowData(se))
     gene_ids <- rownames(se)
 
-    # Get contrast names from metadata (SOURCE OF TRUTH!)
+    # Get contrast names from metadata
     meta <- tryCatch(
       metadata(se),
       error = function(e) list()
@@ -133,7 +133,7 @@ load_files_server <- function(input, output, session, state) {
       }
     }
 
-    # Store full annotation for export functionality.
+    # Store full annotation
     state$annotation_df(annot)
 
     # Step 3: Join using the detected ID column.
@@ -202,7 +202,7 @@ load_files_server <- function(input, output, session, state) {
     }
 
     # Store SE (compatible with DESeq2/SummarizedExperiment accessor functions).
-    state$dds_obj(se)
+    state$se_obj(se)
 
     # Extract contrasts from rowData.
     de_df <- tryCatch(
@@ -374,7 +374,7 @@ load_files_server <- function(input, output, session, state) {
     req(annot)
 
     # Get organism from stored SE.
-    se_current <- state$dds_obj()
+    se_current <- state$se_obj()
     organism   <- tryCatch(metadata(se_current)$organism, error = function(e) NULL)
     organism   <- if (!is.null(organism) && nzchar(trimws(organism))) organism else NULL
 
@@ -444,7 +444,7 @@ load_files_server <- function(input, output, session, state) {
       state$pending_annotation(NULL)
       state$pending_de_df(NULL)
 
-      se_current <- state$dds_obj()
+      se_current <- state$se_obj()
       output$annotationStatus <- renderUI({
         tagList(
           tags$div(

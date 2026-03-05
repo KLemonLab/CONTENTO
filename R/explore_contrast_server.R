@@ -121,12 +121,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   })
   
   output$conditionSelectUI_geseca <- renderUI({
-    req(state$dds_obj())
+    req(state$se_obj())
     
-    available_vars <- colnames(colData(state$dds_obj()))
+    available_vars <- colnames(colData(state$se_obj()))
     selectInput("geseca_condition_var", "Color by:", 
                 choices = available_vars,
-                selected = all.vars(design(state$dds_obj()))[1])
+                selected = all.vars(design(state$se_obj()))[1])
   })
   
   #==============================
@@ -276,11 +276,11 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # Reactive: GESECA Analysis
   #==============================
   geseca_result <- reactive({
-    req(state$dds_obj(), genesets())
+    req(state$se_obj(), genesets())
     
     tryCatch({
       # Get VST-transformed matrix
-      vst_matrix <- assays(state$dds_obj())[["vst"]]
+      vst_matrix <- assays(state$se_obj())[["vst"]]
       
       if (is.null(vst_matrix)) {
         showNotification("VST matrix not found in DESeq2 object", type = "error")
@@ -471,7 +471,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # Output: Heatmap of Top DE Genes
   #==============================
   output$heatmapPlot <- renderPlot({
-    req(selected_data(), state$dds_obj())
+    req(selected_data(), state$se_obj())
     
     top_genes <- selected_data() %>%
       filter(DE) %>%
@@ -483,7 +483,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       return()
     }
     
-    vsd_mat <- assay(state$dds_obj(), "vst")[rownames(state$dds_obj()) %in% top_genes$Geneid, ]
+    vsd_mat <- assay(state$se_obj(), "vst")[rownames(state$se_obj()) %in% top_genes$Geneid, ]
     vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
     
     rownames(vsd_mat) <- if ("symbol" %in% colnames(top_genes)) top_genes$symbol else top_genes$Geneid
@@ -685,11 +685,11 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       group_variable <- if (!is.null(input$geseca_condition_var) && nzchar(input$geseca_condition_var)) {
         input$geseca_condition_var
       } else {
-        all.vars(design(state$dds_obj()))[1]
+        all.vars(design(state$se_obj()))[1]
       }
       
       # Extract the actual condition values from colData
-      conditions <- colData(state$dds_obj())[[group_variable]]
+      conditions <- colData(state$se_obj())[[group_variable]]
       
       # Create co-regulation plot
       plotCoregulationProfile(pathway_genes, geseca_result()$vst_matrix, conditions = conditions, scale = TRUE) +

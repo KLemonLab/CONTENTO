@@ -206,23 +206,21 @@ server <- function(input, output, session) {
   
   # Shared state across helpers
   state <- list(
-    dds_obj = reactiveVal(NULL),
+    se_obj = reactiveVal(NULL),
     de_df = reactiveVal(NULL),
     varpart_obj = reactiveVal(NULL),
     annotation_df = reactiveVal(NULL),
-    
-    # Pending annotation data for interactive column selection
     pending_annotation = reactiveVal(NULL),
     pending_de_df = reactiveVal(NULL),
     se_organism = reactiveVal(NULL),
-    filtered_de_df = reactive({ NULL })
+    filtered_de_df = reactiveVal(NULL)
   )
   
   # Reactive organism type from SE metadata
   organism <- reactive({
-    req(state$dds_obj())
+    req(state$se_obj())
     meta_organism <- tryCatch(
-      metadata(state$dds_obj())$organism,
+      metadata(state$se_obj())$organism,
       error = function(e) NULL
     )
     if (!is.null(meta_organism) && nzchar(trimws(meta_organism))) {
