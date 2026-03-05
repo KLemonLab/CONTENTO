@@ -1,23 +1,20 @@
 load_files_server <- function(input, output, session, state) {
 
-  # ---- Helpers ----------------------------------------------------------------
-
+  #== == == == == == == == == == == == == == == == ==
+  #===== HELPERS ====================================
+  #== == == == == == == == == == == == == == == == ==
+  
   # Locate a built-in annotation file for the given annotation name.
   find_annotation_path <- function(annotation) {
-    # Try installed-package path first.
-    path <- system.file("annotations",
-                        paste0(annotation, ".rds"),
-                        package = "RNASeqApp")
-    if (nchar(path) > 0) return(path)
-
-    # Fall back to relative path when running the app directly from source.
-    local_path <- file.path("inst", "annotations",
-                            paste0(annotation, ".rds"))
-    if (file.exists(local_path)) return(local_path)
-
-    return(NULL)
+    path <- system.file("annotations", paste0(annotation, ".rds"), package = "RNASeqApp")
+    if (nzchar(path)) {
+      path
+    } else {
+      local_path <- file.path("inst", "annotations", paste0(annotation, ".rds"))
+      if (file.exists(local_path)) local_path else NULL
+    }
   }
-
+  
   # Extract all contrasts from SE rowData into a long-format data frame.
   extract_contrasts <- function(se) {
     rd       <- as.data.frame(SummarizedExperiment::rowData(se))
@@ -58,8 +55,7 @@ load_files_server <- function(input, output, session, state) {
     do.call(rbind, de_list)
   }
 
-  # Merge an annotation data frame into the contrast data frame.
-  # Returns NULL when required columns are missing (to trigger interactive UI).
+  # Merge annotation data frame into the contrast data frame.
   merge_annotation <- function(de_df, annot, organism = NULL, symbol_column = NULL) {
 
     # Step 1: Check for required columns based on organism.
@@ -117,7 +113,7 @@ load_files_server <- function(input, output, session, state) {
       if (!is.null(symbol_column)) {
         if (symbol_column %in% colnames(annot)) {
           # User manually selected a column.
-          annot <- annot %>%
+          annot <- annot |>
             mutate(symbol = .data[[symbol_column]])
         } else {
           # User-specified column not found - signal failure.
@@ -125,11 +121,11 @@ load_files_server <- function(input, output, session, state) {
         }
       } else if (!is.null(organism) && organism == "Human") {
         # Human: use hgnc_symbol.
-        annot <- annot %>%
+        annot <- annot |>
           mutate(symbol = hgnc_symbol)
       } else if (!is.null(organism) && organism == "Bacteria") {
         # Bacterial: use gene, fall back to Geneid when gene is NA/empty.
-        annot <- annot %>%
+        annot <- annot |>
           mutate(symbol = ifelse(is.na(gene) | gene == "", Geneid, gene))
       } else {
         # Unknown organism with no symbol source - need user input.
@@ -150,9 +146,7 @@ load_files_server <- function(input, output, session, state) {
     }
   }
 
-  # Build an info panel from SE metadata and basic dimension info.
-  # If organism and/or annotation are provided they are included in the list
-  # with the same style as genes/samples/contrasts.
+  # Build metadata panel from SE.
   se_info_ui <- function(se, organism = NULL, annotation = NULL) {
     meta  <- tryCatch(metadata(se), error = function(e) list())
     n_contrasts <- length(meta$contrasts)
@@ -173,7 +167,13 @@ load_files_server <- function(input, output, session, state) {
               info_rows)
     )
   }
+  
+  #== == == == == == == == == == == == == == == == ==
+  #===== EVENT HANDLERS =============================
+  #== == == == == == == == == == == == == == == == ==
 
+  
+  ## ---- SE file upload: validation, contrast extraction, and initial annotation -----
   observeEvent(input$seFile, {
     req(input$seFile)
 
@@ -297,7 +297,7 @@ load_files_server <- function(input, output, session, state) {
       }
     }
 
-    # Set de_df exactly once, after all annotation logic is complete.
+    # Set de_df after all annotation logic is complete.
     state$de_df(de_df)
 
     info_panel <- tags$div(
@@ -355,8 +355,7 @@ load_files_server <- function(input, output, session, state) {
     })
   })
 
-  # ---- Custom annotation upload -----------------------------------------------
-
+  ## ---- Custom annotation upload -----
   observeEvent(input$annotFile, {
     req(input$annotFile, state$de_df())
 
@@ -424,8 +423,7 @@ load_files_server <- function(input, output, session, state) {
     }
   })
 
-  # ---- User column selection for annotation -----------------------------------
-
+  ## ---- Custom symbol-column selection -----
   observeEvent(input$applySymbolColumn, {
     req(input$symbolColumnSelect, state$pending_annotation(), state$pending_de_df())
 
@@ -467,10 +465,13 @@ load_files_server <- function(input, output, session, state) {
       )
     }
   })
+  
+  #== == == == == == == == == == == == == == == == ==
+  #===== REACTIVES ==================================
+  #== == == == == == == == == == == == == == == == ==
 
-  #==============================
-  # Reactive: Global filtered DE dataset (used by all modules)
-  #==============================
+  ## ---- Filtered DE table with global cutoffs -----
+  
   filtered_de_df <- reactive({
     req(state$de_df())
     df <- state$de_df()
@@ -478,8 +479,8 @@ load_files_server <- function(input, output, session, state) {
     if (!"padj"   %in% colnames(df)) df$padj   <- NA_real_
     padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
     lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-    df %>%
-      dplyr::filter(!is.na(padj) & !is.na(log2FC) & padj < padj_cut & abs(log2FC) > lfc_cut)
+    df |>
+      dplyr::filter(!is.na(padj) & !is.na(log2FC) & padj <= padj_cut & abs(log2FC) >= lfc_cut)
   })
   state$filtered_de_df <- filtered_de_df
 }

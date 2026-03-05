@@ -36,3 +36,4 @@ rsconnect/
 .DS_Store
 RNASeqApp.Rproj
 test/
+.lintr
