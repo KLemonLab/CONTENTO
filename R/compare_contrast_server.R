@@ -110,13 +110,36 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # Reactive: Data for DEGs upset plot 
   #==============================
   compare_data <- reactive({
-    req(state$filtered_de_df(), input$compare_contrasts)
+    req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
     
+    # Get global cutoffs (with defaults)
+    padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
+      input$global_padj_cutoff
+    } else {
+      0.05
+    }
+    lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) {
+      input$global_log2FC_cutoff
+    } else {
+      2
+    }
+    
+    # For each contrast, get genes that pass cutoffs
     deg_list <- map(input$compare_contrasts, function(ct) {
-      state$filtered_de_df() %>%
-        filter(contrast == ct) %>%
+      state$de_df() %>%
+        filter(
+          contrast == ct,
+          !is.na(padj) & !is.na(log2FC),
+          padj <= padj_cut,
+          abs(log2FC) >= lfc_cut
+        ) %>%
         pull(Geneid)
     }) %>% set_names(input$compare_contrasts)
+    
+    # Check if any genes exist
+    if (all(lengths(deg_list) == 0)) {
+      return(NULL)
+    }
     
     enframe(deg_list, name = "contrast", value = "Geneid") %>%
       unnest(Geneid) %>%
@@ -128,14 +151,44 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # Reactive: Table of DEGs in all selected contrasts
   #==============================
   compare_table_data <- reactive({
-    req(state$filtered_de_df(), input$compare_contrasts)
+    req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
     
-    has_symbol <- "symbol" %in% colnames(state$filtered_de_df())
+    # Get global cutoffs (with defaults)
+    padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
+      input$global_padj_cutoff
+    } else {
+      0.05
+    }
+    lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) {
+      input$global_log2FC_cutoff
+    } else {
+      2
+    }
     
-    # Filter DE results for selected contrasts (already filtered by global cutoffs)
+    has_symbol <- "symbol" %in% colnames(state$de_df())
     id_cols <- if (has_symbol) c("Geneid", "symbol") else "Geneid"
-    filtered <- state$filtered_de_df() %>%
-      filter(contrast %in% input$compare_contrasts) %>%
+    
+    # Get genes that pass in at least one selected contrast
+    passing_genes <- state$de_df() %>%
+      filter(
+        contrast %in% input$compare_contrasts,
+        !is.na(padj) & !is.na(log2FC),
+        padj <= padj_cut,
+        abs(log2FC) >= lfc_cut
+      ) %>%
+      pull(Geneid) %>%
+      unique()
+    
+    if (length(passing_genes) == 0) {
+      return(NULL)
+    }
+    
+    # Get ALL data for these genes across selected contrasts
+    filtered <- state$de_df() %>%
+      filter(
+        contrast %in% input$compare_contrasts,
+        Geneid %in% passing_genes
+      ) %>%
       select(all_of(c(id_cols, "contrast", "log2FC")))
     
     # Pivot to wide format
@@ -582,6 +635,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     
     draw(ht, heatmap_legend_side = "right")
   })
+  
   #==============================
   # Output: GSEA Comparison Table
   #==============================
