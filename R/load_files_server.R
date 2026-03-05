@@ -55,33 +55,76 @@ load_files_server <- function(input, output, session, state) {
   }
 
   # Merge annotation data frame into the contrast data frame.
-  # Detects the join column automatically by priority:
-  #   1. Exact match: "Geneid"
-  #   2. Pattern match: gene_id / geneid (case-insensitive, with/without underscore)
-  # Returns the merged data frame, or NULL if no usable join column is found.
+  # Returns a list with:
+  #   $result: merged data frame or NULL
+  #   $message: diagnostic message (only present if result is NULL)
   merge_annotation <- function(de_df, annot) {
-    # Check for exact "Geneid" match first (in both data frames)
-    if ("Geneid" %in% colnames(de_df) && "Geneid" %in% colnames(annot)) {
-      return(dplyr::left_join(de_df, annot, by = "Geneid"))
+    # Validate inputs
+    if (!is.data.frame(de_df) || !is.data.frame(annot)) {
+      return(list(result = NULL, message = "Invalid data frame structure"))
     }
     
-    # Search for gene ID column in annotation using regex pattern
-    #gene_id_pattern <- "(gene[_\\s]?)?(id|identifier)"
-    gene_id_pattern <- "(gene[_\\s]?)?id"
+    if (nrow(annot) == 0) {
+      return(list(result = NULL, message = "Annotation file is empty"))
+    }
+    
+    # Check for exact "Geneid" match first
+    if ("Geneid" %in% colnames(de_df) && "Geneid" %in% colnames(annot)) {
+      # Check type compatibility
+      if (!is.character(annot[["Geneid"]])) {
+        return(list(
+          result = NULL,
+          message = paste0("Column 'Geneid' is type ", class(annot[["Geneid"]])[1], 
+                          " (expected character). Cannot join.")
+        ))
+      }
+      
+      merged <- tryCatch(
+        dplyr::left_join(de_df, annot, by = "Geneid"),
+        error = function(e) NULL
+      )
+      if (!is.null(merged)) {
+        return(list(result = merged))
+      } else {
+        return(list(result = NULL, message = "Join by 'Geneid' failed"))
+      }
+    }
+    
+    # Search for gene ID column using strict pattern
+    # Matches: geneid, gene_id, ensembl_gene_id, etc.
+    # Does NOT match: gene_callers_id, other_id, etc.
+    gene_id_pattern <- "^(.*_)?gene[_\\s]?id$"
     annot_gene_col <- grep(gene_id_pattern, colnames(annot), 
                            ignore.case = TRUE, value = TRUE)
     
     if (length(annot_gene_col) > 0) {
-      # Take first match if multiple found
       annot_gene_col <- annot_gene_col[1]
       
-      # Join using Geneid from de_df and detected column from annot
-      return(dplyr::left_join(de_df, annot, 
-                              by = c("Geneid" = annot_gene_col)))
+      # Check type compatibility
+      if (!is.character(annot[[annot_gene_col]])) {
+        return(list(
+          result = NULL, 
+          message = paste0("Column '", annot_gene_col, "' is type ", 
+                          class(annot[[annot_gene_col]])[1], 
+                          " (expected character). Cannot join with Geneid.")
+        ))
+      }
+      
+      # Attempt join
+      merged <- tryCatch(
+        dplyr::left_join(de_df, annot, by = c("Geneid" = annot_gene_col)),
+        error = function(e) NULL
+      )
+      
+      if (!is.null(merged)) {
+        return(list(result = merged))
+      } else {
+        return(list(result = NULL, message = paste0("Join by '", annot_gene_col, "' failed")))
+      }
     }
     
     # No usable join column found
-    return(NULL)
+    return(list(result = NULL, message = "No compatible gene ID column found (expected 'Geneid' or similar pattern)"))
   }
 
   # Create (or update) the 'symbol' column in a data frame using primary and
@@ -113,7 +156,6 @@ load_files_server <- function(input, output, session, state) {
   # Build the single-dropdown symbol-column selection UI from annotation columns.
   build_symbol_select_ui <- function(annot_cols, primary_sel) {
     tagList(
-
       selectInput("symbolPrimaryCol",
                   "Select symbol column (Geneid used as fallback):",
                   choices  = annot_cols,
@@ -226,8 +268,10 @@ load_files_server <- function(input, output, session, state) {
           }
         )
         if (!is.null(annot)) {
-          merged <- merge_annotation(de_df, annot)
-          if (!is.null(merged)) {
+          merged_result <- merge_annotation(de_df, annot)
+          
+          if (!is.null(merged_result$result)) {
+            merged <- merged_result$result
             # Determine and auto-apply default symbol column (Geneid always fallback).
             annot_cols  <- colnames(annot)
             sym_primary <- default_symbol_col(annot_cols)
@@ -237,13 +281,10 @@ load_files_server <- function(input, output, session, state) {
             state$annotation_df(annot)
 
             annot_status  <- "loaded"
-            annot_message <- paste("Annotation loaded")
+            annot_message <- "Annotation loaded"
           } else {
             annot_status  <- "no_join_col"
-            annot_message <- paste0(
-              "Annotation '", basename(annot_path), "' has no recognized join column ",
-              "(expected 'Geneid' or pattern matching 'gene_id'). Upload a different annotation file."
-            )
+            annot_message <- merged_result$message
           }
         }
       } else {
@@ -311,9 +352,10 @@ load_files_server <- function(input, output, session, state) {
     organism   <- tryCatch(metadata(se_current)$organism, error = function(e) NULL)
     organism   <- if (!is.null(organism) && nzchar(trimws(organism))) organism else NULL
 
-    merged <- merge_annotation(state$de_df(), annot)
+    merged_result <- merge_annotation(state$de_df(), annot)
 
-    if (!is.null(merged)) {
+    if (!is.null(merged_result$result)) {
+      merged <- merged_result$result
       annot_cols  <- colnames(annot)
       sym_primary <- default_symbol_col(annot_cols)
 
@@ -334,8 +376,9 @@ load_files_server <- function(input, output, session, state) {
                    build_symbol_select_ui(annot_cols, sym_primary))
         )
       })
-      showNotification("Custom annotation loaded successfully.", type = "message")
+      showNotification("Custom annotation loaded", type = "message", duration = 3)
     } else {
+      # Join failed - show specific error
       output$annotationStatus <- renderUI({
         tagList(
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
@@ -344,24 +387,16 @@ load_files_server <- function(input, output, session, state) {
                    se_info_ui(se_current, organism = organism)),
           tags$p(
             icon("exclamation-triangle"),
-            HTML(paste0(
-              "Annotation has no recognized join column ",
-              "(expected <strong>Geneid</strong> or pattern matching <strong>gene_id</strong>). ",
-              "Please upload an annotation file that contains a compatible gene ID column."
-            )),
+            merged_result$message,
             style = "color: red; padding-left: 15px;"
           ),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
       })
-      showNotification(
-        "Annotation could not be joined: no compatible gene ID column found.",
-        type = "error"
-      )
     }
   })
 
-  ## ---- Symbol-column selection (immediate update) -----
+  ## ---- Symbol-column selection -----
   observeEvent(input$symbolPrimaryCol, {
     req(input$symbolPrimaryCol, state$de_df())
     
@@ -382,7 +417,7 @@ load_files_server <- function(input, output, session, state) {
     }
     
     showNotification(
-      paste0("Symbol column set to '", primary_col, "' (fallback: Geneid)"),
+      paste0("Symbol column: '", primary_col, "'"),
       type = "message",
       duration = 2
     )
