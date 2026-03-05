@@ -58,7 +58,7 @@ ui <- dashboardPage(
     hr(),
     h4("DE Cutoffs", style = "padding-left: 20px;"),
     sliderInput("global_log2FC_cutoff", "log2FC cutoff", min = 0, max = 8, value = 2, step = 0.5),
-    numericInput("global_padj_cutoff", "FDR cutoff", value = 0.05, min = 0, max = 1, step = 0.01)
+    numericInput("global_padj_cutoff", "p-value FDR cutoff", value = 0.05, min = 0, max = 1, step = 0.01)
   ),
   
   dashboardBody(
@@ -81,7 +81,7 @@ ui <- dashboardPage(
               
               # Second row: three main app sections
               fluidRow(
-                box(title = tagList(icon("chart-line"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
+                box(title = tagList(icon("layer-group"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
                     p("Select a contrast to explore its results and adjust fold-change cutoff for both table and plots. Controls also allow adjusting number of top genes and colors for the heat as well as gene set collections for enrichment analyses."),
                     tags$ul(
                       tags$li(strong("Selected Genes:"), " Table of differential expression results. You can save a .csv file with the filtered results."),
