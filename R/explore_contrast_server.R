@@ -1,4 +1,4 @@
-explore_contrast_server <- function(input, output, session, state) {
+explore_contrast_server <- function(input, output, session, state, organism) {
   
   #==============================
   # UI: Contrast dropdown 
@@ -19,7 +19,7 @@ explore_contrast_server <- function(input, output, session, state) {
       tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
     )
     
-    if (input$organism == "Human") {
+    if (!is.null(organism()) && organism() == "Human") {
       tabs <- append(tabs, 
                      list(
                        tabPanel("GSEA",
@@ -121,32 +121,40 @@ explore_contrast_server <- function(input, output, session, state) {
   })
   
   output$conditionSelectUI_geseca <- renderUI({
-    req(state$dds_obj())
+    req(state$se_obj())
     
-    available_vars <- colnames(colData(state$dds_obj()))
+    available_vars <- colnames(colData(state$se_obj()))
     selectInput("geseca_condition_var", "Color by:", 
                 choices = available_vars,
-                selected = all.vars(design(state$dds_obj()))[1])
+                selected = all.vars(design(state$se_obj()))[1])
   })
   
   #==============================
   # Reactive: Filtered DE data
   #==============================
   selected_data <- reactive({
-    req(state$de_df(), input$contrast, input$fc_cutoff)
+    req(state$de_df(), input$contrast)
+    
+    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
     
     tryCatch({
-      state$de_df() %>%
-        filter(contrast == input$contrast) %>%
+      df <- state$de_df() %>%
+        filter(contrast == input$contrast)
+      
+      if (!"log2FC" %in% colnames(df)) df$log2FC <- NA_real_
+      if (!"padj"   %in% colnames(df)) df$padj   <- NA_real_
+      
+      df %>%
         mutate(
           tooltip = paste0(
-            symbol, " (", Geneid, ")",
+            if ("symbol" %in% names(.)) .data$symbol else .data$Geneid, " (", Geneid, ")",
             "\nlog2FC: ", round(log2FC, 2),
             "\nFDR: ", signif(padj, 3)
           ),
           regulated = case_when(
-            padj < 0.05 & log2FC >  input$fc_cutoff  ~ "up",
-            padj < 0.05 & log2FC < -input$fc_cutoff ~ "down",
+            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
+            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
             TRUE ~ NA_character_
           ),
           DE = !is.na(regulated)
@@ -163,16 +171,22 @@ explore_contrast_server <- function(input, output, session, state) {
   selected_data_export <- reactive({
     req(selected_data(), state$annotation_df())
     
-    # Get DE genes with their stats
+    # Get DE genes with their stats (select only columns that exist)
+    stat_cols <- intersect(c("Geneid", "log2FC", "log2FC_shrunk", "padj", "regulated"),
+                           colnames(selected_data()))
     de_data <- selected_data() %>%
       filter(DE) %>%
-      select(Geneid, log2FC, log2FC_shrunk, padj, regulated) %>%
+      select(all_of(stat_cols)) %>%
       arrange(desc(abs(log2FC)))
     
     # Merge with full annotations
-    de_data %>%
-      left_join(state$annotation_df(), by = "Geneid") %>%
-      select(Geneid, symbol, everything())
+    merged <- de_data %>%
+      left_join(state$annotation_df(), by = "Geneid")
+    
+    # Put Geneid first, then symbol if it exists, then everything else
+    first_cols <- intersect(c("Geneid", "symbol"), colnames(merged))
+    merged %>%
+      select(all_of(first_cols), everything())
   })
   
   #==============================
@@ -262,11 +276,11 @@ explore_contrast_server <- function(input, output, session, state) {
   # Reactive: GESECA Analysis
   #==============================
   geseca_result <- reactive({
-    req(state$dds_obj(), genesets())
+    req(state$se_obj(), genesets())
     
     tryCatch({
       # Get VST-transformed matrix
-      vst_matrix <- assays(state$dds_obj())[["vst"]]
+      vst_matrix <- assays(state$se_obj())[["vst"]]
       
       if (is.null(vst_matrix)) {
         showNotification("VST matrix not found in DESeq2 object", type = "error")
@@ -332,23 +346,27 @@ explore_contrast_server <- function(input, output, session, state) {
       }
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
+      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
       file_name <- paste(file_base, contrast_str, fc_str, sep = "__")
+      
+      display_cols <- intersect(c("Geneid", "symbol", "log2FC", "log2FC_shrunk", "padj", "regulated"),
+                                colnames(selected_data()))
       
       df <- selected_data() %>%
         filter(DE) %>%
         mutate(
-          across(c(log2FC, log2FC_shrunk), ~ round(.x, 2)),
+          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
           padj = formatC(padj, format = "e", digits = 2)
         ) %>%
         arrange(desc(abs(log2FC))) %>%
-        select(Geneid, symbol, biotype, log2FC, log2FC_shrunk, padj, regulated)
+        select(all_of(display_cols))
       
       if (nrow(df) == 0) {
         showNotification("No differentially expressed genes found with current cutoffs", type = "warning")
       }
       
-      datatable(
+      dt <- datatable(
         df,
         extensions = 'Buttons',
         rownames = FALSE,
@@ -367,6 +385,16 @@ explore_contrast_server <- function(input, output, session, state) {
           )
         )
       )
+      
+      if ("regulated" %in% colnames(df)) {
+        dt <- dt %>%
+          formatStyle(
+            'regulated',
+            target = 'row',
+            backgroundColor = DT::styleEqual(c("up", "down"), c("lightblue", "pink"))
+          )
+      }
+      dt
     },
     server = FALSE   
   )
@@ -383,7 +411,8 @@ explore_contrast_server <- function(input, output, session, state) {
       }
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
+      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
       
       paste(file_base, contrast_str, fc_str, "full.csv", sep = "__")
     },
@@ -393,7 +422,7 @@ explore_contrast_server <- function(input, output, session, state) {
       # Get full export data
       full_data <- selected_data_export() %>%
         mutate(
-          across(c(log2FC, log2FC_shrunk), ~ round(.x, 2)),
+          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
           padj = formatC(padj, format = "e", digits = 2)
         )
       
@@ -422,12 +451,17 @@ explore_contrast_server <- function(input, output, session, state) {
   output$volcanoPlot <- renderPlotly({
     req(selected_data())
     
-    gg <- ggplot(selected_data(), aes(x = log2FC_shrunk, y = -log10(padj), text = tooltip)) +
+    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
+    
+    x_col <- if ("log2FC_shrunk" %in% colnames(selected_data())) "log2FC_shrunk" else "log2FC"
+    
+    gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
       geom_point(aes(color = DE), alpha = 0.6) +
       scale_color_manual(values = c("TRUE" = "red", "FALSE" = "gray"), guide = "none") +
-      geom_vline(xintercept = c(-input$fc_cutoff, input$fc_cutoff), linetype = "dashed") +
-      geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
-      labs(x = "log2 Fold Change (shrunken)", y = "-log10(FDR)") +
+      geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed") +
+      geom_hline(yintercept = -log10(padj_cut), linetype = "dashed") +
+      labs(x = paste0("log2 Fold Change", if (x_col == "log2FC_shrunk") " (shrunken)" else ""), y = "-log10(FDR)") +
       theme_minimal()
     
     ggplotly(gg, tooltip = "text")
@@ -437,7 +471,7 @@ explore_contrast_server <- function(input, output, session, state) {
   # Output: Heatmap of Top DE Genes
   #==============================
   output$heatmapPlot <- renderPlot({
-    req(selected_data(), state$dds_obj())
+    req(selected_data(), state$se_obj())
     
     top_genes <- selected_data() %>%
       filter(DE) %>%
@@ -449,10 +483,10 @@ explore_contrast_server <- function(input, output, session, state) {
       return()
     }
     
-    vsd_mat <- assay(state$dds_obj(), "vst")[rownames(state$dds_obj()) %in% top_genes$Geneid, ]
+    vsd_mat <- assay(state$se_obj(), "vst")[rownames(state$se_obj()) %in% top_genes$Geneid, ]
     vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
     
-    rownames(vsd_mat) <- top_genes$symbol
+    rownames(vsd_mat) <- if ("symbol" %in% colnames(top_genes)) top_genes$symbol else top_genes$Geneid
     
     Heatmap(
       scale(vsd_mat),
@@ -651,11 +685,11 @@ explore_contrast_server <- function(input, output, session, state) {
       group_variable <- if (!is.null(input$geseca_condition_var) && nzchar(input$geseca_condition_var)) {
         input$geseca_condition_var
       } else {
-        all.vars(design(state$dds_obj()))[1]
+        all.vars(design(state$se_obj()))[1]
       }
       
       # Extract the actual condition values from colData
-      conditions <- colData(state$dds_obj())[[group_variable]]
+      conditions <- colData(state$se_obj())[[group_variable]]
       
       # Create co-regulation plot
       plotCoregulationProfile(pathway_genes, geseca_result()$vst_matrix, conditions = conditions, scale = TRUE) +

@@ -1,4 +1,4 @@
-compare_contrast_server <- function(input, output, session, state) {
+compare_contrast_server <- function(input, output, session, state, organism) {
   
   #==============================
   # UI: Contrast selection
@@ -34,7 +34,7 @@ compare_contrast_server <- function(input, output, session, state) {
                withSpinner(DTOutput("compareTable"), type = 5))
     )
     
-    if (input$organism == "Human") {
+    if (!is.null(organism()) && organism() == "Human") {
       tabs <- append(tabs, 
                      list(
                        tabPanel("Gene Sets Overlap",
@@ -110,17 +110,36 @@ compare_contrast_server <- function(input, output, session, state) {
   # Reactive: Data for DEGs upset plot 
   #==============================
   compare_data <- reactive({
-    req(state$de_df(), input$compare_contrasts)
+    req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
     
+    # Get global cutoffs (with defaults)
+    padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
+      input$global_padj_cutoff
+    } else {
+      0.05
+    }
+    lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) {
+      input$global_log2FC_cutoff
+    } else {
+      2
+    }
+    
+    # For each contrast, get genes that pass cutoffs
     deg_list <- map(input$compare_contrasts, function(ct) {
       state$de_df() %>%
         filter(
           contrast == ct,
-          padj < 0.05,
-          abs(log2FC) > input$compare_fc_cutoff
+          !is.na(padj) & !is.na(log2FC),
+          padj <= padj_cut,
+          abs(log2FC) >= lfc_cut
         ) %>%
         pull(Geneid)
     }) %>% set_names(input$compare_contrasts)
+    
+    # Check if any genes exist
+    if (all(lengths(deg_list) == 0)) {
+      return(NULL)
+    }
     
     enframe(deg_list, name = "contrast", value = "Geneid") %>%
       unnest(Geneid) %>%
@@ -132,28 +151,57 @@ compare_contrast_server <- function(input, output, session, state) {
   # Reactive: Table of DEGs in all selected contrasts
   #==============================
   compare_table_data <- reactive({
-    req(state$de_df(), input$compare_contrasts)
+    req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
     
-    # Filter DE results for selected contrasts and cutoff
+    # Get global cutoffs (with defaults)
+    padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
+      input$global_padj_cutoff
+    } else {
+      0.05
+    }
+    lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) {
+      input$global_log2FC_cutoff
+    } else {
+      2
+    }
+    
+    has_symbol <- "symbol" %in% colnames(state$de_df())
+    id_cols <- if (has_symbol) c("Geneid", "symbol") else "Geneid"
+    
+    # Get genes that pass in at least one selected contrast
+    passing_genes <- state$de_df() %>%
+      filter(
+        contrast %in% input$compare_contrasts,
+        !is.na(padj) & !is.na(log2FC),
+        padj <= padj_cut,
+        abs(log2FC) >= lfc_cut
+      ) %>%
+      pull(Geneid) %>%
+      unique()
+    
+    if (length(passing_genes) == 0) {
+      return(NULL)
+    }
+    
+    # Get ALL data for these genes across selected contrasts
     filtered <- state$de_df() %>%
       filter(
         contrast %in% input$compare_contrasts,
-        padj < 0.05,
-        abs(log2FC) > input$compare_fc_cutoff
+        Geneid %in% passing_genes
       ) %>%
-      select(Geneid, symbol, contrast, log2FC)
+      select(all_of(c(id_cols, "contrast", "log2FC")))
     
     # Pivot to wide format
     wide_data <- filtered %>%
       pivot_wider(
-        id_cols = c(Geneid, symbol),  
+        id_cols = all_of(id_cols),
         names_from = contrast,
         values_from = log2FC
       ) %>%
-      mutate(across(-c(Geneid, symbol), ~ round(., 2)))
+      mutate(across(-any_of(id_cols), ~ round(., 2)))
     
     # Get contrast column names
-    contrast_cols <- setdiff(names(wide_data), c("Geneid", "symbol"))
+    contrast_cols <- setdiff(names(wide_data), id_cols)
     
     # Add TRUE/FALSE indicator columns for each contrast
     for(col in contrast_cols) {
@@ -161,7 +209,7 @@ compare_contrast_server <- function(input, output, session, state) {
     }
     
     # Arrange and reorder columns to group each contrast with its indicator
-    col_order <- c("Geneid", "symbol")
+    col_order <- id_cols
     for(col in contrast_cols) {
       col_order <- c(col_order, col, paste0(col, "_DE"))
     }
@@ -415,66 +463,10 @@ compare_contrast_server <- function(input, output, session, state) {
     {
       req(compare_table_data())
       
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
-      
-      contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
-        paste(input$compare_contrasts, collapse = "-")
-      } else {
-        "contrasts"
-      }
-      contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
-      
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
-      
-      file_name <- paste(file_base, contrasts_str, fc_str, sep = "__")
-      
-      df <- compare_table_data()
-      lfc_cols <- setdiff(colnames(df), c("Geneid", "symbol"))
-      
-      datatable(
-        df,
-        extensions = 'Buttons',
-        filter = 'top',
-        options = list(
-          pageLength = 20,
-          scrollX = TRUE,
-          dom = 'Bfrtip',
-          buttons = list(
-            list(
-              extend = 'csv',
-              text = 'Download CSV',
-              filename = file_name,
-              exportOptions = list(modifier = list(page = "all"))
-            )
-          )
-        ),
-        rownames = FALSE
-      ) %>%
-        formatStyle(
-          columns = lfc_cols,
-          backgroundColor = styleInterval(
-            0,
-            c("pink", "lightblue")
-          )
-        )
-    },
-    server = FALSE
-  )
-  
-  #==============================
-  # Output: DEGs Comparison Table
-  #==============================
-  output$compareTable <- renderDT(
-    {
-      req(compare_table_data())
-      
       # Display table (simplified)
       df_display <- compare_table_data()
-      lfc_cols <- setdiff(colnames(df_display), c("Geneid", "symbol"))
+      id_cols    <- intersect(c("Geneid", "symbol"), colnames(df_display))
+      lfc_cols   <- setdiff(colnames(df_display), id_cols)
       
       datatable(
         df_display,
@@ -523,7 +515,8 @@ compare_contrast_server <- function(input, output, session, state) {
       }
       contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
       
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(input$fc_cutoff)))
+      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
       
       paste(file_base, contrasts_str, fc_str, "full.csv", sep = "__")
     },
@@ -642,6 +635,7 @@ compare_contrast_server <- function(input, output, session, state) {
     
     draw(ht, heatmap_legend_side = "right")
   })
+  
   #==============================
   # Output: GSEA Comparison Table
   #==============================
