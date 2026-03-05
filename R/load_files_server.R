@@ -3,7 +3,7 @@ load_files_server <- function(input, output, session, state) {
   #== == == == == == == == == == == == == == == == ==
   #===== HELPERS ====================================
   #== == == == == == == == == == == == == == == == ==
-  
+
   # Locate a built-in annotation file for the given annotation name.
   find_annotation_path <- function(annotation) {
     path <- system.file("annotations", paste0(annotation, ".rds"), package = "RNASeqApp")
@@ -14,13 +14,12 @@ load_files_server <- function(input, output, session, state) {
       if (file.exists(local_path)) local_path else NULL
     }
   }
-  
+
   # Extract all contrasts from SE rowData into a long-format data frame.
   extract_contrasts <- function(se) {
     rd       <- as.data.frame(SummarizedExperiment::rowData(se))
     gene_ids <- rownames(se)
 
-    # Get contrast names from metadata
     meta <- tryCatch(
       metadata(se),
       error = function(e) list()
@@ -56,110 +55,86 @@ load_files_server <- function(input, output, session, state) {
   }
 
   # Merge annotation data frame into the contrast data frame.
-  merge_annotation <- function(de_df, annot, organism = NULL, symbol_column = NULL) {
-
-    # Step 1: Check for required columns based on organism.
-    id_column            <- NULL
-    symbol_source_column <- NULL
-    missing_columns      <- c()
-
-    if (!is.null(organism) && organism == "Human") {
-      # Human: need ensembl_gene_id AND hgnc_symbol
-      if (!("ensembl_gene_id" %in% colnames(annot))) {
-        missing_columns <- c(missing_columns, "ensembl_gene_id")
-      } else {
-        id_column <- "ensembl_gene_id"
-      }
-
-      if (!("hgnc_symbol" %in% colnames(annot))) {
-        missing_columns <- c(missing_columns, "hgnc_symbol")
-      } else {
-        symbol_source_column <- "hgnc_symbol"
-      }
-
-    } else if (!is.null(organism) && organism == "Bacteria") {
-      # Bacterial: need Geneid AND gene
-      if (!("Geneid" %in% colnames(annot))) {
-        missing_columns <- c(missing_columns, "Geneid")
-      } else {
-        id_column <- "Geneid"
-      }
-
-      if (!("gene" %in% colnames(annot))) {
-        missing_columns <- c(missing_columns, "gene")
-      } else {
-        symbol_source_column <- "gene"
-      }
-
-    } else {
-      # Unknown organism - try to auto-detect an ID column.
-      if ("Geneid" %in% colnames(annot)) {
-        id_column <- "Geneid"
-      } else if ("ensembl_gene_id" %in% colnames(annot)) {
-        id_column <- "ensembl_gene_id"
-      } else {
-        missing_columns <- c(missing_columns, "Geneid", "ensembl_gene_id")
-      }
-    }
-
-    # If required columns are missing and user hasn't supplied a symbol column,
-    # return NULL to trigger interactive column selection.
-    if (length(missing_columns) > 0 && is.null(symbol_column)) {
-      return(NULL)
-    }
-
-    # Step 2: Create standardised 'symbol' column if not already present.
-    if (!"symbol" %in% colnames(annot)) {
-      if (!is.null(symbol_column)) {
-        if (symbol_column %in% colnames(annot)) {
-          # User manually selected a column.
-          annot <- annot |>
-            mutate(symbol = .data[[symbol_column]])
-        } else {
-          # User-specified column not found - signal failure.
-          return(NULL)
-        }
-      } else if (!is.null(organism) && organism == "Human") {
-        # Human: use hgnc_symbol.
-        annot <- annot |>
-          mutate(symbol = hgnc_symbol)
-      } else if (!is.null(organism) && organism == "Bacteria") {
-        # Bacterial: use gene, fall back to Geneid when gene is NA/empty.
-        annot <- annot |>
-          mutate(symbol = ifelse(is.na(gene) | gene == "", Geneid, gene))
-      } else {
-        # Unknown organism with no symbol source - need user input.
-        return(NULL)
-      }
-    }
-
-    # Store full annotation
-    state$annotation_df(annot)
-
-    # Step 3: Join using the detected ID column.
-    if (!is.null(id_column) && id_column == "ensembl_gene_id") {
-      # Human: join ensembl_gene_id from annotation to Geneid from de_df.
+  # Detects the join column automatically (ensembl_gene_id or Geneid).
+  # Does NOT create a symbol column — that is handled via apply_symbol().
+  # Returns the merged data frame, or NULL if no usable join column is found.
+  merge_annotation <- function(de_df, annot) {
+    if ("ensembl_gene_id" %in% colnames(annot)) {
       dplyr::left_join(de_df, annot, by = c("Geneid" = "ensembl_gene_id"))
-    } else {
-      # Bacterial / unknown: join on Geneid.
+    } else if ("Geneid" %in% colnames(annot)) {
       dplyr::left_join(de_df, annot, by = "Geneid")
+    } else {
+      NULL
     }
   }
 
-  # Build metadata panel from SE.
+  # Create (or update) the 'symbol' column in a data frame using primary and
+  # optional fallback columns.  When the primary value is NA or empty the
+  # fallback is used.  Returns the data frame unchanged if primary_col is not
+  # present.
+  apply_symbol <- function(df, primary_col, secondary_col = "none") {
+    if (!primary_col %in% colnames(df)) return(df)
+    if (!is.null(secondary_col) && secondary_col != "none" &&
+        secondary_col %in% colnames(df)) {
+      df |>
+        dplyr::mutate(symbol = ifelse(
+          is.na(.data[[primary_col]]) | as.character(.data[[primary_col]]) == "",
+          as.character(.data[[secondary_col]]),
+          as.character(.data[[primary_col]])
+        ))
+    } else {
+      df |>
+        dplyr::mutate(symbol = as.character(.data[[primary_col]]))
+    }
+  }
+
+  # Determine default primary and secondary symbol columns from a set of
+  # available column names.
+  default_symbol_cols <- function(annot_cols) {
+    primary <- {
+      found <- intersect(c("gene", "hgnc_symbol"), annot_cols)
+      if (length(found) > 0) found[1] else annot_cols[1]
+    }
+    secondary <- {
+      found <- intersect(c("Geneid", "ensembl_gene_id"), annot_cols)
+      if (length(found) > 0) found[1] else "none"
+    }
+    list(primary = primary, secondary = secondary)
+  }
+
+  # Build the two-dropdown symbol-column selection UI from annotation columns.
+  build_symbol_select_ui <- function(annot_cols, primary_sel, secondary_sel) {
+    secondary_choices <- c("none" = "none", setNames(annot_cols, annot_cols))
+
+    tagList(
+      tags$hr(style = "margin: 6px 0;"),
+      tags$p(icon("tag"), strong("Select symbol columns:"),
+             style = "margin: 4px 0 2px 0; font-size: 0.9em;"),
+      selectInput("symbolPrimaryCol",
+                  "Primary symbol column:",
+                  choices  = annot_cols,
+                  selected = primary_sel),
+      selectInput("symbolSecondaryCol",
+                  "Fallback column (used when primary is NA):",
+                  choices  = secondary_choices,
+                  selected = secondary_sel),
+      actionButton("applySymbolColumns", "Apply", class = "btn-primary btn-sm")
+    )
+  }
+
+  # Build the SE metadata info panel.
   se_info_ui <- function(se, organism = NULL, annotation = NULL) {
-    meta  <- tryCatch(metadata(se), error = function(e) list())
+    meta        <- tryCatch(metadata(se), error = function(e) list())
     n_contrasts <- length(meta$contrasts)
 
-    # Core stats always shown
     info_rows <- tagList(
-      tags$li(icon("dna"),         strong("Genes: "),    nrow(se)),
-      tags$li(icon("vials"),       strong("Samples: "),  ncol(se)),
-      tags$li(icon("layer-group"), strong("Contrasts: "), n_contrasts),
+      tags$li(icon("dna"),         strong("Genes: "),     nrow(se)),
+      tags$li(icon("vials"),       strong("Samples: "),   ncol(se)),
+      tags$li(icon("layer-group"), strong("Contrasts: "),  n_contrasts),
       if (!is.null(organism))
-        tags$li(icon("bug"), strong("Organism: "), organism),
+        tags$li(icon("bug"),  strong("Organism: "),    organism),
       if (!is.null(annotation))
-        tags$li(icon("book"), strong("Annotation: "), annotation)
+        tags$li(icon("book"), strong("Annotation: "),  annotation)
     )
 
     tagList(
@@ -167,12 +142,11 @@ load_files_server <- function(input, output, session, state) {
               info_rows)
     )
   }
-  
+
   #== == == == == == == == == == == == == == == == ==
   #===== EVENT HANDLERS =============================
   #== == == == == == == == == == == == == == == == ==
 
-  
   ## ---- SE file upload: validation, contrast extraction, and initial annotation -----
   observeEvent(input$seFile, {
     req(input$seFile)
@@ -201,10 +175,8 @@ load_files_server <- function(input, output, session, state) {
       return(NULL)
     }
 
-    # Store SE (compatible with DESeq2/SummarizedExperiment accessor functions).
     state$se_obj(se)
 
-    # Extract contrasts from rowData.
     de_df <- tryCatch(
       extract_contrasts(se),
       error = function(e) {
@@ -220,7 +192,7 @@ load_files_server <- function(input, output, session, state) {
     req(de_df)
 
     # Extract variance partition if varpart_* columns are present.
-    rd <- as.data.frame(SummarizedExperiment::rowData(se))
+    rd           <- as.data.frame(SummarizedExperiment::rowData(se))
     varpart_cols <- grep("^varpart_", colnames(rd), value = TRUE)
     if (length(varpart_cols) > 0) {
       vp_mat <- as.data.frame(rd[, varpart_cols, drop = FALSE])
@@ -229,65 +201,52 @@ load_files_server <- function(input, output, session, state) {
       state$varpart_obj(list(varPart = vp_mat))
     }
 
-    # Determine organism and annotation from SE metadata only.
-    se_organism <- tryCatch(
-      metadata(se)$organism,
-      error = function(e) NULL
-    )
-    organism <- if (!is.null(se_organism) && nzchar(trimws(se_organism))) {
-      se_organism
-    } else {
-      NULL
-    }
+    # Determine organism and annotation from SE metadata.
+    se_organism <- tryCatch(metadata(se)$organism, error = function(e) NULL)
+    organism    <- if (!is.null(se_organism) && nzchar(trimws(se_organism))) se_organism else NULL
+    
+    state$se_organism(organism)
 
-    se_annotation <- tryCatch(
-      metadata(se)$annotation,
-      error = function(e) NULL
-    )
-    annotation <- if (!is.null(se_annotation) && nzchar(trimws(se_annotation))) {
-      se_annotation
-    } else {
-      NULL
-    }
+    se_annotation <- tryCatch(metadata(se)$annotation, error = function(e) NULL)
+    annotation    <- if (!is.null(se_annotation) && nzchar(trimws(se_annotation))) se_annotation else NULL
 
-    # Track annotation status for UI rendering after de_df is set.
     annot_status  <- "none"
     annot_message <- NULL
-    missing_cols  <- NULL
+    annot_cols    <- NULL
+    sym_primary   <- NULL
+    sym_secondary <- NULL
 
     if (!is.null(annotation)) {
-      # Try to load built-in annotation.
       annot_path <- find_annotation_path(annotation)
 
       if (!is.null(annot_path)) {
         annot <- tryCatch(
           readRDS(annot_path),
           error = function(e) {
-            showNotification(paste("Annotation load error:", e$message),
-                             type = "error")
+            showNotification(paste("Annotation load error:", e$message), type = "error")
             NULL
           }
         )
         if (!is.null(annot)) {
-          merged <- merge_annotation(de_df, annot, organism = organism)
+          merged <- merge_annotation(de_df, annot)
           if (!is.null(merged)) {
-            de_df         <- merged
+            # Determine and auto-apply default symbol columns.
+            annot_cols    <- colnames(annot)
+            defaults      <- default_symbol_cols(annot_cols)
+            sym_primary   <- defaults$primary
+            sym_secondary <- defaults$secondary
+
+            de_df         <- apply_symbol(merged, sym_primary, sym_secondary)
+            annot         <- apply_symbol(annot,  sym_primary, sym_secondary)
+            state$annotation_df(annot)
+
             annot_status  <- "loaded"
             annot_message <- paste("Annotation loaded:", basename(annot_path))
           } else {
-            # Required columns missing - store pending data for user selection.
-            state$pending_annotation(annot)
-            state$pending_de_df(de_df)
-            state$se_organism(organism)
-            annot_status <- "missing_cols"
-            missing_cols <- setdiff(
-              if (!is.null(organism) && organism == "Human")
-                c("ensembl_gene_id", "hgnc_symbol")
-              else if (!is.null(organism) && organism == "Bacteria")
-                c("Geneid", "gene")
-              else
-                c("Geneid", "ensembl_gene_id"),
-              colnames(annot)
+            annot_status  <- "no_join_col"
+            annot_message <- paste0(
+              "Annotation '", basename(annot_path), "' has no recognized join column ",
+              "(expected 'Geneid' or 'ensembl_gene_id'). Upload a different annotation file."
             )
           }
         }
@@ -297,7 +256,6 @@ load_files_server <- function(input, output, session, state) {
       }
     }
 
-    # Set de_df after all annotation logic is complete.
     state$de_df(de_df)
 
     info_panel <- tags$div(
@@ -312,42 +270,22 @@ load_files_server <- function(input, output, session, state) {
         tagList(
           info_panel,
           tags$p(icon("check-circle"), annot_message,
-                 style = "color: green; padding-left: 15px; margin: 2px 0;")
-        )
-      } else if (annot_status == "missing_cols") {
-        annot_cols <- colnames(isolate(state$pending_annotation()))
-        tagList(
-          info_panel,
-          tags$p(
-            icon("exclamation-triangle"),
-            HTML(paste0(
-              "Annotation is missing required columns: <strong>",
-              paste(missing_cols, collapse = ", "),
-              "</strong>. Please select a column to use as the gene symbol."
-            )),
-            style = "color: orange; padding-left: 15px;"
-          ),
-          tags$div(
-            style = "padding-left: 15px;",
-            selectInput("symbolColumnSelect", "Use column as symbol:",
-                        choices = annot_cols),
-            actionButton("applySymbolColumn", "Apply", class = "btn-primary btn-sm")
-          )
-        )
-      } else if (annot_status == "not_found") {
-        tagList(
-          info_panel,
-          tags$p(icon("exclamation-triangle"),
-                 HTML(paste0(annot_message, ". Upload an annotation file or fix the annotation name in your SE object metadata.")),
-                 style = "color: orange; padding-left: 15px;"),
-          fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
+                 style = "color: green; padding-left: 15px; margin: 2px 0;"),
+          tags$div(style = "padding-left: 15px;",
+                   build_symbol_select_ui(annot_cols, sym_primary, sym_secondary))
         )
       } else {
-        # annot_status == "none": no annotation in SE metadata
         tagList(
           info_panel,
           tags$p(icon("exclamation-triangle"),
-                 HTML("Annotation not found in SE metadata. Upload an annotation file or add the annotation to your SE object metadata."),
+                 HTML(
+                   if (annot_status == "no_join_col") annot_message
+                   else if (annot_status == "not_found")
+                     paste0(annot_message,
+                            ". Upload an annotation file or fix the annotation name in your SE object metadata.")
+                   else
+                     "Annotation not found in SE metadata. Upload an annotation file or add the annotation to your SE object metadata."
+                 ),
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
@@ -373,14 +311,21 @@ load_files_server <- function(input, output, session, state) {
     )
     req(annot)
 
-    # Get organism from stored SE.
     se_current <- state$se_obj()
     organism   <- tryCatch(metadata(se_current)$organism, error = function(e) NULL)
     organism   <- if (!is.null(organism) && nzchar(trimws(organism))) organism else NULL
 
-    merged <- merge_annotation(state$de_df(), annot, organism = organism)
+    merged <- merge_annotation(state$de_df(), annot)
 
     if (!is.null(merged)) {
+      annot_cols    <- colnames(annot)
+      defaults      <- default_symbol_cols(annot_cols)
+      sym_primary   <- defaults$primary
+      sym_secondary <- defaults$secondary
+
+      merged <- apply_symbol(merged, sym_primary, sym_secondary)
+      annot  <- apply_symbol(annot,  sym_primary, sym_secondary)
+      state$annotation_df(annot)
       state$de_df(merged)
 
       output$annotationStatus <- renderUI({
@@ -390,17 +335,13 @@ load_files_server <- function(input, output, session, state) {
                           icon("info-circle"), strong("SE loaded")),
                    se_info_ui(se_current, organism = organism)),
           tags$p(icon("check-circle"), "Custom annotation loaded successfully.",
-                 style = "color: green; padding-left: 15px;")
+                 style = "color: green; padding-left: 15px;"),
+          tags$div(style = "padding-left: 15px;",
+                   build_symbol_select_ui(annot_cols, sym_primary, sym_secondary))
         )
       })
       showNotification("Custom annotation loaded successfully.", type = "message")
     } else {
-      # Required columns missing - store pending data for interactive selection.
-      state$pending_annotation(annot)
-      state$pending_de_df(state$de_df())
-      state$se_organism(organism)
-
-      annot_cols <- colnames(annot)
       output$annotationStatus <- renderUI({
         tagList(
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
@@ -409,69 +350,56 @@ load_files_server <- function(input, output, session, state) {
                    se_info_ui(se_current, organism = organism)),
           tags$p(
             icon("exclamation-triangle"),
-            HTML("Annotation is missing required columns. Please select a column to use as the gene symbol."),
-            style = "color: orange; padding-left: 15px;"
+            HTML(paste0(
+              "Annotation has no recognized join column ",
+              "(<strong>Geneid</strong> or <strong>ensembl_gene_id</strong>). ",
+              "Please upload an annotation file that contains one of these columns."
+            )),
+            style = "color: red; padding-left: 15px;"
           ),
-          tags$div(
-            style = "padding-left: 15px;",
-            selectInput("symbolColumnSelect", "Use column as symbol:",
-                        choices = annot_cols),
-            actionButton("applySymbolColumn", "Apply", class = "btn-primary btn-sm")
-          )
+          fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
       })
-    }
-  })
-
-  ## ---- Custom symbol-column selection -----
-  observeEvent(input$applySymbolColumn, {
-    req(input$symbolColumnSelect, state$pending_annotation(), state$pending_de_df())
-
-    annot    <- state$pending_annotation()
-    de_df    <- state$pending_de_df()
-    organism <- state$se_organism()
-
-    de_df_merged <- merge_annotation(
-      de_df,
-      annot,
-      organism      = organism,
-      symbol_column = input$symbolColumnSelect
-    )
-
-    if (!is.null(de_df_merged)) {
-      state$de_df(de_df_merged)
-      # Clear pending state.
-      state$pending_annotation(NULL)
-      state$pending_de_df(NULL)
-
-      se_current <- state$se_obj()
-      output$annotationStatus <- renderUI({
-        tagList(
-          tags$div(
-            style = "padding-left: 15px; margin-bottom: 8px;",
-            tags$p(style = "color: steelblue; margin: 0;",
-                   icon("info-circle"), strong("SE loaded")),
-            se_info_ui(se_current, organism = organism)
-          ),
-          tags$p(icon("check-circle"),
-                 paste0("Annotation loaded. Using '", input$symbolColumnSelect, "' as symbol column."),
-                 style = "color: green; padding-left: 15px; margin: 2px 0;")
-        )
-      })
-
       showNotification(
-        paste("Annotation applied successfully using", input$symbolColumnSelect),
-        type = "message"
+        "Annotation could not be joined: no 'Geneid' or 'ensembl_gene_id' column found.",
+        type = "error"
       )
     }
   })
-  
+
+  ## ---- Symbol-column selection (apply button) -----
+  observeEvent(input$applySymbolColumns, {
+    req(input$symbolPrimaryCol, state$de_df())
+
+    primary_col   <- input$symbolPrimaryCol
+    secondary_col <- input$symbolSecondaryCol  # may be "none"
+
+    if (!primary_col %in% colnames(state$de_df())) {
+      showNotification(paste("Column not found in data:", primary_col), type = "error")
+      return()
+    }
+
+    state$de_df(apply_symbol(state$de_df(), primary_col, secondary_col))
+
+    # Mirror the symbol column in annotation_df for full-annotation downloads.
+    annot <- state$annotation_df()
+    if (!is.null(annot) && primary_col %in% colnames(annot)) {
+      state$annotation_df(apply_symbol(annot, primary_col, secondary_col))
+    }
+
+    showNotification(
+      paste0("Symbol column set to '", primary_col, "'",
+             if (!is.null(secondary_col) && secondary_col != "none")
+               paste0(" (fallback: '", secondary_col, "')") else ""),
+      type = "message"
+    )
+  })
+
   #== == == == == == == == == == == == == == == == ==
   #===== REACTIVES ==================================
   #== == == == == == == == == == == == == == == == ==
 
   ## ---- Filtered DE table with global cutoffs -----
-  
   filtered_de_df <- reactive({
     req(state$de_df())
     df <- state$de_df()
