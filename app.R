@@ -27,7 +27,9 @@ library(circlize)
 library(SummarizedExperiment)
 
 
-# Source helper server modules
+# Source utilities and server modules
+source("R/utils-global.R")
+source("R/utils.R")
 source("R/load_files_server.R")
 source("R/explore_contrast_server.R")
 source("R/compare_contrast_server.R")
@@ -121,18 +123,40 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("contrastSelect"),
-                    numericInput("top_n", "Top DE genes (Heatmap)", value = 25, min = 15, step = 5),
-                    selectInput("viridis_palette", "Color palette (Heatmap)",
-                                choices = c("viridis", "magma", "plasma", "inferno", "cividis"), selected = "viridis"),
-                    selectInput("gs_collection", "Gene Set (GSEA/GESECA)",
-                                choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
-                    conditionalPanel(condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
-                                     textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
-                    tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
-                                    target = "_blank",
-                                    icon("external-link-alt"),
-                                    "MSigDB"))
+                    h4("Heatmap Options"),
+                    numericInput("top_n", "Top N genes", value = 50, min = 10, max = 500, step = 10),
+                    selectInput("viridis_palette", "Viridis palette",
+                                choices = c("viridis", "magma", "plasma", "inferno", "cividis", "mako", "rocket", "turbo"),
+                                selected = "viridis"),
+                    hr(),
+                    h4("Gene Sets (GSEA/GESECA)"),
+                    # Conditional UI: Human uses MSigDB, Bacteria uses functional annotations
+                    conditionalPanel(
+                      condition = "output.se_organism == 'Human'",
+                      selectInput("gs_collection", "MSigDB Collection",
+                                  choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), 
+                                  selected = "H"),
+                      conditionalPanel(
+                        condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
+                        textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
+                      ),
+                      tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
+                               tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                                      target = "_blank",
+                                      icon("external-link-alt"),
+                                      "MSigDB"))
+                    ),
+                    conditionalPanel(
+                      condition = "output.se_organism == 'Bacteria'",
+                      selectInput("bacterial_geneset_source", "Functional Annotation",
+                                  choices = c(
+                                    "COG24 Category" = "func_COG24_CATEGORY",
+                                    "COG24 Pathway" = "func_COG24_PATHWAY",
+                                    "KEGG Class" = "func_KEGG_Class",
+                                    "KEGG Module" = "func_KEGG_Module"
+                                  ),
+                                  selected = "func_COG24_CATEGORY")
+                    )
                 ),
                 
                 box(title = "Explore Results by Contrast", width = 9, status = "primary", collapsible = TRUE,
@@ -152,15 +176,34 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("multiContrastSelect"),
-                    selectInput("compare_gs_collection", "Gene Set (GSEA/GESECA)",
-                                choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), selected = "H"),
-                    conditionalPanel(condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
-                                     textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")),
-                    tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                             tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
-                                    target = "_blank",
-                                    icon("external-link-alt"),
-                                    "MSigDB")),
+                    h4("Gene Sets (GSEA)"),
+                    # Conditional UI: Human uses MSigDB, Bacteria uses functional annotations
+                    conditionalPanel(
+                      condition = "output.se_organism == 'Human'",
+                      selectInput("compare_gs_collection", "MSigDB Collection",
+                                  choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), 
+                                  selected = "H"),
+                      conditionalPanel(
+                        condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
+                        textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
+                      ),
+                      tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
+                               tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                                      target = "_blank",
+                                      icon("external-link-alt"),
+                                      "MSigDB"))
+                    ),
+                    conditionalPanel(
+                      condition = "output.se_organism == 'Bacteria'",
+                      selectInput("bacterial_geneset_source_compare", "Functional Annotation",
+                                  choices = c(
+                                    "COG24 Category" = "func_COG24_CATEGORY",
+                                    "COG24 Pathway" = "func_COG24_PATHWAY",
+                                    "KEGG Class" = "func_KEGG_Class",
+                                    "KEGG Module" = "func_KEGG_Module"
+                                  ),
+                                  selected = "func_COG24_CATEGORY")
+                    ),
                     numericInput("max_pathways", "Max pathways to show", value = 100, min = 10, max = 500, step = 10),
                     numericInput("pathway_name_length", "Max pathway name length", value = 50, min = 25, max = 500, step = 10)
                 ),
@@ -175,7 +218,6 @@ ui <- dashboardPage(
                     )
                 )
               )
-              
       ),
       
       ## ---- Explore by Gene -----

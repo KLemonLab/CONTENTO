@@ -19,7 +19,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
     )
     
-    if (!is.null(organism()) && organism() == "Human") {
+    if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
       tabs <- append(tabs, 
                      list(
                        tabPanel("GSEA",
@@ -190,21 +190,35 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   })
   
   #==============================
-  # Reactive: Gene sets from MSigDB
+  # Reactive: Gene sets from MSigDB or Bacterial Annotations
   #==============================
   genesets <- reactive({
-    req(input$gs_collection)
-    
-    tryCatch({
-      if (nzchar(input$gs_subcollection)) {
-        msigdbr(species = "Homo sapiens", collection = input$gs_collection, subcollection = input$gs_subcollection)
-      } else {
-        msigdbr(species = "Homo sapiens", collection = input$gs_collection)
-      }
-    }, error = function(e) {
-      showNotification(paste("Error loading gene sets:", e$message), type = "error")
-      NULL
-    })
+    # For Bacteria: use functional annotations
+    if (!is.null(organism()) && organism() == "Bacteria") {
+      req(state$annotation_df(), input$bacterial_geneset_source)
+      
+      tryCatch({
+        build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source)
+      }, error = function(e) {
+        showNotification(paste("Error loading bacterial gene sets:", e$message), type = "error")
+        NULL
+      })
+      
+    } else {
+      # For Human: use MSigDB
+      req(input$gs_collection)
+      
+      tryCatch({
+        if (nzchar(input$gs_subcollection)) {
+          msigdbr(species = "Homo sapiens", collection = input$gs_collection, subcollection = input$gs_subcollection)
+        } else {
+          msigdbr(species = "Homo sapiens", collection = input$gs_collection)
+        }
+      }, error = function(e) {
+        showNotification(paste("Error loading gene sets:", e$message), type = "error")
+        NULL
+      })
+    }
   })
   
   #==============================
@@ -226,10 +240,16 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       
       ranks_vec <- setNames(ranks$stat, ranks$Geneid)
       
-      # Convert msigdbr format to named list of gene vectors
-      pathways_list <- genesets() %>%
-        split(.$gs_name) %>%
-        lapply(function(x) x$ensembl_gene)
+      # Convert gene sets to named list of gene vectors
+      # For bacteria: already in correct format
+      # For human: need to convert from msigdbr format
+      if (!is.null(organism()) && organism() == "Bacteria") {
+        pathways_list <- genesets()
+      } else {
+        pathways_list <- genesets() %>%
+          split(.$gs_name) %>%
+          lapply(function(x) x$ensembl_gene)
+      }
       
       if (length(pathways_list) == 0) {
         showNotification("No pathways found in selected gene set", type = "warning")
@@ -287,10 +307,16 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      # Convert msigdbr format to named list
-      pathways_list <- genesets() %>%
-        split(.$gs_name) %>%
-        lapply(function(x) x$ensembl_gene)
+      # Convert gene sets to named list
+      # For bacteria: already in correct format
+      # For human: need to convert from msigdbr format
+      if (!is.null(organism()) && organism() == "Bacteria") {
+        pathways_list <- genesets()
+      } else {
+        pathways_list <- genesets() %>%
+          split(.$gs_name) %>%
+          lapply(function(x) x$ensembl_gene)
+      }
       
       if (length(pathways_list) == 0) {
         showNotification("No pathways found in selected gene set", type = "warning")

@@ -34,7 +34,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                withSpinner(DTOutput("compareTable"), type = 5))
     )
     
-    if (!is.null(organism()) && organism() == "Human") {
+    if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
       tabs <- append(tabs, 
                      list(
                        tabPanel("Gene Sets Overlap",
@@ -243,20 +243,26 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # Reactive: GSEA Results for Multiple Contrasts
   #==============================
   compare_gsea_data <- reactive({
-    req(state$de_df(), input$compare_contrasts, input$compare_gs_collection)
+    req(state$de_df(), input$compare_contrasts)
     
     tryCatch({
-      # Load gene sets
-      genesets <- if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) {
-        msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection, subcollection = input$compare_gs_subcollection)
+      # Load gene sets based on organism
+      if (!is.null(organism()) && organism() == "Bacteria") {
+        req(input$bacterial_geneset_source, state$annotation_df())
+        pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source)
       } else {
-        msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection)
+        req(input$compare_gs_collection)
+        genesets <- if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) {
+          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection, subcollection = input$compare_gs_subcollection)
+        } else {
+          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection)
+        }
+        
+        # Convert to pathway list
+        pathways_list <- genesets %>%
+          split(.$gs_name) %>%
+          lapply(function(x) x$ensembl_gene)
       }
-      
-      # Convert to pathway list
-      pathways_list <- genesets %>%
-        split(.$gs_name) %>%
-        lapply(function(x) x$ensembl_gene)
       
       # Run GSEA for each selected contrast
       fgsea_results <- map(input$compare_contrasts, function(ct) {

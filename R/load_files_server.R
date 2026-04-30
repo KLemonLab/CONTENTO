@@ -105,8 +105,8 @@ load_files_server <- function(input, output, session, state) {
         return(list(
           result = NULL, 
           message = paste0("Column '", annot_gene_col, "' is type ", 
-                          class(annot[[annot_gene_col]])[1], 
-                          " (expected character). Cannot join with Geneid.")
+                           class(annot[[annot_gene_col]])[1], 
+                           " (expected character). Cannot join with Geneid.")
         ))
       }
       
@@ -126,7 +126,7 @@ load_files_server <- function(input, output, session, state) {
     # No usable join column found
     return(list(result = NULL, message = "No compatible gene ID column found (expected 'Geneid' or similar pattern)"))
   }
-
+  
   # Create (or update) the 'symbol' column in a data frame using primary and
   # optional fallback columns.  When the primary value is NA or empty the
   # fallback is used.  Returns the data frame unchanged if primary_col is not
@@ -146,13 +146,13 @@ load_files_server <- function(input, output, session, state) {
         dplyr::mutate(symbol = as.character(.data[[primary_col]]))
     }
   }
-
+  
   # Determine default primary symbol column from available annotation columns.
   default_symbol_col <- function(annot_cols) {
     found <- intersect(c("Gene", "gene", "hgnc_symbol", "gene_name", "symbol"), annot_cols)
     if (length(found) > 0) found[1] else annot_cols[1]
   }
-
+  
   # Build the single-dropdown symbol-column selection UI from annotation columns.
   build_symbol_select_ui <- function(annot_cols, primary_sel) {
     tagList(
@@ -162,12 +162,12 @@ load_files_server <- function(input, output, session, state) {
                   selected = primary_sel)
     )
   }
-
+  
   # Build the SE metadata info panel.
   se_info_ui <- function(se, organism = NULL, annotation = NULL) {
     meta        <- tryCatch(metadata(se), error = function(e) list())
     n_contrasts <- length(meta$contrasts)
-
+    
     info_rows <- tagList(
       tags$li(icon("dna"),         strong("Genes: "),     nrow(se)),
       tags$li(icon("vials"),       strong("Samples: "),   ncol(se)),
@@ -177,21 +177,21 @@ load_files_server <- function(input, output, session, state) {
       if (!is.null(annotation))
         tags$li(icon("book"), strong("Annotation: "),  annotation)
     )
-
+    
     tagList(
       tags$ul(style = "list-style: none; padding-left: 15px; margin: 5px 0;",
               info_rows)
     )
   }
-
+  
   #== == == == == == == == == == == == == == == == ==
   #===== EVENT HANDLERS =============================
   #== == == == == == == == == == == == == == == == ==
-
+  
   ## ---- SE file upload: validation, contrast extraction, and initial annotation -----
   observeEvent(input$seFile, {
     req(input$seFile)
-
+    
     se <- tryCatch(
       readRDS(input$seFile$datapath),
       error = function(e) {
@@ -422,6 +422,17 @@ load_files_server <- function(input, output, session, state) {
       duration = 2
     )
   })
+  
+  #== == == == == == == == == == == == == == == == ==
+  #===== OUTPUTS FOR UI CONDITIONALS =================
+  #== == == == == == == == == == == == == == == == ==
+  
+  # Output organism for conditional UI in app.R
+  output$se_organism <- reactive({
+    state$se_organism()
+  })
+  outputOptions(output, "se_organism", suspendWhenHidden = FALSE)
+  
 
   #== == == == == == == == == == == == == == == == ==
   #===== REACTIVES ==================================
