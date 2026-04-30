@@ -124,9 +124,21 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     req(state$se_obj())
     
     available_vars <- colnames(colData(state$se_obj()))
+    
+    # Try to get default from metadata
+    default_var <- tryCatch({
+      meta <- metadata(state$se_obj())
+      if (!is.null(meta$design_formula)) {
+        # Extract first variable from formula stored in metadata
+        all.vars(as.formula(meta$design_formula))[1]
+      } else {
+        available_vars[1]
+      }
+    }, error = function(e) available_vars[1])
+    
     selectInput("geseca_condition_var", "Color by:", 
                 choices = available_vars,
-                selected = all.vars(design(state$se_obj()))[1])
+                selected = default_var)
   })
   
   #==============================
@@ -691,11 +703,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         text(0.5, 0.5, "Pathway not found", cex = 1.2)
         return()
       }
-      # Get grouping variable
+      
+      # Get grouping variable 
       group_variable <- if (!is.null(input$geseca_condition_var) && nzchar(input$geseca_condition_var)) {
         input$geseca_condition_var
       } else {
-        all.vars(design(state$se_obj()))[1]
+        colnames(colData(state$se_obj()))[1]
       }
       
       # Extract the actual condition values from colData
