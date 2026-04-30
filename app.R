@@ -152,7 +152,8 @@ ui <- dashboardPage(
                                   choices = c(
                                     "COG24 Category" = "func_COG24_CATEGORY",
                                     "COG24 Pathway" = "func_COG24_PATHWAY",
-                                    "KEGG Class" = "func_KEGG_Class",
+                                    "KEGG Group" = "func_KEGG_Class_L2",
+                                    "KEGG Class" = "func_KEGG_Class_L3",
                                     "KEGG Module" = "func_KEGG_Module"
                                   ),
                                   selected = "func_COG24_CATEGORY")
@@ -199,7 +200,8 @@ ui <- dashboardPage(
                                   choices = c(
                                     "COG24 Category" = "func_COG24_CATEGORY",
                                     "COG24 Pathway" = "func_COG24_PATHWAY",
-                                    "KEGG Class" = "func_KEGG_Class",
+                                    "KEGG Group" = "func_KEGG_Class_L2",
+                                    "KEGG Class" = "func_KEGG_Class_L3",
                                     "KEGG Module" = "func_KEGG_Module"
                                   ),
                                   selected = "func_COG24_CATEGORY")
