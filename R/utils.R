@@ -72,3 +72,30 @@ build_kegg_class_genesets <- function(annot_df, level = 2) {
     dplyr::summarise(genes = list(Geneid), .groups = "drop") %>%
     tibble::deframe()
 }
+
+#' Get base filename for downloads
+#' 
+#' Extracts a meaningful base name for downloaded files from the SE object
+#' or uploaded filename.
+#' 
+#' @param input Shiny input object
+#' @param state App state list containing reactive values
+#' @return Character string to use as base filename
+get_download_filename <- function(input, state) {
+  # Try SE metadata first
+  se_name <- tryCatch(
+    metadata(state$se_obj())$dataset_name,
+    error = function(e) NULL
+  )
+  if (!is.null(se_name) && nzchar(trimws(se_name))) {
+    return(se_name)
+  }
+  
+  # Fall back to uploaded filename
+  if (!is.null(input$seFile$name)) {
+    return(file_path_sans_ext(basename(input$seFile$name)))
+  }
+  
+  # Last resort
+  "RNASeq_results"
+}

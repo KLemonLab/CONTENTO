@@ -365,11 +365,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     {
       req(selected_data())
       
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
+      file_base <- get_download_filename(input, state)
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
       lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
@@ -430,11 +426,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   #==============================
   output$downloadDETableFull <- downloadHandler(
     filename = function() {
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
+      file_base <- get_download_filename(input, state)
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
       lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
@@ -549,11 +541,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       req(gsea_result())
       
       # Prepare file name
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
+      file_base <- get_download_filename(input, state)
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
       gs_str <- paste0(input$gs_collection, if (nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
@@ -652,11 +640,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       req(geseca_result())
       
       # Prepare file name
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
+      file_base <- get_download_filename(input, state)
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
       gs_str <- paste0(input$gs_collection, if (nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")

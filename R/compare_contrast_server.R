@@ -508,11 +508,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   #==============================
   output$downloadCompareTableFull <- downloadHandler(
     filename = function() {
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
+      file_base <- get_download_filename(input, state)
       
       contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
         paste(input$compare_contrasts, collapse = "-")
@@ -650,11 +646,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       req(compare_gsea_data())
       
       # Prepare file name
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
+      file_base <- get_download_filename(input, state)
       
       contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
         paste(input$compare_contrasts, collapse = "-")
@@ -755,11 +747,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       req(leading_edge_data(), state$de_df())
       
       # Prepare file name
-      file_base <- if (!is.null(input$deFile) && !is.null(input$deFile$name)) {
-        file_path_sans_ext(basename(input$deFile$name))
-      } else {
-        "contrasts"
-      }
+      file_base <- get_download_filename(input, state)
       
       pathway_str <- gsub("[^A-Za-z0-9._-]+", "__", input$selected_pathway_compare)
       file_name <- paste(file_base, pathway_str, "LeadingEdge", sep = "__")
