@@ -28,6 +28,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   #==============================
   output$compareSubTabs <- renderUI({
     tabs <- list(
+      tabPanel("Expression Heatmap",
+               uiOutput("heatmapControlsUI"),
+               hr(),
+               withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5)),
       tabPanel("DEG Overlap", 
                withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5),  
                h4("Table of DEGs in All Selected Contrasts"),
@@ -41,6 +45,17 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                 tabsetPanel(
                                   tabPanel("Overview",
                                            h4("GSEA Heatmap: Pathways Significant in At Least One Contrast"),
+                                           fluidRow(
+                                             column(6,
+                                                    numericInput("max_pathways", "Max pathways to show", 
+                                                                 value = 100, min = 10, max = 500, step = 10)
+                                             ),
+                                             column(6,
+                                                    numericInput("pathway_name_length", "Max pathway name length", 
+                                                                 value = 50, min = 25, max = 500, step = 10)
+                                             )
+                                           ),
+                                           hr(),
                                            withSpinner(plotOutput("compareGSEAPlot", height = "1000px"), type = 5),
                                            hr(),
                                            h4("NES Values for Significant Pathways"),
@@ -91,7 +106,23 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     
     do.call(tabsetPanel, tabs)
   }) 
-    
+  
+  #==============================
+  # UI: Heatmap controls
+  #==============================
+  output$heatmapControlsUI <- renderUI({
+    fluidRow(
+      column(6,
+             numericInput("top_n", "Top N genes", value = 50, min = 10, max = 500, step = 10)
+      ),
+      column(6,
+             selectInput("viridis_palette", "Viridis palette",
+                         choices = c("viridis", "magma", "plasma", "inferno", "cividis", "mako", "rocket", "turbo"),
+                         selected = "viridis")
+      )
+    )
+  })
+  
   #==============================
   # Select All / Clear All actions
   #==============================
@@ -128,7 +159,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   #==============================
-  # UI: Pathway selector for comparison (GESECA)
+  # UI: Selectors for GESECA
   #==============================
   output$pathwaySelectUI_geseca <- renderUI({
     req(geseca_result())
@@ -166,13 +197,17 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       }
     }, error = function(e) available_vars[1])
     
-    tagList(
-      selectInput("geseca_color_var", "Color by:", 
-                  choices = available_vars,
-                  selected = default_var),
-      selectInput("geseca_sort_var", "Sort by:", 
-                  choices = available_vars,
-                  selected = default_var)
+    fluidRow(
+      column(6,
+             selectInput("geseca_color_var", "Color by:", 
+                         choices = available_vars,
+                         selected = default_var)
+      ),
+      column(6,
+             selectInput("geseca_sort_var", "Sort by:", 
+                         choices = available_vars,
+                         selected = default_var)
+      )
     )
   })
   
@@ -578,6 +613,56 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       showNotification(paste("Error running GESECA:", e$message), type = "error")
       NULL
     })
+  })
+  
+  #==============================
+  # Output: Heatmap of Top DE Genes Across All Contrasts
+  #==============================
+  output$heatmapPlot <- renderPlot({
+    req(compare_data(), state$se_obj())
+    req(input$top_n, input$viridis_palette)
+    
+    # Get all genes from the compare_data upset df (already filtered by contrasts + cutoffs)
+    all_genes <- compare_data()$Geneid
+    
+    if (length(all_genes) == 0) {
+      plot.new()
+      text(0.5, 0.5, "No DE genes found for heatmap\nAdjust cutoffs or select contrasts", cex = 1.5)
+      return()
+    }
+    
+    # Get log2FC for these genes to rank them
+    top_genes <- state$de_df() %>%
+      filter(
+        Geneid %in% all_genes,
+        contrast %in% input$compare_contrasts
+      ) %>%
+      arrange(desc(abs(log2FC))) %>%
+      slice_head(n = input$top_n) %>%
+      distinct(Geneid, .keep_all = TRUE)
+    
+    if (nrow(top_genes) == 0) {
+      plot.new()
+      text(0.5, 0.5, "No genes to display", cex = 1.5)
+      return()
+    }
+    
+    vsd_mat <- assay(state$se_obj(), "vst")[rownames(state$se_obj()) %in% top_genes$Geneid, ]
+    vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
+    
+    rownames(vsd_mat) <- if ("symbol" %in% colnames(top_genes)) top_genes$symbol else top_genes$Geneid
+    
+    Heatmap(
+      scale(vsd_mat),
+      col = viridis(100, option = input$viridis_palette),
+      column_names_gp = grid::gpar(fontsize = 12),
+      row_names_gp = grid::gpar(fontsize = 10),
+      heatmap_legend_param = list(title = "Z-scores"),
+      cluster_rows = TRUE,
+      cluster_columns = TRUE,
+      show_row_dend = TRUE,
+      show_column_dend = TRUE
+    )
   })
   
   #==============================

@@ -77,7 +77,7 @@ ui <- dashboardPage(
                     tags$ul(
                       tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
                       tags$li(strong("Annotation:"), " Automatically loaded from your annotations folder to match the metadata in your SE object. Upload if needed."),
-                      tags$li(strong("DE Cutoffs:"), " Addjust both log2 fold-change and adjusted p-value cutoffs to filter significant genes across the app. These cutoffs will be applied to all contrasts and gene-level results, but can be further adjusted within each section.")
+                      tags$li(strong("DE Cutoffs:"), " Adjust both log2 fold-change and adjusted p-value cutoffs to filter significant genes across the app. These cutoffs will be applied to all contrasts and gene-level results, but can be further adjusted within each section.")
                     )
                 )
               ),
@@ -85,21 +85,21 @@ ui <- dashboardPage(
               # Second row: three main app sections
               fluidRow(
                 box(title = tagList(icon("layer-group"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
-                    p("Select a contrast to explore its results.  Controls also allow adjusting number of top genes and colors for the heatmap as well as gene set collections for enrichment analyses."),
+                    p("Select a contrast to explore its results."),
                     tags$ul(
                       tags$li(strong("Selected Genes:"), " Table of differential expression results. You can save a .csv file with the filtered results."),
-                      tags$li(strong("Volcano Plot:"), " Interactive plot of significance vs. fold-change. The log2 fold-changes are shrinked to stabilize variance across genes."),
-                      tags$li(strong("Heatmap:"), " Visualizes top DE genes across samples. Expression values are normalized using a variance-stabilizing transformation (VST) and scaled to Z-scores for visualization."),
-                      tags$li(strong("GSEA:"), " Gene Set Enrichment Analysis for human datasets. Ranks genes by their DE statistics and identifies enriched pathways using data sets from MSigDB.")
+                      tags$li(strong("Volcano Plot:"), " Interactive plot of significance vs. fold-change. The log2 fold-changes are shrunken to stabilize variance across genes."),
+                      tags$li(strong("GSEA:"), " Gene Set Enrichment Analysis. Ranks genes by their DE statistics and identifies enriched pathways.")
                     )
                 )
               ),
               fluidRow(
                 box(title = tagList(icon("exchange-alt"), "Compare Contrast"), width = 12, status = "warning", solidHeader = TRUE,
-                    p("Compare multiple contrasts simultaneously. "),
+                    p("Compare multiple contrasts simultaneously."),
                     tags$ul(
-                      tags$li(strong("DEG Overlap:"), " Shows overlap of significant genes between selected contrasts using the fold-change cutoff."),
-                      tags$li(strong("Gene Sets Overlap:"), " Shows overlap of enriched gene sets between selected contrasts (only for human datasets)."),
+                      tags$li(strong("Heatmap:"), " Visualizes top DE genes across all samples. Expression values are normalized using a variance-stabilizing transformation (VST) and scaled to Z-scores."),
+                      tags$li(strong("DEG Overlap:"), " Shows overlap of significant genes between selected contrasts."),
+                      tags$li(strong("Gene Sets Overlap:"), " Shows overlap of enriched gene sets between selected contrasts (GSEA)."),
                       tags$li(strong("GESECA:"), " Gene Set Co-expression Analysis. Identifies co-expressed gene sets based on VST-normalized expression values across all samples.")
                     )
                 )
@@ -123,11 +123,6 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("contrastSelect"),
-                    h4("Heatmap Options"),
-                    numericInput("top_n", "Top N genes", value = 50, min = 10, max = 500, step = 10),
-                    selectInput("viridis_palette", "Viridis palette",
-                                choices = c("viridis", "magma", "plasma", "inferno", "cividis", "mako", "rocket", "turbo"),
-                                selected = "viridis"),
                     hr(),
                     h4("Gene Sets (GSEA)"),
                     # Conditional UI: Human uses MSigDB, Bacteria uses functional annotations
@@ -206,8 +201,6 @@ ui <- dashboardPage(
                                   ),
                                   selected = "func_COG24_CATEGORY")
                     ),
-                    numericInput("max_pathways", "Max pathways to show", value = 100, min = 10, max = 500, step = 10),
-                    numericInput("pathway_name_length", "Max pathway name length", value = 50, min = 25, max = 500, step = 10)
                 ),
                 
                 box(title = "Compare Contrast Results", width = 9, status = "primary", collapsible = TRUE,

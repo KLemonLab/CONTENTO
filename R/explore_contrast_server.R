@@ -15,8 +15,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   output$contrastSubTabs <- renderUI({
     tabs <- list(
       tabPanel("Selected Genes", withSpinner(DTOutput("DETable"), type = 5)),
-      tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5)),
-      tabPanel("Heatmap", withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5))
+      tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5))
     )
     
     if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
@@ -362,40 +361,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       theme_minimal()
     
     ggplotly(gg, tooltip = "text")
-  })
-  
-  #==============================
-  # Output: Heatmap of Top DE Genes
-  #==============================
-  output$heatmapPlot <- renderPlot({
-    req(selected_data(), state$se_obj())
-    
-    top_genes <- selected_data() %>%
-      filter(DE) %>%
-      slice_max(order_by = abs(log2FC), n = input$top_n)
-    
-    if (nrow(top_genes) == 0) {
-      plot.new()
-      text(0.5, 0.5, "No DE genes found for heatmap", cex = 1.5)
-      return()
-    }
-    
-    vsd_mat <- assay(state$se_obj(), "vst")[rownames(state$se_obj()) %in% top_genes$Geneid, ]
-    vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
-    
-    rownames(vsd_mat) <- if ("symbol" %in% colnames(top_genes)) top_genes$symbol else top_genes$Geneid
-    
-    Heatmap(
-      scale(vsd_mat),
-      col = viridis(100, option = input$viridis_palette),
-      column_names_gp = grid::gpar(fontsize = 12),
-      row_names_gp = grid::gpar(fontsize = 10),
-      heatmap_legend_param = list(title = "Z-scores"),
-      cluster_rows = TRUE,
-      cluster_columns = TRUE,
-      show_row_dend = TRUE,
-      show_column_dend = TRUE
-    )
   })
   
   #==============================
