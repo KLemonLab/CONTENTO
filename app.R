@@ -74,7 +74,8 @@ ui <- dashboardPage(
                     tags$h4("Required Inputs (Upload on the left sidebar):"),
                     tags$ul(
                       tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
-                      tags$li(strong("Annotation:"), " Automatically loaded from your annotations folder to match the metadata in your SE object. Upload if needed.")
+                      tags$li(strong("Annotation:"), " Automatically loaded from your annotations folder to match the metadata in your SE object. Upload if needed."),
+                      tags$li(strong("DE Cutoffs:"), " Addjust both log2 fold-change and adjusted p-value cutoffs to filter significant genes across the app. These cutoffs will be applied to all contrasts and gene-level results, but can be further adjusted within each section.")
                     )
                 )
               ),
@@ -82,7 +83,7 @@ ui <- dashboardPage(
               # Second row: three main app sections
               fluidRow(
                 box(title = tagList(icon("layer-group"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
-                    p("Select a contrast to explore its results and adjust fold-change cutoff for both table and plots. Controls also allow adjusting number of top genes and colors for the heat as well as gene set collections for enrichment analyses."),
+                    p("Select a contrast to explore its results.  Controls also allow adjusting number of top genes and colors for the heatmap as well as gene set collections for enrichment analyses."),
                     tags$ul(
                       tags$li(strong("Selected Genes:"), " Table of differential expression results. You can save a .csv file with the filtered results."),
                       tags$li(strong("Volcano Plot:"), " Interactive plot of significance vs. fold-change. The log2 fold-changes are shrinked to stabilize variance across genes."),
@@ -94,7 +95,7 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 box(title = tagList(icon("exchange-alt"), "Compare Contrast"), width = 12, status = "warning", solidHeader = TRUE,
-                    p("Compare multiple contrasts simultaneously. Use contrast selector to control displayed results."),
+                    p("Compare multiple contrasts simultaneously. "),
                     tags$ul(
                       tags$li(strong("DEG Overlap:"), " Shows overlap of significant genes between selected contrasts using the fold-change cutoff."),
                       tags$li(strong("Gene Sets Overlap:"), " Shows overlap of enriched gene sets between selected contrasts (only for human datasets).")
@@ -103,9 +104,10 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 box(title = tagList(icon("dna"), "Explore by Gene"), width = 12, status = "danger", solidHeader = TRUE,
-                    p("Visualize expression for a single gene. Use a Gene ID (from your DESeq2 contrasts analysis) to select the gene you want to explore."),
+                    p("Visualize expression for a single gene across conditions. Search by Gene ID or Symbol the gene you want to explore."),
                     tags$ul(
-                      tags$li(strong("Expression Plot:"), " Shows the VST-normalized expression for the selected gene. You can select the variables used for the X-axis, color and shapes from the metadata columns in your DESeq2 object."),
+                      tags$li(strong("Gene Info:"), " Displays gene annotations from your annotation file."),
+                      tags$li(strong("Expression Plot:"), " Shows the VST-normalized expression for the selected gene. You can select the variables used for the X-axis, color and shapes from the metadata in your SE object."),
                       tags$li(strong("Gene Table:"), " Displays DE results for the selected gene across all contrasts, with rows colored by up/down regulation."),
                       tags$li(strong("Variance Decomposition:"), " If a variance partition object is loaded, this plot shows the fraction of expression variance explained by different factors for the selected gene."),
                       tags$li(strong("Neighbourhood Analysis:"), " Allows exploration of the genes up/downstreams the selected one in bacterial datasets.")
