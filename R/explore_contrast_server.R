@@ -129,16 +129,20 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     default_var <- tryCatch({
       meta <- metadata(state$se_obj())
       if (!is.null(meta$design_formula)) {
-        # Extract first variable from formula stored in metadata
         all.vars(as.formula(meta$design_formula))[1]
       } else {
         available_vars[1]
       }
     }, error = function(e) available_vars[1])
     
-    selectInput("geseca_condition_var", "Color by:", 
-                choices = available_vars,
-                selected = default_var)
+    tagList(
+      selectInput("geseca_color_var", "Color by:", 
+                  choices = available_vars,
+                  selected = default_var),
+      selectInput("geseca_sort_var", "Sort by:", 
+                  choices = available_vars,
+                  selected = default_var)
+    )
   })
   
   #==============================
@@ -704,22 +708,42 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         return()
       }
       
-      # Get grouping variable 
-      group_variable <- if (!is.null(input$geseca_condition_var) && nzchar(input$geseca_condition_var)) {
-        input$geseca_condition_var
+      # Get color variable
+      color_variable <- if (!is.null(input$geseca_color_var) && nzchar(input$geseca_color_var)) {
+        input$geseca_color_var
       } else {
         colnames(colData(state$se_obj()))[1]
       }
       
-      # Extract the actual condition values from colData
-      conditions <- colData(state$se_obj())[[group_variable]]
+      # Get sort variable
+      sort_variable <- if (!is.null(input$geseca_sort_var) && nzchar(input$geseca_sort_var)) {
+        input$geseca_sort_var
+      } else {
+        colnames(colData(state$se_obj()))[1]
+      }
       
-      # Create co-regulation plot
-      plotCoregulationProfile(pathway_genes, geseca_result()$vst_matrix, conditions = conditions, scale = TRUE) +
+      # Extract condition values from colData
+      color_conditions <- colData(state$se_obj())[[color_variable]]
+      sort_conditions <- colData(state$se_obj())[[sort_variable]]
+      
+      # Sort samples by the sort variable for better visualization
+      sample_order <- order(sort_conditions)
+      vst_sorted <- geseca_result()$vst_matrix[, sample_order]
+      color_conditions_sorted <- color_conditions[sample_order]
+      
+      # Create co-regulation plot with sorted data
+      plotCoregulationProfile(
+        pathway_genes, 
+        vst_sorted, 
+        conditions = color_conditions_sorted,  # for coloring
+        scale = TRUE
+      ) +
         labs(title = input$selected_pathway_geseca) +
         theme_minimal() +
-        theme(plot.title = element_text(size = 10),
-              axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+        theme(
+          plot.title = element_text(size = 10),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+        )
       
     }, error = function(e) {
       plot.new()
