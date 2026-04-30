@@ -37,7 +37,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
       tabs <- append(tabs, 
                      list(
-                       tabPanel("Gene Sets Overlap",
+                       tabPanel("GSEA Overlap",
                                 tabsetPanel(
                                   tabPanel("Overview",
                                            h4("GSEA Heatmap: Pathways Significant in At Least One Contrast"),
@@ -59,6 +59,27 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                                     hr(),
                                                     h4("All Leading Edge Genes"),
                                                     withSpinner(DTOutput("leadingEdgeTable"), type = 5)
+                                             )
+                                           )
+                                  )
+                                )
+                       ),
+                       tabPanel("GESECA",
+                                tabsetPanel(
+                                  tabPanel("Overview",
+                                           h4("Top 20 GESECA Results"),
+                                           withSpinner(plotOutput("gesecaTablePlot", height = "600px"), type = 5),
+                                           hr(),
+                                           h4("All GESECA Results"),
+                                           withSpinner(DTOutput("gesecaResultsTable"), type = 5)
+                                  ),
+                                  tabPanel("Pathway Detail",
+                                           fluidRow(
+                                             column(12,
+                                                    uiOutput("pathwaySelectUI_geseca"),
+                                                    uiOutput("conditionSelectUI_geseca"),
+                                                    hr(),
+                                                    withSpinner(plotOutput("CoregulationPlot", height = "400px"), type = 5)
                                              )
                                            )
                                   )
@@ -85,7 +106,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   #==============================
-  # UI: Pathway selector for comparison
+  # UI: Pathway selector for comparison (GSEA)
   #==============================
   output$pathwaySelectUI_compare <- renderUI({
     req(compare_gsea_data())
@@ -104,6 +125,55 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         "No significant pathways found (FDR < 0.05)"
       )
     }
+  })
+  
+  #==============================
+  # UI: Pathway selector for comparison (GESECA)
+  #==============================
+  output$pathwaySelectUI_geseca <- renderUI({
+    req(geseca_result())
+    
+    pathways <- geseca_result()$gesecaRes %>%
+      arrange(padj) %>%
+      pull(pathway)
+    
+    if (length(pathways) > 0) {
+      selectInput("selected_pathway_geseca", "Select Pathway:", 
+                  choices = pathways, 
+                  selected = pathways[1],
+                  width = "100%")
+    } else {
+      div(
+        class = "alert alert-warning",
+        icon("exclamation-triangle"),
+        "No pathways found"
+      )
+    }
+  })
+  
+  output$conditionSelectUI_geseca <- renderUI({
+    req(state$se_obj())
+    
+    available_vars <- colnames(colData(state$se_obj()))
+    
+    # Try to get default from metadata
+    default_var <- tryCatch({
+      meta <- metadata(state$se_obj())
+      if (!is.null(meta$design_formula)) {
+        all.vars(as.formula(meta$design_formula))[1]
+      } else {
+        available_vars[1]
+      }
+    }, error = function(e) available_vars[1])
+    
+    tagList(
+      selectInput("geseca_color_var", "Color by:", 
+                  choices = available_vars,
+                  selected = default_var),
+      selectInput("geseca_sort_var", "Sort by:", 
+                  choices = available_vars,
+                  selected = default_var)
+    )
   })
   
   #==============================
@@ -434,6 +504,78 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       
     }, error = function(e) {
       showNotification(paste("Error extracting leading edge:", e$message), type = "error")
+      NULL
+    })
+  })
+  
+  #==============================
+  # Reactive: GESECA Analysis
+  #==============================
+  geseca_result <- reactive({
+    req(state$se_obj())
+    
+    tryCatch({
+      # Get gene sets based on organism
+      if (!is.null(organism()) && organism() == "Bacteria") {
+        req(input$bacterial_geneset_source_compare, state$annotation_df())
+        pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source_compare)
+      } else {
+        req(input$compare_gs_collection)
+        genesets <- if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) {
+          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection, subcollection = input$compare_gs_subcollection)
+        } else {
+          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection)
+        }
+        
+        pathways_list <- genesets %>%
+          split(.$gs_name) %>%
+          lapply(function(x) x$ensembl_gene)
+      }
+      
+      if (length(pathways_list) == 0) {
+        showNotification("No pathways found in selected gene set", type = "warning")
+        return(NULL)
+      }
+      
+      # Get VST-transformed matrix
+      vst_matrix <- assays(state$se_obj())[["vst"]]
+      
+      if (is.null(vst_matrix)) {
+        showNotification("VST matrix not found in SummarizedExperiment object", type = "error")
+        return(NULL)
+      }
+      
+      # Run GESECA 
+      gesecaRes <- geseca(
+        pathways = pathways_list,
+        E = vst_matrix,
+        minSize = 15,
+        maxSize = 500
+      ) %>%
+        arrange(padj, pval)
+      
+      # Select top pathways by pctVar
+      topPathways <- gesecaRes %>%
+        filter(padj < 0.05) %>%
+        arrange(desc(abs(pctVar))) %>%
+        slice_head(n = 20) %>%
+        pull(pathway)
+      
+      # Generate table plot (only if there are significant pathways)
+      tableplot <- if (length(topPathways) > 0) {
+        plotGesecaTable(
+          gesecaRes = gesecaRes,
+          pathways = pathways_list[topPathways], 
+          E = vst_matrix
+        )
+      } else {
+        NULL
+      }
+      
+      list(tableplot = tableplot, gesecaRes = gesecaRes, vst_matrix = vst_matrix, pathways_list = pathways_list)
+      
+    }, error = function(e) {
+      showNotification(paste("Error running GESECA:", e$message), type = "error")
       NULL
     })
   })
@@ -788,4 +930,121 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     server = FALSE
   )
   
+  #==============================
+  # Output: GESECA Table Plot
+  #==============================
+  output$gesecaTablePlot <- renderPlot({
+    req(geseca_result())
+    
+    if (is.null(geseca_result()$tableplot)) {
+      plot.new()
+      text(0.5, 0.5, "No significant pathways found (FDR < 0.05)", cex = 1.5)
+    } else {
+      geseca_result()$tableplot
+    }
+  })
+  
+  #==============================
+  # Output: GESECA Results Table
+  #==============================
+  output$gesecaResultsTable <- renderDT(
+    {
+      req(geseca_result())
+      
+      file_base <- get_download_filename(input, state)
+      
+      gs_str <- if (!is.null(organism()) && organism() == "Bacteria") {
+        gsub("func_", "", input$bacterial_geneset_source_compare)
+      } else {
+        paste0(input$compare_gs_collection, 
+               if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) 
+                 paste0("_", input$compare_gs_subcollection) else "")
+      }
+      
+      file_name <- paste(file_base, "GESECA", gs_str, sep = "__")
+      
+      df <- geseca_result()$gesecaRes %>%
+        mutate(
+          across(c(pval, padj), ~ formatC(.x, format = "e", digits = 2)),
+          across(c(pctVar, log2err), ~ round(.x, 3))
+        ) 
+      
+      datatable(
+        df,
+        extensions = 'Buttons',
+        rownames = FALSE,
+        filter = 'top',
+        options = list(
+          pageLength = 15,
+          scrollX = TRUE,
+          dom = 'Bfrtip',
+          buttons = list(
+            list(
+              extend = 'csv',
+              text = 'Download Full GESECA Results',
+              filename = file_name,
+              exportOptions = list(modifier = list(page = "all"))
+            )
+          )
+        )
+      )
+    },
+    server = FALSE
+  )
+  
+  #==============================
+  # Output: GESECA Co-regulation Plot
+  #==============================
+  output$CoregulationPlot <- renderPlot({
+    req(geseca_result(), input$selected_pathway_geseca)
+    
+    tryCatch({
+      pathway_genes <- geseca_result()$pathways_list[[input$selected_pathway_geseca]]
+      
+      if (is.null(pathway_genes) || length(pathway_genes) == 0) {
+        plot.new()
+        text(0.5, 0.5, "Pathway not found", cex = 1.2)
+        return()
+      }
+      
+      # Get color and sort variables
+      color_variable <- if (!is.null(input$geseca_color_var) && nzchar(input$geseca_color_var)) {
+        input$geseca_color_var
+      } else {
+        colnames(colData(state$se_obj()))[1]
+      }
+      
+      sort_variable <- if (!is.null(input$geseca_sort_var) && nzchar(input$geseca_sort_var)) {
+        input$geseca_sort_var
+      } else {
+        colnames(colData(state$se_obj()))[1]
+      }
+      
+      # Extract and sort data
+      color_conditions <- colData(state$se_obj())[[color_variable]]
+      sort_conditions <- colData(state$se_obj())[[sort_variable]]
+      
+      sample_order <- order(sort_conditions)
+      vst_sorted <- geseca_result()$vst_matrix[, sample_order]
+      color_conditions_sorted <- color_conditions[sample_order]
+      
+      # Create plot
+      plotCoregulationProfile(
+        pathway_genes, 
+        vst_sorted, 
+        conditions = color_conditions_sorted,
+        scale = TRUE
+      ) +
+        labs(title = input$selected_pathway_geseca) +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(size = 10),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+        )
+      
+    }, error = function(e) {
+      plot.new()
+      text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
+    })
+  })
 }

@@ -90,8 +90,7 @@ ui <- dashboardPage(
                       tags$li(strong("Selected Genes:"), " Table of differential expression results. You can save a .csv file with the filtered results."),
                       tags$li(strong("Volcano Plot:"), " Interactive plot of significance vs. fold-change. The log2 fold-changes are shrinked to stabilize variance across genes."),
                       tags$li(strong("Heatmap:"), " Visualizes top DE genes across samples. Expression values are normalized using a variance-stabilizing transformation (VST) and scaled to Z-scores for visualization."),
-                      tags$li(strong("GSEA:"), " Gene Set Enrichment Analysis for human datasets. Ranks genes by their DE statistics and identifies enriched pathways using data sets from MSigDB."),
-                      tags$li(strong("GESECA:"), " Gene Set Co-expression Analysis for human datasets. Identifies co-expressed gene sets based on VST-normalized expression values.")
+                      tags$li(strong("GSEA:"), " Gene Set Enrichment Analysis for human datasets. Ranks genes by their DE statistics and identifies enriched pathways using data sets from MSigDB.")
                     )
                 )
               ),
@@ -100,7 +99,8 @@ ui <- dashboardPage(
                     p("Compare multiple contrasts simultaneously. "),
                     tags$ul(
                       tags$li(strong("DEG Overlap:"), " Shows overlap of significant genes between selected contrasts using the fold-change cutoff."),
-                      tags$li(strong("Gene Sets Overlap:"), " Shows overlap of enriched gene sets between selected contrasts (only for human datasets).")
+                      tags$li(strong("Gene Sets Overlap:"), " Shows overlap of enriched gene sets between selected contrasts (only for human datasets)."),
+                      tags$li(strong("GESECA:"), " Gene Set Co-expression Analysis. Identifies co-expressed gene sets based on VST-normalized expression values across all samples.")
                     )
                 )
               ),
@@ -129,7 +129,7 @@ ui <- dashboardPage(
                                 choices = c("viridis", "magma", "plasma", "inferno", "cividis", "mako", "rocket", "turbo"),
                                 selected = "viridis"),
                     hr(),
-                    h4("Gene Sets (GSEA/GESECA)"),
+                    h4("Gene Sets (GSEA)"),
                     # Conditional UI: Human uses MSigDB, Bacteria uses functional annotations
                     conditionalPanel(
                       condition = "output.se_organism == 'Human'",
@@ -177,7 +177,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("multiContrastSelect"),
-                    h4("Gene Sets (GSEA)"),
+                    h4("Gene Sets (GSEA/GESECA)"),
                     # Conditional UI: Human uses MSigDB, Bacteria uses functional annotations
                     conditionalPanel(
                       condition = "output.se_organism == 'Human'",
