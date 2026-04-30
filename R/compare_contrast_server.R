@@ -248,8 +248,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       # Load gene sets based on organism
       if (!is.null(organism()) && organism() == "Bacteria") {
-        req(input$bacterial_geneset_source, state$annotation_df())
-        pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source)
+        req(input$bacterial_geneset_source_compare, state$annotation_df())
+        pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source_compare)
       } else {
         req(input$compare_gs_collection)
         genesets <- if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) {
