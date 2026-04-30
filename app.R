@@ -180,7 +180,14 @@ ui <- dashboardPage(
       tabItem(tabName = "gene",
               fluidRow(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    textInput("gene_select", "Enter Gene ID", placeholder = "e.g., ENSG00000141510"),
+                    selectizeInput("gene_select", 
+                                   "Search Gene (Symbol or ID):", 
+                                   choices = NULL,  
+                                   options = list(
+                                     placeholder = 'Start typing gene name or ID...',
+                                     maxOptions = 20,
+                                     loadThrottle = 200
+                                   )),
                     selectInput("x_col", "X-axis", choices = NULL),
                     selectInput("color_col", "Color", choices = NULL),
                     selectInput("shape_col", "Shape", choices = NULL),

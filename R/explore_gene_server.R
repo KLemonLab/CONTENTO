@@ -13,6 +13,39 @@ explore_gene_server <- function(input, output, session, state, organism) {
   })
   
   #==============================
+  # UI: Update gene_select choices with symbol + Geneid
+  #==============================
+  observe({
+    req(state$de_df())
+    
+    gene_df <- state$de_df() %>%
+      select(Geneid, symbol) %>%
+      distinct()
+    
+    # Create lookup table: display "symbol [Geneid]", value = Geneid
+    if ("symbol" %in% colnames(gene_df)) {
+      choices_df <- gene_df %>%
+        mutate(
+          display = ifelse(
+            is.na(symbol) | symbol == "" | symbol == Geneid,
+            Geneid,
+            paste0(symbol, " [", Geneid, "]")
+          )
+        ) %>%
+        arrange(display)
+      
+      choice_vec <- setNames(choices_df$Geneid, choices_df$display)
+    } else {
+      choice_vec <- setNames(gene_df$Geneid, gene_df$Geneid)
+    }
+    
+    updateSelectizeInput(session, "gene_select", 
+                         choices = choice_vec, 
+                         server = TRUE,  # This enables server-side filtering
+                         selected = character(0))  # Start empty
+  })
+  
+  #==============================
   # Reactive: Filter gene data and calculate DE based on global cutoffs
   #==============================
   selected_gene_data <- reactive({
@@ -82,19 +115,22 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # Output: Gene table Info
   #==============================
   output$geneDetails <- renderDT({
-    req(selected_gene_data())
+    req(input$gene_select)
     
-    # Select annotation columns defensively
-    annot_cols <- intersect(c("symbol", "biotype", "description", "gene_biotype", "gene"),
-                            colnames(selected_gene_data()))
-    if (length(annot_cols) == 0) annot_cols <- "Geneid"
-    
-    gene_table <- selected_gene_data() %>%
-      select(all_of(annot_cols)) %>%
+    # Start with the gene row from de_df (which has merged annotation + DE stats)
+    gene_row <- state$de_df() %>%
+      filter(Geneid == input$gene_select) %>%
+      select(-any_of(c("contrast", "baseMean", "log2FC", "log2FC_shrunk", 
+                       "lfcSE", "stat", "pvalue", "padj", "regulated", "DE", "tooltip"))) %>%
       distinct()
     
-    # Transpose and convert to data frame
-    transposed <- as.data.frame(t(gene_table))
+    # Fallback: if no data found, show minimal info
+    if (nrow(gene_row) == 0) {
+      gene_row <- data.frame(Geneid = input$gene_select)
+    }
+    
+    # Transpose to Field-Value format
+    transposed <- as.data.frame(t(gene_row))
     colnames(transposed) <- "Value"
     transposed$Field <- rownames(transposed)
     transposed <- transposed[, c("Field", "Value")]
