@@ -149,7 +149,8 @@ ui <- dashboardPage(
                                     "COG24 Pathway" = "func_COG24_PATHWAY",
                                     "KEGG Group" = "func_KEGG_Class_L2",
                                     "KEGG Class" = "func_KEGG_Class_L3",
-                                    "KEGG Module" = "func_KEGG_Module"
+                                    "KEGG Module" = "func_KEGG_Module",
+                                    "RegPrecise Regulons" = "RegPrecise"
                                   ),
                                   selected = "func_COG24_CATEGORY")
                     )
@@ -197,7 +198,8 @@ ui <- dashboardPage(
                                     "COG24 Pathway" = "func_COG24_PATHWAY",
                                     "KEGG Group" = "func_KEGG_Class_L2",
                                     "KEGG Class" = "func_KEGG_Class_L3",
-                                    "KEGG Module" = "func_KEGG_Module"
+                                    "KEGG Module" = "func_KEGG_Module",
+                                    "RegPrecise Regulons" = "RegPrecise"
                                   ),
                                   selected = "func_COG24_CATEGORY")
                     ),
