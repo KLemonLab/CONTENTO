@@ -116,7 +116,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     req(selected_data(), state$annotation_df())
     
     # Get DE genes with their stats (select only columns that exist)
-    stat_cols <- intersect(c("Geneid", "log2FC", "log2FC_shrunk", "padj", "regulated"),
+    stat_cols <- intersect(c("Geneid", "log2FC", "log2FC_shrunk", "stat", "padj", "regulated"),
                            colnames(selected_data()))
     de_data <- selected_data() %>%
       filter(DE) %>%
@@ -250,13 +250,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
       file_name <- paste(file_base, contrast_str, fc_str, sep = "__")
       
-      display_cols <- intersect(c("Geneid", "symbol", "log2FC", "log2FC_shrunk", "padj", "regulated"),
+      display_cols <- intersect(c("Geneid", "symbol", "log2FC", "log2FC_shrunk", "stat", "padj", "regulated"),
                                 colnames(selected_data()))
       
       df <- selected_data() %>%
         filter(DE) %>%
         mutate(
-          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
+          across(any_of(c("log2FC", "log2FC_shrunk", "stat")), ~ round(.x, 2)),
           padj = formatC(padj, format = "e", digits = 2)
         ) %>%
         arrange(desc(abs(log2FC))) %>%
