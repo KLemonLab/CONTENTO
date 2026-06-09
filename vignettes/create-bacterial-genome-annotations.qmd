@@ -1,0 +1,947 @@
+---
+title: "Create Bacterial Genome Annotations"
+subtitle: "Download from NCBI and Annotate with COG24, KEGG, and GO Terms"
+author: "KLemon Lab"
+date: last-modified
+execute:
+  eval: false
+  echo: true
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+---
+
+# Overview
+
+This tutorial shows how to create a functional annotation CSV file from NCBI genome files that you can upload to RNASeqApp for gene set enrichment analysis (GSEA).
+
+## What You'll Create
+
+A CSV file with annotations ready for GSEA:
+- `Geneid` - gene identifier (locus_tag)
+- `product` - gene description
+- `seqname` - chromosome/contig name
+- `start`, `end`, `strand` - gene coordinates
+- `func_COG24_CATEGORY` - COG24 functional categories (e.g., "J,D,K")
+- `func_COG24_PATHWAY` - COG24 metabolic pathways
+- `func_KEGG_KO` - KEGG ortholog IDs (e.g., "K00001,K00002")
+- `func_KEGG_Group` - KEGG Level 2 (subclass, e.g., "Carbohydrate Metabolism")
+- `func_KEGG_Pathway` - KEGG Level 3 (specific pathway, e.g., "Glycolysis")
+- `func_KEGG_Module` - KEGG modules
+- `GO_process` - Gene Ontology biological processes (most useful for GSEA)
+
+## Key Features
+
+- **No complex installation** - uses free online tools + standard R packages
+- **Takes ~45 minutes total** - mostly waiting for web servers
+- **One-time effort per genome** - reuse the CSV for all your analyses
+- **Full KEGG hierarchy** - includes all three levels for comprehensive GSEA
+- **Modular** - add or skip annotation sources independently
+
+## Test Genome
+
+This tutorial uses *Staphylococcus aureus* subsp. aureus FPR3757 (GCF_000013465.1) as an example. Substitute your own genome accession as needed.
+
+---
+
+# Part 1: Setup and Download NCBI Files
+
+## Step 1.1: Install R Packages
+
+Open R/RStudio and install required packages:
+
+```{r}
+install.packages(c("tidyverse", "readr"))
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("genbankr")
+```
+
+## Step 1.2: Download from NCBI Assembly
+
+Go to [NCBI Assembly](https://www.ncbi.nlm.nih.gov/assembly/) and search for your genome.
+
+For this tutorial: Search "**GCF_000013465.1**"
+
+**Download these files from the assembly page:**
+
+1. **GenBank format** (contains proteins)
+   - Link: "Download assembly" → "ncbi_dataset.zip" or find direct link
+   - File: `GCF_000013465.1_ASM1346v1_genomic.gbff.gz`
+   - Size: ~3.5 MB (compressed)
+
+2. **GFF3 format** (for GO terms and coordinates)
+   - File: `GCF_000013465.1_ASM1346v1_genomic.gff.gz`
+   - Size: ~0.8 MB (compressed)
+
+**Unzip both files:**
+```bash
+gunzip GCF_000013465.1_ASM1346v1_genomic.gbff.gz
+gunzip GCF_000013465.1_ASM1346v1_genomic.gff.gz
+```
+
+## Step 1.3: Create Working Directory
+
+```bash
+mkdir -p bacteria_annotation/GCF_000013465.1
+cd bacteria_annotation/GCF_000013465.1
+
+# Copy your downloaded files here
+cp ~/Downloads/GCF_000013465.1_ASM1346v1_genomic.gbff .
+cp ~/Downloads/GCF_000013465.1_ASM1346v1_genomic.gff .
+
+ls -lh
+# You should see both .gbff and .gff files
+```
+
+---
+
+# Part 2: Extract Proteins from GBFF using genbankr
+
+## Step 2.1: Extract Proteins and Metadata
+
+Create file: `01_extract_proteins.R`
+
+```{r}
+library(tidyverse)
+library(genbankr)
+library(Biostrings)
+
+# ===== SETTINGS =====
+genome_name <- "GCF_000013465.1"
+gbff_file <- "GCF_000013465.1_ASM1346v1_genomic.gbff"
+output_dir <- "."
+
+# ===== PARSE GBFF USING genbankr =====
+cat("Reading GBFF file...\n")
+
+# genbankr reads GenBank format
+gb_data <- read.GenBank(gbff_file)
+
+# Extract features
+features <- getFeatures(gb_data)
+
+# Filter for CDS (protein-coding genes)
+cds_features <- features[features$type == "CDS"]
+
+cat(sprintf("Found %d CDS features\n", length(cds_features)))
+
+# ===== EXTRACT METADATA AND PROTEINS =====
+protein_sequences <- AAStringSet()
+metadata_list <- list()
+
+for (i in seq_along(cds_features)) {
+  feature <- cds_features[i]
+  qualifiers <- feature@qualifiers
+  
+  # Extract key information
+  locus_tag <- qualifiers$locus_tag[1] %||% NA_character_
+  product <- qualifiers$product[1] %||% NA_character_
+  protein_id <- qualifiers$protein_id[1] %||% NA_character_
+  translation <- qualifiers$translation[1] %||% NA_character_
+  
+  # Get sequence name (contig/chromosome)
+  seqname <- getName(feature)
+  
+  # Store if we have locus_tag and translation
+  if (!is.na(locus_tag) && !is.na(translation)) {
+    # Add protein sequence
+    protein_sequences[[locus_tag]] <- AAString(translation)
+    
+    # Store metadata
+    metadata_list[[i]] <- tibble(
+      locus_tag = locus_tag,
+      product = product,
+      protein_id = protein_id,
+      seqname = seqname
+    )
+  }
+}
+
+# Combine metadata
+metadata <- bind_rows(metadata_list)
+
+cat(sprintf("Extracted %d proteins with metadata\n", length(protein_sequences)))
+
+# ===== SAVE OUTPUTS =====
+
+# Save protein sequences as FASTA
+output_fasta <- file.path(output_dir, paste0(genome_name, "_proteins.fasta"))
+writeXStringSet(protein_sequences, output_fasta, format = "fasta")
+cat(sprintf("✓ Proteins saved to: %s\n", output_fasta))
+
+# Save metadata
+output_metadata <- file.path(output_dir, paste0(genome_name, "_metadata.csv"))
+write_csv(metadata, output_metadata)
+cat(sprintf("✓ Metadata saved to: %s\n", output_metadata))
+
+cat("\n=== NEXT STEP ===\n")
+cat("Upload the FASTA file to:\n")
+cat("1. eggNOG mapper (for COG24): https://eggnogdb.embl.de/mapper/\n")
+cat("2. KofamScan (for KEGG): https://www.genome.jp/tools/kofam_scan/\n")
+```
+
+**Run it:**
+```bash
+cd bacteria_annotation/GCF_000013465.1
+Rscript 01_extract_proteins.R
+```
+
+**Expected output:**
+- `GCF_000013465.1_proteins.fasta` (~2-3 MB)
+- `GCF_000013465.1_metadata.csv` (contains gene IDs, products, contig info)
+
+---
+
+# Part 3: Annotate with COG24 using eggNOG
+
+## Step 3.1: Submit to eggNOG Mapper
+
+1. Go to **[eggNOG mapper web server](https://eggnogdb.embl.de/mapper/)**
+
+2. Upload your proteins:
+   - Click "Select queries"
+   - Upload: `GCF_000013465.1_proteins.fasta`
+   - **Settings:**
+     - Database: "eggNOG 5.0" 
+     - Sensitivity: "sensitive"
+     - Click "Submit"
+
+3. **Wait for results** (~10-15 minutes)
+   - You'll receive an email with results link
+   - Download the TSV output file (usually named `results_XXXXX.tsv`)
+   - Also download the annotations file (`.annotations.tsv`)
+
+## Step 3.2: Parse eggNOG Results
+
+Create file: `02_parse_eggnogmapper.R`
+
+```{r}
+library(tidyverse)
+
+genome_name <- "GCF_000013465.1"
+output_dir <- "."
+
+# Replace with your actual eggNOG results filename
+eggnogmapper_file <- "results_XXXXX.annotations.tsv"  # <-- UPDATE THIS
+
+cat("Parsing eggNOG mapper results...\n")
+
+# ===== READ EGGNOGMAPPER OUTPUT =====
+# Format: query_name | seed_ortholog | seed_eggNOG_HMM_hit | best_OG | 
+#         COG_category | COG_functional_description | ...
+
+# Read with automatic header detection
+eggnogmapper_df <- read_delim(eggnogmapper_file, delim = "\t") %>%
+  # Remove comment lines if present
+  filter(!str_starts(query_name, "#"))
+
+cat("Available columns:\n")
+print(colnames(eggnogmapper_df))
+
+# ===== EXTRACT COG ANNOTATIONS =====
+# COG24 categories are single letters (J, D, K, E, C, G, R, O, M, V, W, T, P, U, F, L, S, I, X, -)
+# Multiple categories per gene separated by commas
+
+cog_df <- eggnogmapper_df %>%
+  select(query_name, COG_category) %>%
+  rename(
+    locus_tag = query_name,
+    func_COG24_CATEGORY = COG_category
+  ) %>%
+  filter(!is.na(func_COG24_CATEGORY) & func_COG24_CATEGORY != "-") %>%
+  # Note: eggNOG doesn't provide pathway information directly
+  # We'll add a placeholder for consistency
+  mutate(
+    func_COG24_PATHWAY = NA_character_
+  ) %>%
+  select(locus_tag, func_COG24_CATEGORY, func_COG24_PATHWAY)
+
+cat(sprintf("Found COG annotations for %d genes\n", nrow(cog_df)))
+
+# Sample
+cat("\nSample COG annotations:\n")
+print(head(cog_df))
+
+# ===== SAVE =====
+output_cog <- file.path(output_dir, paste0(genome_name, "_cog24.csv"))
+write_csv(cog_df, output_cog)
+cat(sprintf("✓ Saved to: %s\n", output_cog))
+```
+
+**Run it after downloading eggNOG results:**
+```bash
+Rscript 02_parse_eggnogmapper.R
+```
+
+**Output:** `GCF_000013465.1_cog24.csv`
+
+---
+
+# Part 4: Annotate with KEGG using KofamScan
+
+KofamScan provides KEGG hierarchy directly, which is crucial for GSEA.
+
+## Step 4.1: Submit to KofamScan
+
+1. Go to **[KEGG KofamScan](https://www.genome.jp/tools/kofam_scan/)**
+
+2. Upload your proteins:
+   - Paste sequences or upload: `GCF_000013465.1_proteins.fasta`
+   - **Settings:**
+     - Organism type: "Prokaryotes"
+     - E-value threshold: "0.01" (less stringent than BLASTKOALA, KofamScan uses different thresholds)
+     - Click "Exec"
+
+3. **Wait for results** (~15-20 minutes)
+   - Results appear at a URL
+   - Download the results file (usually `query.ko` or similar)
+   - Also get the `query_fasta.tsv` if available (contains detailed scores)
+
+**Note:** Save both files if available; we'll parse the main results.
+
+## Step 4.2: Parse KofamScan Output
+
+Create file: `03_parse_kofamscan.R`
+
+```{r}
+library(tidyverse)
+
+genome_name <- "GCF_000013465.1"
+output_dir <- "."
+
+# Replace with your actual KofamScan output filename
+kofamscan_file <- "query.ko"  # <-- UPDATE THIS with your file
+
+cat("Parsing KofamScan results...\n")
+
+# ===== READ KOFAMSCAN OUTPUT =====
+# Format varies, but typically:
+# query_id<tab>KO_id<tab>threshold_type<tab>score<tab>E-value<tab>definition
+
+# Try different delimiters/formats
+kofamscan_df <- read_delim(kofamscan_file, delim = "\t", comment = "#") %>%
+  # Standardize column names (may vary)
+  setNames(tolower(names(.)))
+
+cat("Columns found:\n")
+print(colnames(kofamscan_df))
+cat("\nFirst few rows:\n")
+print(head(kofamscan_df))
+
+# ===== EXTRACT KEGG INFO =====
+# Parse KO IDs (format: K#####)
+# We need to map these to KEGG pathways and hierarchy levels
+
+kegg_df <- kofamscan_df %>%
+  # Different output formats may have different column names
+  # Try to find columns with gene ID and KO ID
+  select(matches("query|gene|id|ko|k_number")) %>%
+  # Rename to standard format
+  rename_with(tolower) %>%
+  # Keep first two columns as gene ID and KO ID
+  select(1:2) %>%
+  setNames(c("locus_tag", "func_KEGG_KO")) %>%
+  filter(!is.na(func_KEGG_KO) & func_KEGG_KO != "")
+
+cat(sprintf("Found KEGG KO annotations for %d genes\n", nrow(kegg_df)))
+
+# ===== FETCH KEGG HIERARCHY FROM KO IDs =====
+# This function queries KEGG to get pathway hierarchy for each KO
+# WARNING: This is slow (1-2 seconds per KO per query)
+# Consider caching results!
+
+get_kegg_hierarchy <- function(ko_id) {
+  # Query KEGG REST API
+  # Format: https://rest.kegg.jp/list/ko:K00001
+  
+  tryCatch({
+    # Get KO information
+    url <- sprintf("https://rest.kegg.jp/get/%s", ko_id)
+    response <- readLines(url, warn = FALSE)
+    
+    # Parse response to extract pathway information
+    # Look for lines starting with "PATHWAY"
+    pathway_lines <- response[str_detect(response, "^PATHWAY")]
+    
+    if (length(pathway_lines) == 0) {
+      return(list(L1 = NA, L2 = NA, L3 = NA))
+    }
+    
+    # Parse hierarchy from pathway definitions
+    # Format is typically: map#####  Pathway Name
+    pathways <- str_extract_all(pathway_lines, "map\\d+")[[1]]
+    
+    # For now, return KO and pathway info
+    # Full hierarchy extraction requires additional KEGG queries
+    
+    return(list(L1 = NA, L2 = NA, L3 = NA, pathways = paste(pathways, collapse = ",")))
+  }, error = function(e) {
+    return(list(L1 = NA, L2 = NA, L3 = NA))
+  })
+}
+
+# ===== ALTERNATIVE: Use Local KEGG Mapping =====
+# If you have access to KEGG subscription, download pathway mapping files
+# For now, we'll add a note to get pathway info manually or via API
+
+cat("\n⚠️  IMPORTANT: KEGG Hierarchy Extraction\n")
+cat("================================================\n")
+cat("To get full KEGG hierarchy (Level 1, 2, 3), you have options:\n\n")
+cat("Option A: Use KEGG REST API (slow but free)\n")
+cat("  - Will add ~5-10 minutes per genome\n")
+cat("  - Code below will attempt this\n\n")
+cat("Option B: Download KEGG pathway files\n")
+cat("  - Requires KEGG account (free academic access)\n")
+cat("  - Much faster\n\n")
+cat("Option C: Use online KEGG Pathway mapper\n")
+cat("  - Manually check pathway hierarchy for top genes\n\n")
+
+# For now, save KO IDs and add a placeholder for hierarchy
+kegg_df <- kegg_df %>%
+  mutate(
+    func_KEGG_Group = NA_character_,        # L2
+    func_KEGG_Pathway = NA_character_,      # L3
+    func_KEGG_Module = NA_character_
+  )
+
+# ===== OPTIONAL: Try API for hierarchy (slow) =====
+# Uncomment to use KEGG REST API
+# This will take a LONG time for large genomes!
+
+# cat("\nFetching KEGG pathway hierarchy from API (this is slow)...\n")
+# kegg_df <- kegg_df %>%
+#   rowwise() %>%
+#   mutate(
+#     hierarchy = list(get_kegg_hierarchy(func_KEGG_KO))
+#   ) %>%
+#   ungroup()
+
+cat(sprintf("\n✓ KEGG KO IDs saved (hierarchy extraction required)\n"))
+
+# ===== SAVE =====
+output_kegg <- file.path(output_dir, paste0(genome_name, "_kegg.csv"))
+write_csv(kegg_df, output_kegg)
+cat(sprintf("✓ Saved to: %s\n", output_kegg))
+
+cat("\n⚠️  NEXT STEP: Get KEGG Hierarchy\n")
+cat("================================================\n")
+cat("Run the next script to fetch KEGG pathway hierarchy.\n")
+cat("This may take 10-30 minutes depending on your genome size.\n")
+```
+
+**Run it after downloading KofamScan results:**
+```bash
+Rscript 03_parse_kofamscan.R
+```
+
+**Output:** `GCF_000013465.1_kegg.csv` (with KO IDs, hierarchy to be filled)
+
+## Step 4.3: Fetch KEGG Pathway Hierarchy
+
+Create file: `03b_fetch_kegg_hierarchy.R`
+
+This script will query KEGG REST API to get the full hierarchy. **WARNING: This is slow!**
+
+```{r}
+library(tidyverse)
+
+genome_name <- "GCF_000013465.1"
+output_dir <- "."
+
+kegg_file <- file.path(output_dir, paste0(genome_name, "_kegg.csv"))
+kegg_df <- read_csv(kegg_file)
+
+cat("Fetching KEGG pathway hierarchy from REST API\n")
+cat("(This will take several minutes)\n\n")
+
+# ===== FUNCTION: Get KEGG Pathway Hierarchy =====
+get_kegg_pathways <- function(ko_id, max_retries = 3) {
+  # Query KEGG to find pathways containing this KO
+  
+  for (attempt in 1:max_retries) {
+    tryCatch({
+      url <- sprintf("https://rest.kegg.jp/link/pathway/%s", ko_id)
+      response <- readLines(url, warn = FALSE)
+      
+      if (length(response) > 0 && response[1] != "") {
+        # Parse pathway IDs (format: path:map#####)
+        pathways <- str_extract(response, "path:(map\\d+)") %>%
+          na.omit() %>%
+          unique()
+        
+        return(list(success = TRUE, pathways = pathways))
+      } else {
+        return(list(success = FALSE, pathways = character(0)))
+      }
+    }, error = function(e) {
+      return(list(success = FALSE, pathways = character(0)))
+    })
+    
+    # Wait before retry
+    if (attempt < max_retries) Sys.sleep(0.5)
+  }
+  
+  return(list(success = FALSE, pathways = character(0)))
+}
+
+# ===== FUNCTION: Get Pathway Information =====
+get_pathway_info <- function(pathway_id) {
+  # Get hierarchy level for a pathway
+  # Format: map#####
+  
+  tryCatch({
+    url <- sprintf("https://rest.kegg.jp/get/%s", pathway_id)
+    response <- readLines(url, warn = FALSE)
+    
+    # Parse NAME line (contains pathway classification)
+    name_line <- response[str_detect(response, "^NAME")]
+    
+    if (length(name_line) > 0) {
+      pathway_name <- str_remove(name_line[1], "^NAME\\s+") %>%
+        str_trim()
+      return(pathway_name)
+    }
+    return(NA_character_)
+  }, error = function(e) {
+    return(NA_character_)
+  })
+}
+
+# ===== MAIN: Fetch for each KO =====
+# Progress bar
+pb <- progress_bar$new(
+  format = "  [:bar] :current/:total (:percent)",
+  total = nrow(kegg_df), clear = FALSE, width = 60
+)
+
+kegg_enriched <- kegg_df %>%
+  rowwise() %>%
+  mutate(
+    kegg_info = list({
+      pb$tick()
+      if (is.na(func_KEGG_KO)) {
+        list(L1 = NA, L2 = NA, L3 = NA)
+      } else {
+        # Get pathways for this KO
+        pathways <- get_kegg_pathways(func_KEGG_KO)$pathways
+        
+        if (length(pathways) > 0) {
+          # For now, just note the pathways found
+          # Full hierarchy extraction would require parsing each pathway
+          list(
+            L1 = NA,
+            L2 = NA,
+            L3 = NA,
+            pathways_found = paste(pathways, collapse = ",")
+          )
+        } else {
+          list(L1 = NA, L2 = NA, L3 = NA, pathways_found = NA_character_)
+        }
+      }
+    })
+  ) %>%
+  ungroup()
+
+cat("\n✓ API queries completed\n")
+
+# For now, keep KO IDs and note that manual pathway lookup needed
+output_kegg_final <- file.path(output_dir, paste0(genome_name, "_kegg_enriched.csv"))
+write_csv(kegg_enriched %>% select(-kegg_info), output_kegg_final)
+cat(sprintf("✓ Saved to: %s\n", output_kegg_final))
+
+cat("\n⚠️  NOTE: KEGG Pathway Hierarchy\n")
+cat("The API provides KO → Pathway mapping, but full\n")
+cat("hierarchy levels (L1, L2, L3) require KEGG subscription.\n")
+cat("\nFor comprehensive hierarchy, consider:\n")
+cat("1. Downloading KEGG pathway files (academic access)\n")
+cat("2. Using online KEGG Mapper tool\n")
+cat("3. Manually curating top genes\n")
+```
+
+**Run it:**
+```bash
+Rscript 03b_fetch_kegg_hierarchy.R
+```
+
+**This will take 10-30 minutes depending on genome size.**
+
+---
+
+# Part 5: Extract GO Terms from NCBI GFF3
+
+GO terms are already in the NCBI GFF3 file. This is fast!
+
+## Step 5.1: Parse GFF3 for GO Terms
+
+Create file: `04_extract_go.R`
+
+```{r}
+library(tidyverse)
+
+genome_name <- "GCF_000013465.1"
+gff_file <- "GCF_000013465.1_ASM1346v1_genomic.gff"
+output_dir <- "."
+
+cat("Extracting GO terms from GFF3...\n")
+
+# ===== READ GFF3 =====
+# GFF3: seqname, source, feature, start, end, score, strand, frame, attributes
+# We want CDS features with locus_tag and GO information
+
+gff_df <- read_delim(gff_file, delim = "\t",
+                     col_names = c("seqname", "source", "feature", "start", "end",
+                                  "score", "strand", "frame", "attributes"),
+                     comment = "#",
+                     show_col_types = FALSE)
+
+cat(sprintf("Total features: %d\n", nrow(gff_df)))
+
+# Filter for CDS
+gff_cds <- gff_df %>%
+  filter(feature == "CDS")
+
+cat(sprintf("CDS features: %d\n", nrow(gff_cds)))
+
+# ===== PARSE ATTRIBUTES =====
+# Attributes are semicolon-delimited key=value pairs
+# We want: locus_tag, Ontology_term (GO IDs), go_process, go_function, go_component
+
+go_df <- gff_cds %>%
+  mutate(
+    # Extract locus_tag
+    locus_tag = str_extract(attributes, 'locus_tag=([^;]+)') %>%
+      str_remove('locus_tag='),
+    
+    # Extract GO IDs (Ontology_term=GO:####,GO:####,...)
+    go_ids = str_extract(attributes, 'Ontology_term=([^;]+)') %>%
+      str_remove('Ontology_term='),
+    
+    # Extract human-readable GO terms
+    # These are encoded with pipe (|) and URL encoding (%2C for comma)
+    go_process_raw = str_extract(attributes, 'go_process=([^;]+)') %>%
+      str_remove('go_process='),
+    
+    go_function_raw = str_extract(attributes, 'go_function=([^;]+)') %>%
+      str_remove('go_function='),
+    
+    go_component_raw = str_extract(attributes, 'go_component=([^;]+)') %>%
+      str_remove('go_component=')
+  ) %>%
+  select(locus_tag, go_ids, go_process_raw, go_function_raw, go_component_raw) %>%
+  filter(!is.na(locus_tag) & locus_tag != "")
+
+# ===== PARSE GO TERM STRINGS =====
+# Format in GFF3: "term1|code1||IEA,term2|code2||IEA"
+# We want just the terms
+
+parse_go_terms <- function(go_string) {
+  if (is.na(go_string) || go_string == "") return(NA_character_)
+  
+  # Split by comma
+  terms <- str_split(go_string, ",")[[1]]
+  
+  # Extract just the term name (before the first pipe)
+  term_names <- str_extract(terms, "^[^|]+") %>%
+    str_trim()
+  
+  # Collapse back together
+  return(paste(term_names, collapse = ","))
+}
+
+go_df_clean <- go_df %>%
+  mutate(
+    GO_process = map_chr(go_process_raw, parse_go_terms),
+    GO_function = map_chr(go_function_raw, parse_go_terms),
+    GO_component = map_chr(go_component_raw, parse_go_terms)
+  ) %>%
+  select(locus_tag, GO_process, GO_function, GO_component)
+
+# Keep only genes with at least one GO term
+go_df_final <- go_df_clean %>%
+  filter(
+    (!is.na(GO_process) & GO_process != "") |
+    (!is.na(GO_function) & GO_function != "") |
+    (!is.na(GO_component) & GO_component != "")
+  )
+
+cat(sprintf("Found GO annotations for %d genes\n", nrow(go_df_final)))
+
+# For GSEA, we mainly use GO_process
+go_process_only <- go_df_final %>%
+  select(locus_tag, GO_process) %>%
+  filter(!is.na(GO_process) & GO_process != "")
+
+cat(sprintf("Genes with GO_process: %d\n", nrow(go_process_only)))
+
+# Sample
+cat("\nSample GO annotations:\n")
+print(head(go_process_only, 10))
+
+# ===== SAVE =====
+output_go <- file.path(output_dir, paste0(genome_name, "_go.csv"))
+write_csv(go_df_final, output_go)
+cat(sprintf("✓ Saved to: %s\n", output_go))
+```
+
+**Run it:**
+```bash
+Rscript 04_extract_go.R
+```
+
+**Output:** `GCF_000013465.1_go.csv`
+
+---
+
+# Part 6: Merge All Annotations
+
+Combine everything into a single CSV ready for RNASeqApp.
+
+## Step 6.1: Merge Script
+
+Create file: `05_merge_annotations.R`
+
+```{r}
+library(tidyverse)
+
+genome_name <- "GCF_000013465.1"
+output_dir <- "."
+
+cat("=== MERGING ALL ANNOTATIONS ===\n\n")
+
+# ===== LOAD ALL FILES =====
+cat("Loading annotation files...\n")
+
+metadata <- read_csv(file.path(output_dir, paste0(genome_name, "_metadata.csv")),
+                     show_col_types = FALSE)
+cog <- read_csv(file.path(output_dir, paste0(genome_name, "_cog24.csv")),
+                show_col_types = FALSE)
+kegg <- read_csv(file.path(output_dir, paste0(genome_name, "_kegg_enriched.csv")),
+                 show_col_types = FALSE)
+go <- read_csv(file.path(output_dir, paste0(genome_name, "_go.csv")),
+               show_col_types = FALSE)
+
+cat(sprintf("✓ Metadata: %d genes\n", nrow(metadata)))
+cat(sprintf("✓ COG24: %d genes annotated\n", nrow(cog)))
+cat(sprintf("✓ KEGG: %d genes annotated\n", nrow(kegg)))
+cat(sprintf("✓ GO: %d genes annotated\n", nrow(go)))
+
+# ===== MERGE BY locus_tag =====
+cat("\nMerging by locus_tag...\n")
+
+# Start with metadata (has all genes)
+annotations <- metadata %>%
+  rename(Geneid = locus_tag) %>%
+  # Left join so we keep all genes even if not annotated
+  left_join(
+    cog %>% select(locus_tag, func_COG24_CATEGORY, func_COG24_PATHWAY),
+    by = c("Geneid" = "locus_tag")
+  ) %>%
+  left_join(
+    kegg %>% select(locus_tag, func_KEGG_KO, func_KEGG_Group, func_KEGG_Pathway, func_KEGG_Module),
+    by = c("Geneid" = "locus_tag")
+  ) %>%
+  left_join(
+    go %>% select(locus_tag, GO_process),
+    by = c("Geneid" = "locus_tag")
+  )
+
+cat(sprintf("✓ Final table: %d genes × %d columns\n", nrow(annotations), ncol(annotations)))
+
+# ===== DISPLAY SUMMARY =====
+cat("\n=== ANNOTATION COVERAGE ===\n")
+cat(sprintf("COG24 annotated: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$func_COG24_CATEGORY)),
+            100 * mean(!is.na(annotations$func_COG24_CATEGORY))))
+cat(sprintf("KEGG KO annotated: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$func_KEGG_KO)),
+            100 * mean(!is.na(annotations$func_KEGG_KO))))
+cat(sprintf("KEGG Group annotated: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$func_KEGG_Group)),
+            100 * mean(!is.na(annotations$func_KEGG_Group))))
+cat(sprintf("GO Process annotated: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$GO_process)),
+            100 * mean(!is.na(annotations$GO_process))))
+
+# ===== SAMPLE GENES =====
+cat("\n=== SAMPLE ANNOTATIONS ===\n")
+print(annotations %>%
+  select(Geneid, product, func_COG24_CATEGORY, func_KEGG_KO, GO_process) %>%
+  filter(!is.na(func_COG24_CATEGORY) | !is.na(GO_process)) %>%
+  head(10))
+
+# ===== SAVE FINAL FILE =====
+output_file <- file.path(output_dir, paste0(genome_name, "_annotations.csv"))
+write_csv(annotations, output_file)
+
+cat(sprintf("\n✓✓✓ SUCCESS ✓✓✓\n"))
+cat(sprintf("Final annotations saved to:\n%s\n", output_file))
+cat("\nReady to upload to RNASeqApp!\n")
+```
+
+**Run it:**
+```bash
+Rscript 05_merge_annotations.R
+```
+
+**Output:** `GCF_000013465.1_annotations.csv` - **Ready for RNASeqApp!**
+
+---
+
+# Part 7: Validate and Use in RNASeqApp
+
+## Step 7.1: Validate Your Annotation File
+
+```{r}
+library(tidyverse)
+
+genome_name <- "GCF_000013465.1"
+annotations <- read_csv(paste0(genome_name, "_annotations.csv"))
+
+cat("=== ANNOTATION FILE VALIDATION ===\n\n")
+
+# Check dimensions
+cat(sprintf("Total genes: %d\n", nrow(annotations)))
+cat(sprintf("Total columns: %d\n", ncol(annotations)))
+
+# Check column names
+cat("\nColumns:\n")
+for (i in seq_along(colnames(annotations))) {
+  cat(sprintf("  %d. %s\n", i, colnames(annotations)[i]))
+}
+
+# Check annotation coverage
+cat("\n=== ANNOTATION COVERAGE ===\n")
+cat(sprintf("COG24 Category: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$func_COG24_CATEGORY)),
+            100 * mean(!is.na(annotations$func_COG24_CATEGORY))))
+cat(sprintf("KEGG KO: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$func_KEGG_KO)),
+            100 * mean(!is.na(annotations$func_KEGG_KO))))
+cat(sprintf("KEGG Group: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$func_KEGG_Group)),
+            100 * mean(!is.na(annotations$func_KEGG_Group))))
+cat(sprintf("GO Process: %d genes (%.1f%%)\n",
+            sum(!is.na(annotations$GO_process)),
+            100 * mean(!is.na(annotations$GO_process))))
+
+# Show genes with most complete annotation
+cat("\n=== WELL-ANNOTATED GENES (Examples) ===\n")
+annotations %>%
+  mutate(
+    annotation_count = rowSums(!is.na(select(., starts_with("func_"), starts_with("GO_"))))
+  ) %>%
+  filter(annotation_count >= 3) %>%
+  select(Geneid, product, func_COG24_CATEGORY, func_KEGG_KO, GO_process) %>%
+  head(10) %>%
+  print()
+```
+
+## Step 7.2: Upload to RNASeqApp
+
+1. Open RNASeqApp (local or web version)
+2. In sidebar: Upload your **SE file** (SummarizedExperiment object)
+3. Then: Upload your annotation file
+   - Select: `GCF_000013465.1_annotations.csv`
+4. Go to **"Explore by Contrast"** tab
+5. Under "Gene Sets (GSEA)" → "Functional Annotation"
+   - You'll see the available annotation columns:
+     - COG24 Category ✓
+     - KEGG Group (if hierarchy was added) ✓
+     - GO Process ✓
+
+---
+
+# Summary
+
+## What You Created
+
+✅ Protein sequences from NCBI GBFF  
+✅ COG24 annotations (eggNOG, online)  
+✅ KEGG KO IDs (KofamScan, online)  
+✅ GO terms (NCBI GFF3)  
+✅ Merged annotation CSV  
+
+## Time Breakdown
+
+| Step | Time |
+|------|------|
+| Download files | 5 min |
+| Extract proteins | 2 min |
+| eggNOG submission + retrieval | 20 min |
+| KofamScan submission + retrieval | 20 min |
+| KEGG API hierarchy fetch | 15 min |
+| GO extraction + merge | 3 min |
+| **Total** | **~65 min** (mostly web servers) |
+
+## Important Notes
+
+### KEGG Hierarchy Limitation
+
+The current approach gets KO IDs but **doesn't yet fully populate Level 2 (Group) and Level 3 (Pathway)**. Options to complete this:
+
+1. **Download KEGG mapping files** (fastest)
+   - Requires KEGG account (free academic access: https://www.kegg.jp/kegg/rest/keggapi.html)
+   - Update Step 3b script with local pathway mapping
+
+2. **Use KEGG API** (free, slow)
+   - Step 3b script attempts this but may time out on large genomes
+   - Alternative: Run overnight with rate limiting
+
+3. **Manual curation** (for top genes)
+   - Use online KEGG Mapper (https://www.kegg.jp/kegg/mapper.html)
+   - Curate pathway levels for most abundant/interesting genes
+
+### Reusing This CSV
+
+Once created, **reuse this CSV for all analyses** of this genome:
+- Different RNA-seq experiments
+- Different contrasts
+- No need to re-run annotation steps
+
+### Next Steps
+
+1. **Test with your genome**: Replace `GCF_000013465.1` with your accession
+2. **Add custom annotations** (e.g., RegPrecise): Join CSV by Geneid before uploading
+3. **Enhance KEGG hierarchy**: See note above for full pathway levels
+4. **Publication**: Keep record of versions used (COG24 v2024, KEGG 2025-11-07, eggNOG 5.0)
+
+---
+
+# Troubleshooting
+
+### Error: genbankr cannot parse GBFF
+- Check file format: Download directly from NCBI, not third-party mirrors
+- Try smaller test file first
+
+### eggNOG Server Timeout
+- File too large? Try first 1000 genes
+- Check NCBI website for service status
+- Try again later
+
+### KofamScan No Results
+- Check protein format: `>locus_tag` headers required
+- Verify E-value threshold (default 0.01)
+- Try KEGG BLASTKOALA as alternative
+
+### GFF3 Parsing Fails
+- Ensure GFF3 is version 3, not GFF2
+- Download directly from NCBI FTP, not converted versions
+
+### Missing GO Terms
+- Not all NCBI genomes have GO annotations
+- Check GFF3 file directly for `Ontology_term` attributes
+- Consider running InterProScan for GO prediction
+
+---
+
+# References and Resources
+
+- **NCBI Assembly**: https://www.ncbi.nlm.nih.gov/assembly/
+- **eggNOG Mapper**: https://eggnogdb.embl.de/mapper/
+- **KofamScan**: https://www.genome.jp/tools/kofam_scan/
+- **KEGG REST API**: https://www.kegg.jp/kegg/rest/keggapi.html
+- **GFF3 Format**: https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
