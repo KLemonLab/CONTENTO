@@ -1,7 +1,6 @@
 ---
 title: "Create Bacterial Genome Annotations"
-subtitle: "From NCBI GFF3 to RNASeqApp-Ready CSV"
-author: "KLemon Lab"
+author: "Isabel Fernandez Escapa"
 date: last-modified
 execute:
   eval: false
@@ -16,251 +15,101 @@ format:
 
 # Overview
 
-This tutorial shows how to create a functional annotation CSV file from NCBI genome files that you can upload to RNASeqApp for gene set enrichment analysis (GSEA).
-
-**What you'll create:** A CSV file with gene IDs, descriptions, and annotations (GO terms at minimum).
-
-**Time required:** ~10 minutes
-
-**Test genome:** *Staphylococcus aureus* subsp. aureus FPR3757 (GCF_000013465.1)
+This tutorial shows how to create a functional annotation CSV file with gene IDs, descriptions, and annotations to be uploaded into the CONTENTO App. 
 
 ---
 
-# Part 1: Download GFF3 from NCBI
+# Part 1: Source Genome Annotations
 
-## Step 1: Get Your Genome
+## Get Your Genome from NCBI
 
 1. Go to [NCBI Assembly](https://www.ncbi.nlm.nih.gov/assembly/)
-2. Search for your genome accession (e.g., `GCF_000013465.1`)
-3. Click on the result
+2. Search for your genome accession (e.g., `GCF_000013465.1` for *Staphylococcus aureus* subsp. aureus FPR3757)
+3. Click on the result and downoload the assembly in GFF3 format.
+4. Unzip the file and save it in your working directory.
 
-## Step 2: Download GFF3 File
+Alternative you can use the NCBI Datasets command-line interface (CLI) to download the GFF3 file:
 
-On the assembly page, find **"Download assembly"** section.
+```{bash}
+# Install NCBI Datasets CLI if you haven't already
+conda activate ncbi_datasets 
 
-Look for: `GCF_000013465.1_ASM1346v1_genomic.gff.gz`
+# Update the genome accession and directory as needed
+GENOME_NAME="GCF_000013465.1" 
+FILES_DIR="inst/extdata" 
 
-Download and unzip:
-```bash
-gunzip GCF_000013465.1_ASM1346v1_genomic.gff.gz
+# Update to download the desired files (genome sequence, GenBank flat file, GFF3...)
+datasets download genome accession "$GENOME_NAME" \
+            --include genome,gbff,gff3,seq-report \
+            --filename "$FILES_DIR/$GENOME_NAME.zip"
 ```
 
-You now have: `GCF_000013465.1_ASM1346v1_genomic.gff`
+File names and formats may vary, so make sure to check the downloaded files and adapt the code or rename the files to match the expected names in the code.
+
+## Generate your own GFF3 file (Optional)
+
+For genomes not available in NCBI, you can generate your own GFF3 file using Prokka [@Seemann2014] or similar annotation tools. Just make sure to include the necessary attributes (e.g., `locus_tag`, `product`, `go_process`) in the output GFF3.
 
 ---
 
-# Part 2: Extract Annotations from GFF3
-
-Create an R script: `extract_annotations.R`
+# Part 2: Parse Annotation into CSV
 
 ```{r}
+# Set up your R environment and read the GFF3 file. Adapt based on the GFF3 name and location
+
 library(tidyverse)
+library(here)
 
-# ===== SETTINGS =====
-genome_name <- "GCF_000013465.1"
-gff_file <- "GCF_000013465.1_ASM1346v1_genomic.gff"
-output_file <- paste0(genome_name, "_annotations.csv")
+GENOME_NAME <- "GCF_000013465.1"
+GENOMES_DIR <- here("inst/extdata")
 
-# ===== READ GFF3 =====
-cat("Reading GFF3 file...\n")
+gff_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, ".gff"))
 
+# Read the GFF3 file into a data frame
 gff_df <- read_delim(
   gff_file,
   delim = "\t",
-  col_names = c("seqname", "source", "feature", "start", "end",
-                "score", "strand", "frame", "attributes"),
+  col_names = c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes"),
   comment = "#",
   show_col_types = FALSE
 )
-
-cat(sprintf("Total features: %d\n", nrow(gff_df)))
 
 # Filter for CDS (protein-coding genes)
 gff_cds <- gff_df %>%
   filter(feature == "CDS")
 
-cat(sprintf("CDS features: %d\n", nrow(gff_cds)))
-
-# ===== PARSE ATTRIBUTES =====
-# Attributes are key=value pairs separated by semicolons
-# Example: ID=cds-WP_001290433.1;Parent=gene-SAUSA300_RS00010;locus_tag=SAUSA300_RS00010;product=chromosomal replication initiator protein DnaA;protein_id=WP_001290433.1;
-
-annotations <- gff_cds %>%
-  mutate(
-    # Extract locus_tag (gene ID)
-    Geneid = str_extract(attributes, 'locus_tag=([^;]+)') %>%
-      str_remove('locus_tag='),
+# Function to parse the attributes column of GFF3
+parse_gff3_attributes <- function(attributes_string) {
+  pairs <- str_split(attributes_string, ";")[[1]]
+  
+  attr_list <- list()
+  
+  for (pair in pairs) {
+    if (pair == "") next
     
-    # Extract product (gene description)
-    product = str_extract(attributes, 'product=([^;]+)') %>%
-      str_remove('product='),
+    parts <- str_split(pair, "=", n = 2)[[1]]
     
-    # Extract GO process terms (biological function)
-    # Format: "term1|GO:0000001||IEA,term2|GO:0000002||IEA"
-    go_process_raw = str_extract(attributes, 'go_process=([^;]+)') %>%
-      str_remove('go_process=')
-  ) %>%
-  select(Geneid, product, seqname, start, end, strand, go_process_raw) %>%
-  filter(!is.na(Geneid) & Geneid != "")
-
-# ===== CLEAN UP GO TERMS =====
-# Extract just the term names (before the pipe and GO ID)
-parse_go_terms <- function(go_string) {
-  if (is.na(go_string) || go_string == "") return(NA_character_)
+    if (length(parts) == 2) {
+      key <- parts[1]
+      value <- parts[2]
+      attr_list[[key]] <- value
+    }
+  }
   
-  # Split by comma (multiple terms)
-  terms <- str_split(go_string, ",")[[1]]
-  
-  # Extract term name (everything before first pipe)
-  term_names <- str_extract(terms, "^[^|]+") %>%
-    str_trim()
-  
-  # Rejoin with comma
-  return(paste(term_names, collapse = ","))
+  return(attr_list)
 }
 
-annotations <- annotations %>%
+# Apply the parsing function to the attributes column and create new columns for each key
+annotations <- gff_cds %>%
+  rowwise() %>%
   mutate(
-    GO_process = map_chr(go_process_raw, parse_go_terms)
+    attr_list = list(parse_gff3_attributes(attributes))
   ) %>%
-  select(Geneid, product, seqname, start, end, strand, GO_process)
+  ungroup() %>%
+  # Unnest all key=value pairs as columns
+  unnest_wider(attr_list, names_repair = "universal")
 
-# ===== SUMMARY =====
-cat("\n=== RESULTS ===\n")
-cat(sprintf("Total genes: %d\n", nrow(annotations)))
-cat(sprintf("Genes with GO process: %d (%.1f%%)\n",
-            sum(!is.na(annotations$GO_process)),
-            100 * mean(!is.na(annotations$GO_process))))
-
-cat("\nSample:\n")
-print(head(annotations, 5))
-
-# ===== SAVE =====
+# Save the annotations to a CSV file
+output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annotations.csv"))
 write_csv(annotations, output_file)
-cat(sprintf("\n✓ Saved to: %s\n", output_file))
-cat("Ready for RNASeqApp!\n")
 ```
-
-**Run it:**
-```bash
-Rscript extract_annotations.R
-```
-
-**Output:** `GCF_000013465.1_annotations.csv`
-
----
-
-# Part 3: Upload to RNASeqApp
-
-Your CSV is now ready to use:
-
-1. Open RNASeqApp
-2. Upload your SE (SummarizedExperiment) file
-3. Upload annotations CSV: `GCF_000013465.1_annotations.csv`
-4. In "Explore by Contrast" → "Functional Annotation" → Choose "GO_process"
-5. Run GSEA with your genes
-
----
-
-# Part 4: Add More Annotations (Optional)
-
-Your basic CSV has:
-- `Geneid` - gene identifier
-- `product` - gene description  
-- `seqname`, `start`, `end`, `strand` - genomic coordinates
-- `GO_process` - biological functions (useful for GSEA)
-
-**Want to add more annotations?** You have options:
-
-## Option A: COG24 and KEGG Categories (Using Anvi'o)
-
-For publication-quality annotations, use anvi'o:
-
-```bash
-# Import genome to anvi'o database
-anvi-script-NCBI-genbank-to-individuals-fasta GCF_000013465.1_genomic.gbff -o contigs.fa
-
-# Create contigs database
-anvi-gen-contigs-database -f contigs.fa -o contigs.db -n "GCF_000013465.1"
-
-# Run HMMs
-anvi-run-hmms -c contigs.db
-
-# Annotate with COG
-anvi-run-ncbi-cogs -c contigs.db
-
-# Annotate with KEGG
-anvi-run-kegg-kofams -c contigs.db
-
-# Export functions
-anvi-export-functions -c contigs.db -o gene_functions.txt
-```
-
-Then parse `gene_functions.txt` and merge with your CSV.
-
-## Option B: From Other Sources
-
-Add columns from:
-- **RegPrecise** (regulon annotations): http://regprecise.lbl.gov/
-- **PATRIC** (protein family annotations): https://www.patricbrc.org/
-- **InterProScan** (protein domains, COG, GO): https://www.ebi.ac.uk/interpro/search/sequence/
-
-**To merge additional columns:**
-
-```r
-# Load your basic annotations
-annotations <- read_csv("GCF_000013465.1_annotations.csv")
-
-# Load additional annotations from elsewhere
-extra_annot <- read_csv("my_cog_annotations.csv")
-# Should have columns: Geneid, func_COG24_CATEGORY, func_COG24_PATHWAY, etc.
-
-# Merge by Geneid
-annotations_enhanced <- annotations %>%
-  left_join(extra_annot, by = "Geneid")
-
-# Save
-write_csv(annotations_enhanced, "GCF_000013465.1_annotations_enhanced.csv")
-```
-
----
-
-# Summary
-
-✅ **What you have now:**
-- Basic annotations from NCBI GFF3
-- Gene IDs, descriptions, coordinates, GO terms
-- Ready for GSEA with `GO_process`
-
-**Next steps:**
-- Use as-is for GSEA
-- Or add COG24/KEGG using anvi'o for more comprehensive analysis
-- Or bring annotations from other sources and merge
-
----
-
-# Troubleshooting
-
-**No GO terms found?**
-- Not all NCBI genomes have GO annotations
-- Check your GFF3 file directly for `go_process` attributes
-- Alternative: Run InterProScan for GO prediction
-
-**Parsing errors?**
-- Check that your GFF3 is version 3 (not GFF2)
-- Download directly from NCBI FTP, not converted versions
-- Ensure you're using `gunzip` to decompress
-
-**Column names don't match app?**
-- RNASeqApp expects: `Geneid`, `GO_process`, optional `func_COG24_CATEGORY`, `func_KEGG_Group`, etc.
-- Check column names match exactly (case-sensitive)
-
----
-
-# Resources
-
-- **NCBI Assembly**: https://www.ncbi.nlm.nih.gov/assembly/
-- **GFF3 Format**: https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
-- **Anvi'o Documentation**: http://merenlab.org/software/anvio/
-- **RegPrecise**: http://regprecise.lbl.gov/
-- **InterProScan**: https://www.ebi.ac.uk/interpro/search/sequence/
