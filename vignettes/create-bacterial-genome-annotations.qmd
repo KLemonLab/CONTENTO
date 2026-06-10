@@ -135,7 +135,7 @@ You can merge annotations from any source that contains gene identifiers (locus 
 **In this example**, we demonstrate using RegPrecise regulon annotations, but the same approach works for any custom annotation file.
 
 ::: callout-tip
-## Found a Useful Annotation Source?
+### Found a Useful Annotation Source?
 
 Open an [issue on GitHub](https://github.com/KLemonLab/RNASeqApp/issues) to share it with the community! Include the name, URL, and how you used it.
 :::
@@ -189,6 +189,10 @@ write_csv(annotations_merged, output_file)
 - **Pfams** - Protein family annotations
 - **CAZymes** - Carbohydrate-active enzyme classification
 
+### Run Anvi'o Annotation Pipeline
+
+For more details on how to run anvi'o see the [Anvi'o documentation](https://anvio.org/learn/).
+
 ```{bash, eval = FALSE}
 # Install Anvio if you haven't already. This should be run in your terminal.
 conda activate anvio-9
@@ -241,6 +245,8 @@ anvi-display-contigs-stats "$FILES_DIR/${GENOME_NAME}_anvio.db" \
 anvi-db-info "$FILES_DIR/${GENOME_NAME}_anvio.db" &>> "$FILES_DIR/${GENOME_NAME}_log.txt"
 ```
 
+### Parse Anvi'o Annotations into CSV
+
 The resulting anvi'o annotation file contains comprehensive functional annotations for each gene, which can be parsed into a CSV format with the following R code.
 
 ```{r}
@@ -269,6 +275,22 @@ anvio_annot <- anvio_annot |>
   ) 
 ```
 
+### Parse KEGG Hierarchical Annotations
+
+The KEGG annotations from anvi'o come as hierarchical levels separated by semicolons (e.g., "Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis"). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it's useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway).
+
+```{r}
+anvio_annot <- anvio_annot |>
+  mutate(func_KEGG_Class = trimws(as.character(func_KEGG_Class))) |>
+  separate(func_KEGG_Class, 
+           into = c("func_KEGG_Class", "func_KEGG_Subclass", "func_KEGG_Pathway"),
+           sep = ";",
+           extra = "drop",
+           fill = "right")
+```
+
+### Add AA Sequences to Annotations (Optional)
+
 You can also merge the anvi'o annotations with the aa sequences from the calls file to have a comprehensive annotation dataframe with all the information for each gene. This can be useful for gene exploration in CONTENTO, where you can display the sequence along with the functional annotations for each gene.
 
 ```{r}
@@ -281,7 +303,9 @@ anvio_annot <- anvio_annot |>
   left_join(anvio_calls, by = "gene_callers_id")
 ```
 
-Finally, you can merge the anvi'o annotations with the GFF3-derived annotations and the custom annotations from RegPrecise to create a comprehensive annotation CSV file for CONTENTO.
+### Merge Anvi'o Annotations 
+
+Finally, you should merge the anvi'o annotations with the GFF3-derived annotations and the custom annotations from RegPrecise to create a comprehensive annotation CSV file for CONTENTO.
 
 ```{r}
 # Load GFF3-derived annotations (with RegPrecise already merged, or use original if skipping section 3.1)
