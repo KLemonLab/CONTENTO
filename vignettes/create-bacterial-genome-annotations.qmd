@@ -107,8 +107,8 @@ annotations <- gff_cds |>
   rowwise() |>
   mutate(attr_list = list(parse_gff3_attributes(attributes)))  |>
   ungroup() |>
-  # Unnest all key=value pairs as columns
-  unnest_wider(attr_list, names_repair = "universal")
+  unnest_wider(attr_list, names_repair = "universal") |> # Unnest all key=value pairs as columns
+  select(-attributes) # Optionally remove the original attributes column to keep the dataframe clean
 
 # Save the annotations to a CSV file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv"))
@@ -124,7 +124,33 @@ These annotations are useful in CONTENTO for:
 - **Functional enrichment analysis (GSEA)** using for example COG and KEGG categories
 - **Gene exploration** - displaying comprehensive functional information for individual genes
 
-## 3.1 Merge Annotations with the GFF3 derived annotations
+## 3.1 Merge Custom Annotations
+
+You can merge annotations from any source that contains gene identifiers (locus tags). These can be sourced from:
+
+- Public repositories
+- Your own experimental data (e.g., Tn-seq, RNA-seq, proteomics)
+- Manually curated annotations from literature searches
+
+**In this example**, we demonstrate using RegPrecise regulon annotations, but the same approach works for any custom annotation file.
+
+::: callout-tip
+## Found a Useful Annotation Source?
+
+Open an [issue on GitHub](https://github.com/KLemonLab/RNASeqApp/issues) to share it with the community! Include the name, URL, and how you used it.
+:::
+
+### Requirements and Format
+
+**Key requirement:** Your custom annotation file must have a column with gene identifiers that match the `locus_tag` column in your GFF3-derived annotations. This column might have a different name in your custom file (e.g., "Geneid", "Gene ID", "Locus tag", ...), but it should contain the same values as `locus_tag`.
+
+**Important notes:**
+
+- **Columns:** Your custom annotation file can have as many additional columns as you want. All columns will be merged into the final dataframe, or you can select only a subset of columns before merging. In the merging step, you can **add a prefix** to custom annotation columns (e.g., `RegPrecise_`, `reg_`) to avoid name clashes and easily identify annotation sources.
+
+- **Gene coverage:** No requirement for the same number of genes as in the GFF3-derived annotations, as long as there is a common key (`locus_tag`) for merging. Genes in GFF3-derived annotations without a corresponding custom annotation entry will be included in the final dataframe with `NA` values for the custom columns.
+
+- **Multiple annotations per gene:** There should be only **one entry per gene** in the custom annotation file. If a gene has multiple annotations, concatenate them into a single string separated by commas (e.g., `"regulon1,regulon2"`). See the anvi'o example below for how to concatenate multiple values. CONTENTO will parse these and count the gene as belonging to each category for functional enrichment analysis.
 
 ```{r}
 # Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location
@@ -132,9 +158,25 @@ library(tidyverse)
 library(here)
 
 GENOMES_DIR <- here("inst/extdata/genomes")
+GENOME_NAME <- "GCF_000013465.1"
 
-# Read the custom annotation file (e.g., from RegPrecise regulon database or other source)
-custom_file <- read_csv(file.path(GENOMES_DIR, "USA300_FPR3757_regulons.csv"))
+# Load your GFF3-derived annotations
+annotations <- read_csv(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv")))
+
+# Load custom annotation file tab delimited
+custom_annot <- read_delim(file.path(GENOMES_DIR, "USA300_FPR3757_RegPrecise.txt"))
+
+# Merge the custom annotations with the GFF3-derived annotations using locus_tag as the key
+annotations_merged <- annotations |>
+  left_join(custom_annot, by = c("locus_tag" = "Geneid")) |> # Adjust to the "locus_tag" column name in your custom annotation file
+  rename_with(
+    ~ paste0("RegPrecise_", .), # Prefix custom annotation columns to avoid name clashes with GFF3-derived annotations
+    -all_of(colnames(annotations))  
+  ) 
+
+# Save the annotations to a CSV file
+output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise.csv"))
+write_csv(annotations_merged, output_file)
 ```
 
 ## 3.2 Enhance Annotations with Anvi'o
@@ -216,16 +258,15 @@ anvio_annot <- read_delim(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.txt
   select(-e_value) |> # Exclude e-values to keep dataframe simple
   rename("acc" = "accession", "func" = "function") # Shorter names
 
-# Generate wide dataframe collapsing duplicates for the same source
+# Convert from long format (multiple rows per gene) to wide format (one row per gene)
 anvio_annot <- anvio_annot |>
   pivot_wider(
     names_from = source,
     values_from = c(acc, func),
-    values_fn = list(acc = ~ paste(unique(.), collapse = ","), func = ~ paste(unique(.), collapse = ","))
+    values_fn = list(
+      acc = ~ paste(unique(.), collapse = ","), 
+      func = ~ paste(unique(.), collapse = ","))
   ) 
-
-# Sanity check for duplicates by GENBANK_LOCUS_TAG. It should be 0!!
-nrow(anvio_annot |> group_by(acc_GENBANK_LOCUS_TAG) |> filter(n() > 1))
 ```
 
 You can also merge the anvi'o annotations with the aa sequences from the calls file to have a comprehensive annotation dataframe with all the information for each gene. This can be useful for gene exploration in CONTENTO, where you can display the sequence along with the functional annotations for each gene.
@@ -238,4 +279,23 @@ anvio_calls <- read_delim(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_calls.txt
 # Merge with anvio_annot by gene_callers_id
 anvio_annot <- anvio_annot |>
   left_join(anvio_calls, by = "gene_callers_id")
+```
+
+Finally, you can merge the anvi'o annotations with the GFF3-derived annotations and the custom annotations from RegPrecise to create a comprehensive annotation CSV file for CONTENTO.
+
+```{r}
+# Load GFF3-derived annotations (with RegPrecise already merged, or use original if skipping section 3.1)
+annotations <- read_csv(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise.csv")))
+
+# Merge anvi'o annotations using GENBANK_LOCUS_TAG (the column added by anvi'o) as a key for merging, which should match the locus_tag column in the GFF3-derived annotations. 
+annotations_merged <- annotations |>
+  left_join(anvio_annot, by = c("locus_tag" = "func_GENBANK_LOCUS_TAG")) |> 
+  rename_with(
+    ~ paste0("anvio_", .), # Prefix anvio annotation columns 
+    -all_of(colnames(annotations))  
+  ) 
+
+# Save the annotations to a CSV file
+output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise_Anvio.csv"))
+write_csv(annotations_merged, output_file)
 ```
