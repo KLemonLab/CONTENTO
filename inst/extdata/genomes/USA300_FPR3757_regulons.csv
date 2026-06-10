@@ -1,0 +1,296 @@
+Regulator,Locus tag,Position,Score,Sequence,Effector,Biological process
+ArcR,SAUSA300_0065,-76,5.6,TTGTGAATTAAATCACAC,Arginine,Arginine degradation
+ArcR,SAUSA300_2570,-79,6.4,ATGTGAATATAATCACAT,Arginine,Arginine degradation
+ArgR,SAUSA300_0064,0,4.1,ATGGATGAAAATAAAT,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_0065,-243,4.1,ATGATTACTAATACAA,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_0187,-51,4.6,ATATATTAATATTAAT,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_0860,-250,4.6,ATTTATAAATAAAAAT,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_0864,-97,4.5,ATGAATAAATATGTAA,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_1469,-177,4.7,ATTCATTTTTATACAT,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_1808,-88,4.6,ATTGATAAAAATACAT,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_2549,-288,4.8,ATAAATAAATATTCGT,Arginine,Arginine biosynthesis; Arginine degradation
+ArgR,SAUSA300_2570,-335,4.2,ATGAATAATAAAAATT,Arginine,Arginine biosynthesis; Arginine degradation
+ArsR,SAUSA300_1717,-7,6.9,TATATAGATGATAATCTATTTA,Arsenate; Arsenite,Arsenic resistance
+BglR,SAUSA300_0258,-89,6.7,AATTGTACCGGTTCAATT,Beta-glucoside-6-phosphate,Beta-glucosides utilization
+BglR,SAUSA300_0259,-77,6.7,AATTGAACCGGTACAATT,Beta-glucoside-6-phosphate,Beta-glucosides utilization
+BirA,SAUSA300_0559,-48,7.4,AATGTTAACAATATGTATTTTAAAGTTTACATT,Biotin,Biotin biosynthesis
+BirA,SAUSA300_2233,-75,7.5,ATTGTAAACTTTTCATTTCTTAAAGTTTACAAT,Biotin,Biotin biosynthesis
+BirA,SAUSA300_2373,-54,7.9,AATGTAAACTTATTAATTATAAAAGTTTACATT,Biotin,Biotin biosynthesis
+CcpA,SAUSA300_0008,-59,4.6,ATGAAAACGTATACTT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0065,-50,4.6,TTGAAAGCGTTTTATA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0113,-237,4.6,ATTAAACCGCTTTCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0170,-103,5,ATGTAAACGCTTACTA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0190,-98,4.6,TTGTTAGCGTTTTCAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0191,-270,4.6,TTGAAAACGCATACTT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0192,-331,4.6,AAGTATGCGTTTTCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0216,-61,4.3,TATTAAGCGCTTACAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0220,-59,4.9,ATGAAAACGTTAACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0227,-86,4.9,GTGTAAGCGTTTACAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0229,-49,4.6,TTGTAAGGGTTTACAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0264,-107,4.3,ATTTAAACGTTTTCAG,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0311,-93,5.3,ATGTAAGCGTTTACAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0315,-64,4.9,ATGATAGCGTTTACAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0316,-109,4.9,TTGTAAACGCTATCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0337,-76,4.8,TTGACAACGCTTTCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0448,-68,4.9,TTGAAAGCCTTTACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0506,-63,4.4,ATGTTAGCCCTTCCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0535,-79,4.6,ATGATAAGGCTTTCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0537,-53,4.7,AAGAAAACGCTTGCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0538,-97,4.4,AAGAAAGCGCTTTTAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0636,-61,4.6,ATGATAGCGCATTCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0683,-43,4,GTGAAAGCGTACTCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0791,-152,5,ATGTAAGCGTTTACTA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0860,-150,4.9,ATGTAAGGGTTTTCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0861,-84,4.5,TTGTAAGGGCTTTAAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_0916,-62,4.6,ATGTAACGGTTTTCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1046,-235,4.4,GTGGAAGCGTTTTCTA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1058,-334,4.8,TTGTAATCGATTACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1191,-133,4.8,TTGACAACGCTTTCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1224,-42,4.4,GTGAAAGCGCTTGCTT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1246,-103,4.4,AATTAAGCGTTTTCTA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1457,-43,4.4,TTGGAAGCGTTTTCCA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1566,-83,4.5,ATGAAAAGGTATTCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1641,-43,4.7,TTGAAAGCCATTTCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1645,-151,4.8,TTTAAAACGTTTACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1655,-52,4.5,TTGATTGCGCTTTCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1678,-130,4.1,ATGAAAGCGCTAACCC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1679,-37,4.7,AAGAAAGCGTTTTCAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1680,-147,4.7,GTGAAAACGCTTTCTT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1682,-220,4.4,TTGAAAAGGCTTTCTC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1711,-71,4.7,ATGAAAACGCTTTCTC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1731,-44,5,ATGTAAAGGCTTACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1759,-38,5.2,TTGTAAACGTTTACAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1883,-137,4.4,ACGAAAGCGCTTTCTA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1897,-162,4.9,TTGAAAGCGCATTCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_1995,-65,4.3,TTTAAAGCGGTTACAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2079,-142,4.5,ATGTATACGTTTGCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2090,-116,4.6,ATGTATGCGGTTACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2114,-51,4.3,TGGTAAGCGCATACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2131,-128,5,TTGTAATCGTTTTCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2132,-64,5,TTGAAAACGATTACAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2261,-117,4.7,ATGTAAGCGTTTTCCA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2265,-122,4.2,CTGTAAACGATTGCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2270,-104,4.7,GTGTAAGCGTTTACTA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2271,-241,4.7,TAGTAAACGCTTACAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2278,-57,4.9,ATGTAAGCGTTTTAAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2291,-64,4.5,TTTATAACGCTTACAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2324,-127,4.6,ATGAATGCGCTATCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2383,-54,4.7,AAGAAAACGCTTACAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2444,-80,4.7,AAGAAAGCGCTTGCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2449,-148,4.7,TTGTAAACGCTTTCCA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2455,-83,4.7,ATGTTAACGTTTTCTT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2471,-76,5,TTGAAAACGTTTTCTT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2483,-146,4.9,TTGTAAGCGTTTTAAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2484,-123,4.9,ATTAAAACGCTTACAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2491,-112,4.7,ATGAAAGCGATTGCAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2570,-63,4,ATGTAAGCGTTTGAAG,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2575,-45,4.2,TTAAAAACGCTTACAC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2576,-37,4.3,GAGAATACGCTTACAA,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2603,-140,4.7,ATGTAAACGCTTTCTC,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CcpA,SAUSA300_2621,-87,4.6,ATGAAACCGTTATCAT,"HPr, phosphocarrier protein; Fructose-1,6-diphosphate",Carbon catabolism
+CggR,SAUSA300_0755,-85,6.9,TTTTGTCCCACGCGGGACTTAA,"Fructose-1,6-diphosphate",Glycolysis
+CodY,SAUSA300_0012,-314,4.6,AGTAATCAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0129,-102,4.7,AAATATCTGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0135,-102,4.2,AAATTTTATATAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0152,-205,4.1,ATTTTTTTAAATAAA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0160,3,4.2,AGAATTTTAAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0173,-88,4.8,AATATTTAAAAAAAT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0188,-117,5.2,AATTTTCAAAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0306,-85,4.5,ATTTTTCAGATTTTT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0361,-167,5.1,ATTATTCAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0381,-121,4.5,AATATTTTAAAAAGT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0382,-29,4.4,TATATTCAAAAATTT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0444,-169,4.4,CTTTTTTAGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0445,-26,4.4,AATATTCTAAAAAAG,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0539,-92,5.2,AATTTTTAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0632,-178,5,AAAATTCAGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0657,-195,4.5,ATATTTTTGAAAAAT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0712,-112,4.6,AATATTCTCAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0784,-41,4.6,TTTTTTCAGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0864,-32,4.6,AATATTCAGATAACT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0887,-66,4.7,AGATTTCAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0892,-84,4.7,AATATTCTAAAAATA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0914,-78,5.1,AATATTCTGAAAAAT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0928,-186,4.9,AATATTCTGACTATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0929,-77,4.9,AATAGTCAGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_0952,-50,4.2,TAATTTCTAAATTTT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1014,-109,4.4,TAAATTTTGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1200,-187,4.4,ATTTATCAGATTATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1225,-87,4.6,AATATTCAAAATATA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1226,-170,4.7,AAAAATCAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1231,-110,4.7,AAAAATCAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1232,-117,4.1,AAAAATTAAAATTTT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1260,-34,5.1,ATTATTCTGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1262,-96,4.5,AATATTTCGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1286,-342,4.4,AATTTTCAGGTTATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1287,-45,5.2,AATATTCTAAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1330,-64,4.5,AATATTTTAAATATA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1354,-101,4,AAAAACTAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1357,-150,4.6,AATATTAAGATAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1494,-106,4.8,AATTATCAAAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1495,-66,4.8,AATATTTTGATAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1513,-140,4.1,AAATGTTTAATTATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1669,-54,5.4,AATTTTCAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1679,-127,4.3,ATTATATAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1680,-114,4.1,ACATTTCTAATTATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1808,-35,4.3,ATAATTATGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1918,-318,4.4,AATTAACTGAATATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1989,4,4.2,ATTATTTTGATAATA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_1996,-38,4.6,AATTGTCAGATTATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2006,-301,4.9,AATTTTTAGACAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2087,-143,4.5,AGTTATTAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2160,-220,5.2,AATTTTCAAAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2265,-263,4.4,AATATTATTAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2268,-78,4.9,AATTTTCAGAAAAGT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2383,-108,4.3,TATATTTAAAAAAAT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2389,-85,4.7,AATTTTCTGCAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2393,-82,4.1,ATTTGTTTAACAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2416,-271,4.9,AATTTTCAGAAAATA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2417,-75,4.9,TATTTTCTGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2497,-205,4.8,ATTAATCTGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2538,-227,4.9,AATTGTTAGAAAATT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2539,-127,4.5,AATTATCAGAATATA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2572,-199,4.3,AAATTTTAAAATATA,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2600,4,4.4,AATTTTTTAACTTTT,Branched-chain amino acids,Amino acid metabolism
+CodY,SAUSA300_2613,-142,4.6,AATTTTCTGAAAAAG,Branched-chain amino acids,Amino acid metabolism
+CymR,SAUSA300_0173,-68,4.8,AATATCCTTGTAATCCGATAAGAATTA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_0200,-77,4.8,TAATCTTGAGTAGATTACTATGATATA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_0382,-54,5.8,TTATTCTTAGCATACTAGTCGGAATTA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_0433,-88,5.8,TAATTCTTATCTGAAAAGTAAGAATTA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_0435,-42,5.8,TTATTCCTAGTGGATTAATAAGAATTT,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_0491,-55,5.1,TATATCCGATAAATAAACTAAGATTTC,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_1998,-40,5.2,TAATACATACTAAACTTATCGGAAATG,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_2088,-244,4.8,GAATTATTACTTATTCTATCGGTTTTA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_2236,-62,4.6,TAAAGTCGAGTGTTAAACTAGGAATAA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_2359,-40,6.2,TTATTCCGATTAGAATAATAAGAATAA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+CymR,SAUSA300_2554,-258,4.7,TAATAAATAGTAAATAAATAAAAAATA,"O-acetyl-L-serine; CysK, cysteine synthetase",Cysteine metabolism
+FapR,SAUSA300_0885,-44,6.3,ATTAATACCTGGTATTAAA,Malonyl-CoA; Malonyl-ACP,Fatty acid biosynthesis
+FapR,SAUSA300_0912,-111,4.7,TTTATTAAAAAGTCATAAT,Malonyl-CoA; Malonyl-ACP,Fatty acid biosynthesis
+FapR,SAUSA300_1121,-21,6,TTTAAGACTAGGTACTAAA,Malonyl-CoA; Malonyl-ACP,Fatty acid biosynthesis
+FapR,SAUSA300_1476,-193,4.8,TTTAGTAATATTTATTAAA,Malonyl-CoA; Malonyl-ACP,Fatty acid biosynthesis
+FapR,SAUSA300_1842,-49,4.8,ATTTATAGTAAGTAATAAT,Malonyl-CoA; Malonyl-ACP,Fatty acid biosynthesis
+FruR,SAUSA300_0683,-83,5.2,TGAGTGTTTGTGATTGTTTT,Fructose-6-phosphate,Fructose utilization
+Fur,SAUSA300_0117,-181,6.1,ATTGATAATGATTCTCACT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_0118,-128,6.1,AGTGAGAATCATTATCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_0344,-158,5.7,TTTGATAATTATTATCAAC,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_0348,-58,6.3,ATTGATAATCATTATCGTT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_0633,-102,6.2,CATGATAATCATTATCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_0718,-43,6.7,AATGATAATGATTATCATT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_0788,-41,5.6,ATTGAGAAGTATTATCATT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_1028,-52,6.5,ATTGATAATGATTATCAGT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_1029,-158,6.3,AATAATAATGATTATCATT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_1030,-148,6.6,ATTGATAATGGTTATCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_1246,-198,6.3,ATTGATAATTATTCTCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_1874,-198,5.7,AATTATAATCATTCTCATT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_1978,-41,6,ATTGAAAATGAATATCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_2136,-59,6.3,AATGATAATTGTTATCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_2139,-45,5.9,AATGATAATGATTCTTATT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_2140,-75,5.9,AATAAGAATCATTATCATT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_2235,-30,6.5,ATTGATAATCATTTTCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_2319,-70,6.6,AATGATAATAATTATCAAT,"Iron ion, (Fe2+)",Iron homeostasis
+Fur,SAUSA300_2488,-41,6.1,AGTGATAATGATTATTATT,"Iron ion, (Fe2+)",Iron homeostasis
+GlnR,SAUSA300_1200,-84,5.9,ATGTTAGAAAACCTGACAT,"Feedback-inhibited GlnA, glutamine synthetase",Nitrogen assimilation
+GlnR,SAUSA300_1996,-73,4.6,ATGTAATAAAACTTAACGC,"Feedback-inhibited GlnA, glutamine synthetase",Nitrogen assimilation
+GltC,SAUSA300_0444,-79,5.2,ATCTAAAAAATAGAA,2-oxoglutarate; Glutamate,Glutamate metabolism
+GltC,SAUSA300_0445,-116,5.2,TTCTATTTTTTAGAT,2-oxoglutarate; Glutamate,Glutamate metabolism
+GlvR,SAUSA300_2270,-181,7.6,TGAAAAAATTTTCACTATATGAAAA,Maltose-6-phosphate,Maltose utilization
+GntR,SAUSA300_2444,-43,7.1,ATACTTGTATACAAGTAT,Gluconate,Gluconate utilization
+HisR,SAUSA300_0432,-30,5.5,CGCTTTAACGCTTTAAAGGA,Histidine,Histidine biosynthesis
+HisR,SAUSA300_0846,-38,5.1,CGCTTTAGTTCGATAGAGTG,Histidine,Histidine biosynthesis
+HisR,SAUSA300_1888,-62,5.2,CACTTTAATAGATTAATGCG,Histidine,Histidine biosynthesis
+HisR,SAUSA300_2608,30,3.9,AATATTAGTAATGTAAAACG,Histidine,Histidine biosynthesis
+HisR,SAUSA300_2613,-84,4.8,CACTTTAGCGTGGTAGAGAA,Histidine,Histidine biosynthesis
+HrcA,SAUSA300_1542,-39,6.8,TTAGCACTTGAGATAAGTGAGTGCTAA,Heat shock,Heat shock response
+HrcA,SAUSA300_1983,-55,6.9,TTAGCACTCTTTAATGTTAAGTGCTAA,Heat shock,Heat shock response
+HutR,SAUSA300_0319,-155,5.1,ATAATTAGTTAATTTGT,Histidine,Histidine utilization
+HutR,SAUSA300_2278,-122,6.2,ATAATTAGTTTATTTAT,Histidine,Histidine utilization
+HutR,SAUSA300_2279,-54,6.2,ATAAATAAACTAATTAT,Histidine,Histidine utilization
+IcaR,SAUSA300_2599,-156,7.2,ACCTACCTTTCGTTAGTTAGGT,,Intercellular adhesion
+IcaR,SAUSA300_2600,-29,7.2,ACCTAACTAACGAAAGGTAGGT,,Intercellular adhesion
+LexA,SAUSA300_0714,-124,4.9,CACAGAACGTTTGTTCGCTA,DNA damage,SOS response
+LexA,SAUSA300_0741,-113,5.4,TTACGAACAAACGTTTGCTT,DNA damage,SOS response
+LexA,SAUSA300_1178,-145,5.1,ATAAGCACGTTTGTTCGTTT,DNA damage,SOS response
+LexA,SAUSA300_1237,-74,5.6,TAACGAACAAATGTTTGTTT,DNA damage,SOS response
+LexA,SAUSA300_1242,-31,5.3,AAGCGAACAAATGTTCTATA,DNA damage,SOS response
+LexA,SAUSA300_1250,-32,5.3,AAACGAACGTACGTTTGCAG,DNA damage,SOS response
+LexA,SAUSA300_1259,-79,5,AACAGAACATTTGTTCTAAA,DNA damage,SOS response
+LexA,SAUSA300_1903,-51,5.3,AATAGAACACATGTTCGTAT,DNA damage,SOS response
+LexA,SAUSA300_1916,-133,5.7,AACAGAACATATGTTCGTAT,DNA damage,SOS response
+LexA,SAUSA300_2131,-66,4.9,ACCCGAAAATATGTTCGTGT,DNA damage,SOS response
+MalR,SAUSA300_1457,-112,6.9,TTATGCAATCGTTTGCACAA,Maltose,Maltose utilization; Maltodextrin utilization
+MecI,SAUSA300_0032,-52,6.5,ATACTACATTTGTAATAT,Penicillin G; Methicillin,Penicillin and methicillin resistance
+MecI,SAUSA300_0033,-81,6.5,AGACTACATTTGTAGTAT,Penicillin G; Methicillin,Penicillin and methicillin resistance
+MepR,SAUSA300_0334,-34,6.2,TAGTTAGACATCTAACGA,Bis-indoles; Distamycin,Multidrug resistance
+MepR,SAUSA300_0335,-59,6,TAGTTAGATATCTAATTG,Bis-indoles; Distamycin,Multidrug resistance
+MntR,SAUSA300_0620,-42,6.1,TAATTAGGTTAGCCTAAACT,"Manganese ion, (Mn2+)",Manganese homeostasis
+MntR,SAUSA300_1005,-67,6.3,AATTTAGGTTGACCTAAACA,"Manganese ion, (Mn2+)",Manganese homeostasis
+MtlR,SAUSA300_2105,-104,6.5,TTGTCACATTTATTTTGACAA,"MtlA, mannitol-specific enzyme IICB PTS component; HPr, phosphocarrier protein",Mannitol utilization
+MurR,SAUSA300_0192,-133,5.4,ATATGTAAGATTATTACAATG,N-acetylmuramate-6-phosphate,N-acetylmuramate utilization
+NanR,SAUSA300_0236,-83,6.3,ATGAAAAATATTTTCAT,N-acetylmannosamine-6-phosphate,Sialic acid utilization; N-acetylglucosamine utilization
+NanR,SAUSA300_0315,-132,6.1,TTGAAAAACATTTTCAT,N-acetylmannosamine-6-phosphate,Sialic acid utilization; N-acetylglucosamine utilization
+NanR,SAUSA300_0316,-42,6.1,ATGAAAATGTTTTTCAA,N-acetylmannosamine-6-phosphate,Sialic acid utilization; N-acetylglucosamine utilization
+NanR,SAUSA300_0317,-53,6.3,TTGAAAATATTTTTCAT,N-acetylmannosamine-6-phosphate,Sialic acid utilization; N-acetylglucosamine utilization
+NanR,SAUSA300_0318,-103,6.3,ATGAAAAATATTTTCAA,N-acetylmannosamine-6-phosphate,Sialic acid utilization; N-acetylglucosamine utilization
+NrdR,SAUSA300_0715,-211,5.1,ACACTACATATAGTGA,Deoxyribonucleotides,Deoxyribonucleotide biosynthesis
+NrdR,SAUSA300_2551,-60,5.7,ATACTATATATAGTGG,Deoxyribonucleotides,Deoxyribonucleotide biosynthesis
+NreC,SAUSA300_2333,-184,5.6,ATAAGGGAAAATCCTTAT,"NreB, sensor histidine kinase (Nitrate, Nitrite)",Nitrate and nitrite respiration
+NreC,SAUSA300_2343,-134,5.9,ATTAGGTGATTCCCTAAT,"NreB, sensor histidine kinase (Nitrate, Nitrite)",Nitrate and nitrite respiration
+NreC,SAUSA300_2347,-93,5.8,ATCAGGGAATTCCCTGAT,"NreB, sensor histidine kinase (Nitrate, Nitrite)",Nitrate and nitrite respiration
+PerR,SAUSA300_0380,-74,5.8,TTAGAATTATTATAA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_0818,-56,5.7,TTAAAATTATTATAA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_0822,-104,4.8,TAAAAATTTTTATAA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_1232,-32,6,TTATAATTATTATAA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_1783,-191,5.1,TTAAAATTACTATAA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_1842,-37,5.6,TAATAATAATTATTA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_1844,-34,5.2,ATAAAATTATTATAA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_1874,-92,5.8,TTATAATTATTATTA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+PerR,SAUSA300_2092,-112,5.8,TTAGAATAATTATAA,"Hydrogen peroxide; Manganese ion, (Mn2+); Iron ion, (Fe2+)",Oxidative stress response
+Rex,SAUSA300_0020,-85,4.9,CTGTGATTTTTTACACAA,NADH,Energy metabolism
+Rex,SAUSA300_0065,-76,5.5,TTGTGAATTAAATCACAC,NADH,Energy metabolism
+Rex,SAUSA300_0151,-39,6.3,TTGTGAAATAATTCACAA,NADH,Energy metabolism
+Rex,SAUSA300_0220,-96,6,ATGTGAAAAAAATCACAA,NADH,Energy metabolism
+Rex,SAUSA300_0235,-313,6,ATGTGAAATAAATCACAA,NADH,Energy metabolism
+Rex,SAUSA300_0305,-201,6.2,TTGTGAAATTATTCACAA,NADH,Energy metabolism
+Rex,SAUSA300_0594,-306,6,TTGTGAATTAATTCACAT,NADH,Energy metabolism
+Rex,SAUSA300_1331,-38,6.2,TTGTGAAATTATTCACAA,NADH,Energy metabolism
+Rex,SAUSA300_1442,-103,5.6,TTGAGAATTTTTTCACAA,NADH,Energy metabolism
+Rex,SAUSA300_2313,-124,6,TTGTGAAAAAAATCACAT,NADH,Energy metabolism
+Rex,SAUSA300_2333,-168,4.6,ATGTTCACTTTTTCACAA,NADH,Energy metabolism
+Rex,SAUSA300_2343,-107,5.5,TTGTGAAAAAATGTACAA,NADH,Energy metabolism
+Rex,SAUSA300_2347,-64,5.3,ATGTGATTCTTTTCACAA,NADH,Energy metabolism
+Rex,SAUSA300_2423,-129,5.7,TTGTGAAATACATCACAA,NADH,Energy metabolism
+Rex,SAUSA300_2462,-185,6,TTGTGAAAAATATCACAA,NADH,Energy metabolism
+Rex,SAUSA300_2463,-39,5.9,TTGTGATATTTTTCACAA,NADH,Energy metabolism
+Rex,SAUSA300_2570,-79,5.8,ATGTGAATATAATCACAT,NADH,Energy metabolism
+SaeR,SAUSA300_0215,-22,5.8,ATTAATAAATAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0224,-82,5.8,GTTAATATATAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0370,-95,5.4,GTTAATCAAGAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0401,-144,5.2,GTTCAAAAATAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0403,-175,5.2,ATTAAAAATCAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0407,-123,5.3,ATTAATTTTTAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0410,-254,6,TTTAATAAATAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0693,-78,5.9,GTTAAGAATTAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_0815,-87,5.8,GTTAATAATTATTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1052,-88,6.1,GTTAATAAATAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1055,-81,5.8,ATTAATAATTAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1058,-190,5.4,TTTAAATAAAAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1382,-334,5.5,ATTAATAAACAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1758,-99,5.6,GTTAATTAATATTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1759,-109,5.8,GTTAATAGATAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1769,-333,5.8,GTTAATAATCAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1919,-77,5.2,GTTAATGAATAATTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1922,-175,5.5,GTTAAATATTTGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_1975,-99,6,TTTAATAAATAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_2364,-92,6.1,GTTAATAATTAGTTAA,"SaeS, sensor histidine kinase",Virulence
+SaeR,SAUSA300_2366,-86,5.6,GTTAATGAACAGTTAA,"SaeS, sensor histidine kinase",Virulence
+ScrR,SAUSA300_1994,-127,5.7,ATGTGGAACCGATACCATAT,Sucrose-6-phosphate,Sucrose utilization
+ScrR,SAUSA300_2324,-63,6.2,TTTTGGAACCGGTTACAATA,Sucrose-6-phosphate,Sucrose utilization
+YtrA,SAUSA300_1914,-42,6.8,TGTGTATATTGTATATATACA,,Hypothetical ABC transporter
+Zur,SAUSA300_0424,-50,6.4,TAAAACGGAATTATTCCTATTTA,"Zinc ion, (Zn2+)",Zinc homeostasis
+Zur,SAUSA300_0848,-42,6.7,TAAATCGTAACGATTACGTTTTA,"Zinc ion, (Zn2+)",Zinc homeostasis
+Zur,SAUSA300_1233,-38,5.4,TAAATCGTAAAGATTCCTAACAA,"Zinc ion, (Zn2+)",Zinc homeostasis
+Zur,SAUSA300_1234,-45,7.1,TAAATCGTAATAATTACGATTTG,"Zinc ion, (Zn2+)",Zinc homeostasis
+Zur,SAUSA300_1516,-51,5.5,TGAGTCGTAAACATTACTGTTTA,"Zinc ion, (Zn2+)",Zinc homeostasis
+Zur,SAUSA300_2351,-34,6.6,TAAAACGTAAAGATTACTATTTA,"Zinc ion, (Zn2+)",Zinc homeostasis
+Zur,SAUSA300_2360,-207,6.9,TAAATAGTAATGATTACGTTTTA,"Zinc ion, (Zn2+)",Zinc homeostasis
+Zur,SAUSA300_2521,-69,7.4,TAAATCGTAATTATTACGATTTA,"Zinc ion, (Zn2+)",Zinc homeostasis

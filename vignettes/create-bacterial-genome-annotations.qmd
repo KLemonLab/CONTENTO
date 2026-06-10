@@ -15,53 +15,56 @@ format:
 
 # Overview
 
-This tutorial shows how to create a functional annotation CSV file with gene IDs, descriptions, and annotations to be uploaded into the CONTENTO App. 
+This tutorial shows how to create a functional annotation CSV file with gene IDs, descriptions, and annotations to be uploaded into the CONTENTO App.
 
----
+------------------------------------------------------------------------
 
-# Part 1: Source Genome Annotations
+# Step 1: Source Genome Annotations
 
-## Get Your Genome from NCBI
+## 1.1 Get Your Genome from NCBI
 
-1. Go to [NCBI Assembly](https://www.ncbi.nlm.nih.gov/assembly/)
-2. Search for your genome accession (e.g., `GCF_000013465.1` for *Staphylococcus aureus* subsp. aureus FPR3757)
-3. Click on the result and downoload the assembly in GFF3 format.
-4. Unzip the file and save it in your working directory.
+1.  Go to [NCBI Assembly](https://www.ncbi.nlm.nih.gov/assembly/)
+2.  Search for your genome accession (e.g., `GCF_000013465.1` for *Staphylococcus aureus* subsp. aureus FPR3757)
+3.  Click on the result and downoload the assembly in GFF3 format.
+4.  Unzip the file and save it in your working directory.
 
-Alternative you can use the NCBI Datasets command-line interface (CLI) to download the GFF3 file:
+**Alternative: Use NCBI Datasets CLI**
 
-```{bash}
-# Install NCBI Datasets CLI if you haven't already
+```{bash, eval = FALSE}
+# Install NCBI Datasets CLI if you haven't already. This should be run in your terminal.
 conda activate ncbi_datasets 
 
 # Update the genome accession and directory as needed
+FILES_DIR="inst/extdata/genomes" 
 GENOME_NAME="GCF_000013465.1" 
-FILES_DIR="inst/extdata" 
 
 # Update to download the desired files (genome sequence, GenBank flat file, GFF3...)
 datasets download genome accession "$GENOME_NAME" \
             --include genome,gbff,gff3,seq-report \
             --filename "$FILES_DIR/$GENOME_NAME.zip"
+            
+# Unzip
+unzip "$FILES_DIR/$GENOME_NAME.zip" -d "$FILES_DIR"
+# Individual files can be renamed to include the genome name for easier identification.
 ```
 
-File names and formats may vary, so make sure to check the downloaded files and adapt the code or rename the files to match the expected names in the code.
+## 1.2 Generate your own GFF3 file (Optional)
 
-## Generate your own GFF3 file (Optional)
+For genomes not available in NCBI, you can generate your own GFF3 file using Prokka [@Seemann2014] or similar annotation tools. Just make sure to include the necessary attributes (e.g., `locus_tag`, `product`, ...) in the output GFF3.
 
-For genomes not available in NCBI, you can generate your own GFF3 file using Prokka [@Seemann2014] or similar annotation tools. Just make sure to include the necessary attributes (e.g., `locus_tag`, `product`, `go_process`) in the output GFF3.
+------------------------------------------------------------------------
 
----
+# Step 2: Parse Annotation into CSV
 
-# Part 2: Parse Annotation into CSV
+CONTENTO requires a CSV file with gene IDs, descriptions, and annotations. The GFF3 file contains this information in the `attributes` column, which we can parse to create a structured annotation CSV.
 
 ```{r}
 # Set up your R environment and read the GFF3 file. Adapt based on the GFF3 name and location
-
 library(tidyverse)
 library(here)
 
+GENOMES_DIR <- here("inst/extdata/genomes")
 GENOME_NAME <- "GCF_000013465.1"
-GENOMES_DIR <- here("inst/extdata")
 
 gff_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, ".gff"))
 
@@ -75,7 +78,7 @@ gff_df <- read_delim(
 )
 
 # Filter for CDS (protein-coding genes)
-gff_cds <- gff_df %>%
+gff_cds <- gff_df |>
   filter(feature == "CDS")
 
 # Function to parse the attributes column of GFF3
@@ -100,16 +103,139 @@ parse_gff3_attributes <- function(attributes_string) {
 }
 
 # Apply the parsing function to the attributes column and create new columns for each key
-annotations <- gff_cds %>%
-  rowwise() %>%
-  mutate(
-    attr_list = list(parse_gff3_attributes(attributes))
-  ) %>%
-  ungroup() %>%
+annotations <- gff_cds |>
+  rowwise() |>
+  mutate(attr_list = list(parse_gff3_attributes(attributes)))  |>
+  ungroup() |>
   # Unnest all key=value pairs as columns
   unnest_wider(attr_list, names_repair = "universal")
 
 # Save the annotations to a CSV file
-output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annotations.csv"))
+output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv"))
 write_csv(annotations, output_file)
+```
+
+# Step 3: Add Additional Annotations (Optional)
+
+The GFF3 file provides basic gene information, but you can significantly enhance your annotations by running additional bioinformatic tools.
+
+These annotations are useful in CONTENTO for:
+
+- **Functional enrichment analysis (GSEA)** using for example COG and KEGG categories
+- **Gene exploration** - displaying comprehensive functional information for individual genes
+
+## 3.1 Merge Annotations with the GFF3 derived annotations
+
+```{r}
+# Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location
+library(tidyverse)
+library(here)
+
+GENOMES_DIR <- here("inst/extdata/genomes")
+
+# Read the custom annotation file (e.g., from RegPrecise regulon database or other source)
+custom_file <- read_csv(file.path(GENOMES_DIR, "USA300_FPR3757_regulons.csv"))
+```
+
+## 3.2 Enhance Annotations with Anvi'o
+
+**Anvi'o** is a comprehensive platform that integrates multiple annotation sources:
+
+- **HMMs** - Generic protein domain detection
+- **COG24** - Clusters of Orthologous Groups (excellent for functional enrichment)
+- **KEGG** - Kyoto Encyclopedia of Genes and Genomes pathways (excellent for functional enrichment)
+- **Pfams** - Protein family annotations
+- **CAZymes** - Carbohydrate-active enzyme classification
+
+```{bash, eval = FALSE}
+# Install Anvio if you haven't already. This should be run in your terminal.
+conda activate anvio-9
+
+# Update the genome accession and directory as needed
+FILES_DIR="inst/extdata/genomes" 
+GENOME_NAME="GCF_000013465.1" 
+
+# Process the GenBank file to extract gene calls, functions, and fasta sequences 
+anvi-script-process-genbank -i "$FILES_DIR/$GENOME_NAME.gbff" \
+--output-gene-calls "$FILES_DIR/${GENOME_NAME}_calls.txt" \
+--output-functions "$FILES_DIR/${GENOME_NAME}_prodigal.txt" \
+--output-fasta "$FILES_DIR/${GENOME_NAME}.fa" \
+--annotation-source prodigal \
+--include-locus-tags-as-functions
+
+# Create anvi'o contigs database from the fasta file and gene calls
+anvi-gen-contigs-database -f "$FILES_DIR/${GENOME_NAME}.fa" \
+-o "$FILES_DIR/${GENOME_NAME}_anvio.db" \
+--external-gene-calls "$FILES_DIR/${GENOME_NAME}_calls.txt" \
+-n "$GENOME_NAME"
+
+# Import functions from prodigal output
+anvi-import-functions -c "$FILES_DIR/${GENOME_NAME}_anvio.db" \
+-i "$FILES_DIR/${GENOME_NAME}_prodigal.txt"
+
+# Run HMM annotations 
+anvi-run-hmms -T 8 -c "$FILES_DIR/${GENOME_NAME}_anvio.db"
+
+# Run NCBI COG annotations with DIAMOND
+anvi-run-ncbi-cogs -T 8 --search-with diamond -c "$FILES_DIR/${GENOME_NAME}_anvio.db"
+
+# Run KEGG KOfam annotations
+anvi-run-kegg-kofams -T 8 -E 1e-15 -c "$FILES_DIR/${GENOME_NAME}_anvio.db"
+
+# Run Pfam domain annotations
+anvi-run-pfams -T 8 -c "$FILES_DIR/${GENOME_NAME}_anvio.db"
+
+# Run CAZyme annotations
+anvi-run-cazymes -T 8 -c "$FILES_DIR/${GENOME_NAME}_anvio.db"
+
+# Export all functions to text file
+anvi-export-functions -c "$FILES_DIR/${GENOME_NAME}_anvio.db" \
+-o "$FILES_DIR/${GENOME_NAME}_annot.txt"
+
+# Export contigs stats and database info
+anvi-display-contigs-stats "$FILES_DIR/${GENOME_NAME}_anvio.db" \
+--report-as-text -o "$FILES_DIR/${GENOME_NAME}_stats.txt"
+
+anvi-db-info "$FILES_DIR/${GENOME_NAME}_anvio.db" &>> "$FILES_DIR/${GENOME_NAME}_log.txt"
+```
+
+The resulting anvi'o annotation file contains comprehensive functional annotations for each gene, which can be parsed into a CSV format with the following R code.
+
+```{r}
+# Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location
+library(tidyverse)
+library(here)
+
+GENOMES_DIR <- here("inst/extdata/genomes")
+GENOME_NAME <- "GCF_000013465.1"
+
+# Read the anvi'o annotation 
+anvio_annot <- read_delim(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.txt")), delim = "\t") |>
+  mutate(source = as.factor(source)) |>
+  mutate(across(where(is.character), trimws)) |>
+  select(-e_value) |> # Exclude e-values to keep dataframe simple
+  rename("acc" = "accession", "func" = "function") # Shorter names
+
+# Generate wide dataframe collapsing duplicates for the same source
+anvio_annot <- anvio_annot |>
+  pivot_wider(
+    names_from = source,
+    values_from = c(acc, func),
+    values_fn = list(acc = ~ paste(unique(.), collapse = ","), func = ~ paste(unique(.), collapse = ","))
+  ) 
+
+# Sanity check for duplicates by GENBANK_LOCUS_TAG. It should be 0!!
+nrow(anvio_annot |> group_by(acc_GENBANK_LOCUS_TAG) |> filter(n() > 1))
+```
+
+You can also merge the anvi'o annotations with the aa sequences from the calls file to have a comprehensive annotation dataframe with all the information for each gene. This can be useful for gene exploration in CONTENTO, where you can display the sequence along with the functional annotations for each gene.
+
+```{r}
+# Read calls file to get aa sequences
+anvio_calls <- read_delim(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_calls.txt")), delim = "\t") |>
+  select(gene_callers_id, aa_sequence)
+
+# Merge with anvio_annot by gene_callers_id
+anvio_annot <- anvio_annot |>
+  left_join(anvio_calls, by = "gene_callers_id")
 ```

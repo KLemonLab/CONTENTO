@@ -1,0 +1,31 @@
+contigs_db	GCF_000013465.1
+Total Length	2917469
+Num Contigs	4
+Num Contigs > 100 kb	1
+Num Contigs > 50 kb	1
+Num Contigs > 20 kb	2
+Num Contigs > 10 kb	2
+Num Contigs > 5 kb	2
+Num Contigs > 2.5 kb	4
+Longest Contig	2872769
+Shortest Contig	3125
+Mean Contig Length (trim 10%)	729367.25
+L50	1
+L75	1
+L90	1
+N50	2872769
+N75	2872769
+N90	2872769
+Num Genes	2772
+Avg Gene Length	868.78
+Avg Gene Length (trim 10%)	778.47
+Min Gene Length	63
+Max Gene Length	31266
+Archaea_76	35
+Bacteria_71	71
+Protista_83	3
+Ribosomal_RNA_16S	5
+Ribosomal_RNA_18S	0
+bacteria (Bacteria_71)	1
+eukarya (Protista_83)	0
+archaea (Archaea_76)	0
