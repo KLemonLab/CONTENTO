@@ -1,4 +1,4 @@
-Geneid	Regulator
+locus_tag	Regulator
 SAUSA300_RS00045	CcpA
 SAUSA300_RS00065	CodY
 SAUSA300_RS00105	Rex
