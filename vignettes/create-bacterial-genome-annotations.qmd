@@ -15,9 +15,15 @@ format:
 
 # Overview
 
-This tutorial shows how to create a functional annotation CSV file with gene IDs, descriptions, and annotations to be uploaded into the CONTENTO App.
+This tutorial shows how to create a functional annotation file with gene IDs, descriptions, and annotations to be used in the RNASeqApp.
+
+Annotation files are R data frames saved as `.rds` files with the following structure:
+- **Required column:** `Geneid` (character) — matches `rownames(SE)` from your SummarizedExperiment object
+- **Recommended column:** `symbol` (character) — gene name, product, or common identifier
+- **Functional columns:** Any additional columns (KEGG pathways, COG categories, etc.) available for GSEA enrichment analysis
 
 ------------------------------------------------------------------------
+
 
 # Step 1: Source Genome Annotations
 
@@ -25,8 +31,8 @@ This tutorial shows how to create a functional annotation CSV file with gene IDs
 
 1.  Go to [NCBI Assembly](https://www.ncbi.nlm.nih.gov/assembly/)
 2.  Search for your genome accession (e.g., `GCF_000013465.1` for *Staphylococcus aureus* subsp. aureus FPR3757)
-3.  Click on the result and downoload the assembly in GFF3 format.
-4.  Unzip the file and save it in your working directory.
+3.  Download the assembly in GFF3 format
+4.  Unzip and save in your working directory
 
 **Alternative: Use NCBI Datasets CLI**
 
@@ -50,11 +56,11 @@ unzip "$FILES_DIR/$GENOME_NAME.zip" -d "$FILES_DIR"
 
 ## 1.2 Generate your own GFF3 file (Optional)
 
-For genomes not available in NCBI, you can generate your own GFF3 file using Prokka [@Seemann2014] or similar annotation tools. Just make sure to include the necessary attributes (e.g., `locus_tag`, `product`, ...) in the output GFF3.
+For genomes not available in NCBI, you can generate your own GFF3 file using Prokka [@Seemann2014] or similar annotation tools. Ensure your GFF3 includes necessary attributes (e.g., `locus_tag`, `product`, etc.).
 
 ------------------------------------------------------------------------
 
-# Step 2: Parse Annotation into CSV
+# Step 2: Parse GFF3 into Annotation File
 
 CONTENTO requires a CSV file with gene IDs, descriptions, and annotations. The GFF3 file contains this information in the `attributes` column, which we can parse to create a structured annotation CSV.
 
@@ -109,7 +115,8 @@ annotations <- gff_cds |>
   ungroup() |>
   unnest_wider(attr_list, names_repair = "universal") |> # Unnest all key=value pairs as columns
   select(-attributes) |>
-  rename(Geneid = locus_tag)
+  rename(Geneid = locus_tag, # Required column for CONTENTO
+         symbol = gene) # Recommended column name for gene name or product
 
 # Save the annotations to a CSV/RDS file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv"))
