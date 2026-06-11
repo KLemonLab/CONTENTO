@@ -110,9 +110,10 @@ annotations <- gff_cds |>
   unnest_wider(attr_list, names_repair = "universal") |> # Unnest all key=value pairs as columns
   select(-attributes) # Optionally remove the original attributes column to keep the dataframe clean
 
-# Save the annotations to a CSV file
+# Save the annotations to a CSV/RDS file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv"))
 write_csv(annotations, output_file)
+saveRDS(annotations, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.rds")))
 ```
 
 # Step 3: Add Additional Annotations (Optional)
@@ -174,9 +175,10 @@ annotations_merged <- annotations |>
     -all_of(colnames(annotations))  
   ) 
 
-# Save the annotations to a CSV file
+# Save the annotations to a CSV/RDS file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise.csv"))
 write_csv(annotations_merged, output_file)
+saveRDS(annotations_merged, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise.rds"))) 
 ```
 
 ## 3.2 Enhance Annotations with Anvi'o
@@ -262,7 +264,13 @@ anvio_annot <- read_delim(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.txt
   mutate(source = as.factor(source)) |>
   mutate(across(where(is.character), trimws)) |>
   select(-e_value) |> # Exclude e-values to keep dataframe simple
-  rename("acc" = "accession", "func" = "function") # Shorter names
+  rename("acc" = "accession", "func" = "function") |> # Shorter names
+  mutate(across(c(acc, func), trimws))
+
+# Split multiple annotations separated by !!! (one row per annotation)
+anvio_annot <- anvio_annot |>
+  separate_rows(func, sep = "!!!") |>
+  separate_rows(acc, sep = "!!!") 
 
 # Convert from long format (multiple rows per gene) to wide format (one row per gene)
 anvio_annot <- anvio_annot |>
@@ -280,13 +288,28 @@ anvio_annot <- anvio_annot |>
 The KEGG annotations from anvi'o come as hierarchical levels separated by semicolons (e.g., "Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis"). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it's useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway).
 
 ```{r}
+# Split multiple KEGG annotations into separate rows (one row per KEGG annotation) 
 anvio_annot <- anvio_annot |>
-  mutate(func_KEGG_Class = trimws(as.character(func_KEGG_Class))) |>
+  separate_rows(func_KEGG_Class, sep = ",")
+
+# Split into hierarchy levels (separated by ;)
+anvio_annot <- anvio_annot |>
   separate(func_KEGG_Class, 
            into = c("func_KEGG_Class", "func_KEGG_Subclass", "func_KEGG_Pathway"),
            sep = ";",
            extra = "drop",
            fill = "right")
+
+# Collapse back to one row per gene
+anvio_annot <- anvio_annot |>
+  group_by(across(-starts_with("func_KEGG_"))) |>
+  summarise(
+    func_KEGG_Class = paste(unique(na.omit(func_KEGG_Class)), collapse = ","),
+    func_KEGG_Subclass = paste(unique(na.omit(func_KEGG_Subclass)), collapse = ","),
+    func_KEGG_Pathway = paste(unique(na.omit(func_KEGG_Pathway)), collapse = ","),
+    .groups = "drop"
+  ) |>
+  mutate(across(starts_with("func_KEGG_"), ~ na_if(., "")))
 ```
 
 ### Add AA Sequences to Annotations (Optional)
@@ -319,7 +342,8 @@ annotations_merged <- annotations |>
     -all_of(colnames(annotations))  
   ) 
 
-# Save the annotations to a CSV file
+# Save the annotations to a CSV/RDS file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise_Anvio.csv"))
 write_csv(annotations_merged, output_file)
+saveRDS(annotations_merged, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise_Anvio.rds")))
 ```
