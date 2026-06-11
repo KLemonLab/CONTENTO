@@ -118,11 +118,29 @@ annotations <- gff_cds |>
   rename(Geneid = locus_tag, # Required column for CONTENTO
          symbol = gene) # Recommended column name for gene name or product
 
+# Aggregate CDS fragments into gene-level annotations (handles programmed frameshifts)
+annotations <- annotations |>
+  group_by(Geneid) |>
+  summarise(
+    seqname = first(seqname),
+    start = min(start),
+    end   = max(end),
+    strand = first(strand),
+    symbol = first(symbol),
+    product = first(product),
+    protein_id = first(protein_id),
+    .groups = "drop"
+  )
+
+# Sanity check: Ensure there are no duplicated Gene IDs after aggregation
+sum(duplicated(annotations$Geneid))
+
 # Save the annotations to a CSV/RDS file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv"))
 write_csv(annotations, output_file)
 saveRDS(annotations, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.rds")))
 ```
+
 
 # Step 3: Add Additional Annotations (Optional)
 
