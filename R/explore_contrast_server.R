@@ -1,6 +1,46 @@
 explore_contrast_server <- function(input, output, session, state, organism) {
   
   #==============================
+  # UI: Render dynamic GSEA controls
+  #==============================
+  output$gseaControlsUI <- renderUI({
+    if (!is.null(organism()) && organism() == "Human") {
+      # MSigDB for Human
+      return(tagList(
+        selectInput("gs_collection", "MSigDB Collection",
+                    choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"),
+                    selected = "H"),
+        conditionalPanel(
+          condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
+          textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
+        ),
+        tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
+                 tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                        target = "_blank",
+                        icon("external-link-alt"),
+                        "MSigDB"))
+      ))
+    } else if (!is.null(organism()) && organism() == "Bacteria") {
+      # All annotation columns for Bacteria
+      avail_cols <- state$available_gsea_columns()
+      
+      if (length(avail_cols) == 0) {
+        return(div(class = "alert alert-warning",
+                   icon("exclamation-triangle"),
+                   "No annotation columns available. Upload annotation file with functional information."))
+      }
+      
+      return(selectInput("bacterial_geneset_source", "Functional Annotation",
+                         choices = avail_cols,
+                         selected = avail_cols[[1]]))
+    } else {
+      return(div(class = "alert alert-info",
+                 icon("info-circle"),
+                 "Awaiting SE file upload..."))
+    }
+  })
+  
+  #==============================
   # UI: Contrast dropdown 
   #==============================
   output$contrastSelect <- renderUI({
@@ -388,7 +428,17 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       file_base <- get_download_filename(input, state)
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      gs_str <- paste0(input$gs_collection, if (nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
+      
+      # Get gene set source name (handles both Human and Bacteria)
+      if (!is.null(organism()) && organism() == "Bacteria") {
+        gs_str <- if (!is.null(input$bacterial_geneset_source)) {
+          gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source)
+        } else {
+          "unknown"
+        }
+      } else {
+        gs_str <- paste0(input$gs_collection, if (nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
+      }
       file_name <- paste(file_base, contrast_str, "GSEA", gs_str, sep = "__")
       
       # Format the dataframe

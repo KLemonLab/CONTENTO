@@ -1,9 +1,9 @@
 load_files_server <- function(input, output, session, state) {
-
+  
   #== == == == == == == == == == == == == == == == ==
   #===== HELPERS ====================================
   #== == == == == == == == == == == == == == == == ==
-
+  
   # Locate a built-in annotation file for the given annotation name.
   find_annotation_path <- function(annotation) {
     path <- system.file("annotations", paste0(annotation, ".rds"), package = "RNASeqApp")
@@ -14,24 +14,24 @@ load_files_server <- function(input, output, session, state) {
       if (file.exists(local_path)) local_path else NULL
     }
   }
-
+  
   # Extract all contrasts from SE rowData into a long-format data frame.
   extract_contrasts <- function(se) {
     rd       <- as.data.frame(SummarizedExperiment::rowData(se))
     gene_ids <- rownames(se)
-
+    
     meta <- tryCatch(
       metadata(se),
       error = function(e) list()
     )
-
+    
     contrast_names <- meta$contrasts
-
+    
     if (is.null(contrast_names) || length(contrast_names) == 0) {
       stop("No contrasts found in metadata(se)$contrasts. ",
            "Ensure the SE object includes metadata(se)$contrasts as a character vector of contrast names.")
     }
-
+    
     de_list <- lapply(contrast_names, function(cname) {
       get_col <- function(prefix) {
         col <- paste0(prefix, cname)
@@ -50,11 +50,12 @@ load_files_server <- function(input, output, session, state) {
         stringsAsFactors = FALSE
       )
     })
-
+    
     do.call(rbind, de_list)
   }
-
+  
   # Merge annotation data frame into the contrast data frame.
+  # Handles both human (Geneid) and bacterial (locus_tag) gene ID columns.
   # Returns a list with:
   #   $result: merged data frame or NULL
   #   $message: diagnostic message (only present if result is NULL)
@@ -68,14 +69,13 @@ load_files_server <- function(input, output, session, state) {
       return(list(result = NULL, message = "Annotation file is empty"))
     }
     
-    # Check for exact "Geneid" match first
+    # Check for exact "Geneid" match first (Expected for Human)
     if ("Geneid" %in% colnames(de_df) && "Geneid" %in% colnames(annot)) {
-      # Check type compatibility
       if (!is.character(annot[["Geneid"]])) {
         return(list(
           result = NULL,
           message = paste0("Column 'Geneid' is type ", class(annot[["Geneid"]])[1], 
-                          " (expected character). Cannot join.")
+                           " (expected character). Cannot join.")
         ))
       }
       
@@ -90,17 +90,38 @@ load_files_server <- function(input, output, session, state) {
       }
     }
     
+    # Check for exact "Geneid" match first (Expected for Bacteria)
+    if ("Geneid" %in% colnames(de_df) && "locus_tag" %in% colnames(annot)) {
+      if (!is.character(annot[["locus_tag"]])) {
+        return(list(
+          result = NULL,
+          message = paste0("Column 'locus_tag' is type ", class(annot[["locus_tag"]])[1], 
+                           " (expected character). Cannot join.")
+        ))
+      }
+      
+      # Join by locus_tag (bacterial case)
+      merged <- tryCatch(
+        dplyr::left_join(de_df, annot, by = c("Geneid" = "locus_tag")),
+        error = function(e) NULL
+      )
+      if (!is.null(merged)) {
+        return(list(result = merged))
+      } else {
+        return(list(result = NULL, message = "Join by 'locus_tag' failed"))
+      }
+    }
+    
     # Search for gene ID column using strict pattern
-    # Matches: geneid, gene_id, ensembl_gene_id, etc.
+    # Matches: geneid, gene_id, ensembl_gene_id, locus_tag, locus_tags, etc.
     # Does NOT match: gene_callers_id, other_id, etc.
-    gene_id_pattern <- "^(.*_)?gene[_\\s]?id$"
+    gene_id_pattern <- "^(.*_)?(gene[_\\s]?id|locus_tag)s?$"
     annot_gene_col <- grep(gene_id_pattern, colnames(annot), 
                            ignore.case = TRUE, value = TRUE)
     
     if (length(annot_gene_col) > 0) {
       annot_gene_col <- annot_gene_col[1]
       
-      # Check type compatibility
       if (!is.character(annot[[annot_gene_col]])) {
         return(list(
           result = NULL, 
@@ -110,7 +131,6 @@ load_files_server <- function(input, output, session, state) {
         ))
       }
       
-      # Attempt join
       merged <- tryCatch(
         dplyr::left_join(de_df, annot, by = c("Geneid" = annot_gene_col)),
         error = function(e) NULL
@@ -124,7 +144,7 @@ load_files_server <- function(input, output, session, state) {
     }
     
     # No usable join column found
-    return(list(result = NULL, message = "No compatible gene ID column found (expected 'Geneid' or similar pattern)"))
+    return(list(result = NULL, message = "No compatible gene ID column found (expected 'Geneid', 'locus_tag', or similar pattern)"))
   }
   
   # Create (or update) the 'symbol' column in a data frame using primary and
@@ -149,7 +169,7 @@ load_files_server <- function(input, output, session, state) {
   
   # Determine default primary symbol column from available annotation columns.
   default_symbol_col <- function(annot_cols) {
-    found <- intersect(c("Gene", "gene", "hgnc_symbol", "gene_name", "symbol"), annot_cols)
+    found <- intersect(c("product", "Gene", "gene", "hgnc_symbol", "gene_name", "symbol"), annot_cols)
     if (length(found) > 0) found[1] else annot_cols[1]
   }
   
@@ -205,7 +225,7 @@ load_files_server <- function(input, output, session, state) {
       }
     )
     req(se)
-
+    
     if (!inherits(se, "SummarizedExperiment")) {
       showModal(modalDialog(
         title = "File error",
@@ -215,9 +235,9 @@ load_files_server <- function(input, output, session, state) {
       ))
       return(NULL)
     }
-
+    
     state$se_obj(se)
-
+    
     de_df <- tryCatch(
       extract_contrasts(se),
       error = function(e) {
@@ -231,7 +251,7 @@ load_files_server <- function(input, output, session, state) {
       }
     )
     req(de_df)
-
+    
     # Extract variance partition if varpart_* columns are present.
     rd           <- as.data.frame(SummarizedExperiment::rowData(se))
     varpart_cols <- grep("^varpart_", colnames(rd), value = TRUE)
@@ -241,24 +261,25 @@ load_files_server <- function(input, output, session, state) {
       rownames(vp_mat) <- rownames(se)
       state$varpart_obj(list(varPart = vp_mat))
     }
-
+    
     # Determine organism and annotation from SE metadata.
     se_organism <- tryCatch(metadata(se)$organism, error = function(e) NULL)
     organism    <- if (!is.null(se_organism) && nzchar(trimws(se_organism))) se_organism else NULL
     
     state$se_organism(organism)
-
+    
     se_annotation <- tryCatch(metadata(se)$annotation, error = function(e) NULL)
     annotation    <- if (!is.null(se_annotation) && nzchar(trimws(se_annotation))) se_annotation else NULL
-
+    
     annot_status  <- "none"
     annot_message <- NULL
     annot_cols    <- NULL
     sym_primary   <- NULL
-
+    annot         <- NULL
+    
     if (!is.null(annotation)) {
       annot_path <- find_annotation_path(annotation)
-
+      
       if (!is.null(annot_path)) {
         annot <- tryCatch(
           readRDS(annot_path),
@@ -275,11 +296,11 @@ load_files_server <- function(input, output, session, state) {
             # Determine and auto-apply default symbol column (Geneid always fallback).
             annot_cols  <- colnames(annot)
             sym_primary <- default_symbol_col(annot_cols)
-
+            
             de_df       <- apply_symbol(merged, sym_primary, "Geneid")
             annot       <- apply_symbol(annot,  sym_primary, "Geneid")
             state$annotation_df(annot)
-
+            
             annot_status  <- "loaded"
             annot_message <- "Annotation loaded"
           } else {
@@ -292,16 +313,24 @@ load_files_server <- function(input, output, session, state) {
         annot_message <- paste("No built-in annotation found for:", annotation)
       }
     }
-
+    
     state$de_df(de_df)
-
+    
+    # Detect available GSEA columns for gene set selection
+    if (!is.null(annot)) {
+      available_gsea_cols <- get_gsea_columns(annot)
+      state$available_gsea_columns(available_gsea_cols)
+    } else {
+      state$available_gsea_columns(list())
+    }
+    
     info_panel <- tags$div(
       style = "padding-left: 15px; margin-bottom: 8px;",
       tags$p(style = "color: steelblue; margin: 0;",
              icon("info-circle"), strong("SE loaded")),
       se_info_ui(se, organism = organism, annotation = annotation)
     )
-
+    
     output$annotationStatus <- renderUI({
       if (annot_status == "loaded") {
         tagList(
@@ -329,11 +358,11 @@ load_files_server <- function(input, output, session, state) {
       }
     })
   })
-
+  
   ## ---- Custom annotation upload -----
   observeEvent(input$annotFile, {
     req(input$annotFile, state$de_df())
-
+    
     annot <- tryCatch(
       readRDS(input$annotFile$datapath),
       error = function(e) {
@@ -347,23 +376,27 @@ load_files_server <- function(input, output, session, state) {
       }
     )
     req(annot)
-
+    
     se_current <- state$se_obj()
     organism   <- tryCatch(metadata(se_current)$organism, error = function(e) NULL)
     organism   <- if (!is.null(organism) && nzchar(trimws(organism))) organism else NULL
-
+    
     merged_result <- merge_annotation(state$de_df(), annot)
-
+    
     if (!is.null(merged_result$result)) {
       merged <- merged_result$result
       annot_cols  <- colnames(annot)
       sym_primary <- default_symbol_col(annot_cols)
-
+      
       merged <- apply_symbol(merged, sym_primary, "Geneid")
       annot  <- apply_symbol(annot,  sym_primary, "Geneid")
       state$annotation_df(annot)
       state$de_df(merged)
-
+      
+      # Detect available GSEA columns for gene set selection
+      available_gsea_cols <- get_gsea_columns(annot)
+      state$available_gsea_columns(available_gsea_cols)
+      
       output$annotationStatus <- renderUI({
         tagList(
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
@@ -395,7 +428,7 @@ load_files_server <- function(input, output, session, state) {
       })
     }
   })
-
+  
   ## ---- Symbol-column selection -----
   observeEvent(input$symbolPrimaryCol, {
     req(input$symbolPrimaryCol, state$de_df())
@@ -433,11 +466,11 @@ load_files_server <- function(input, output, session, state) {
   })
   outputOptions(output, "se_organism", suspendWhenHidden = FALSE)
   
-
+  
   #== == == == == == == == == == == == == == == == ==
   #===== REACTIVES ==================================
   #== == == == == == == == == == == == == == == == ==
-
+  
   ## ---- Filtered DE table with global cutoffs -----
   filtered_de_df <- reactive({
     req(state$de_df())

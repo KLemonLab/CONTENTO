@@ -125,35 +125,7 @@ ui <- dashboardPage(
                     uiOutput("contrastSelect"),
                     hr(),
                     h4("Gene Sets (GSEA)"),
-                    # Conditional UI: Human uses MSigDB, Bacteria uses functional annotations
-                    conditionalPanel(
-                      condition = "output.se_organism == 'Human'",
-                      selectInput("gs_collection", "MSigDB Collection",
-                                  choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), 
-                                  selected = "H"),
-                      conditionalPanel(
-                        condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
-                        textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
-                      ),
-                      tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                               tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
-                                      target = "_blank",
-                                      icon("external-link-alt"),
-                                      "MSigDB"))
-                    ),
-                    conditionalPanel(
-                      condition = "output.se_organism == 'Bacteria'",
-                      selectInput("bacterial_geneset_source", "Functional Annotation",
-                                  choices = c(
-                                    "COG24 Category" = "func_COG24_CATEGORY",
-                                    "COG24 Pathway" = "func_COG24_PATHWAY",
-                                    "KEGG Group" = "func_KEGG_Class_L2",
-                                    "KEGG Class" = "func_KEGG_Class_L3",
-                                    "KEGG Module" = "func_KEGG_Module",
-                                    "RegPrecise Regulons" = "RegPrecise"
-                                  ),
-                                  selected = "func_COG24_CATEGORY")
-                    )
+                    uiOutput("gseaControlsUI")
                 ),
                 
                 box(title = "Explore Results by Contrast", width = 9, status = "primary", collapsible = TRUE,
@@ -174,35 +146,7 @@ ui <- dashboardPage(
                 box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
                     uiOutput("multiContrastSelect"),
                     h4("Gene Sets (GSEA/GESECA)"),
-                    # Conditional UI: Human uses MSigDB, Bacteria uses functional annotations
-                    conditionalPanel(
-                      condition = "output.se_organism == 'Human'",
-                      selectInput("compare_gs_collection", "MSigDB Collection",
-                                  choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"), 
-                                  selected = "H"),
-                      conditionalPanel(
-                        condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
-                        textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
-                      ),
-                      tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                               tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
-                                      target = "_blank",
-                                      icon("external-link-alt"),
-                                      "MSigDB"))
-                    ),
-                    conditionalPanel(
-                      condition = "output.se_organism == 'Bacteria'",
-                      selectInput("bacterial_geneset_source_compare", "Functional Annotation",
-                                  choices = c(
-                                    "COG24 Category" = "func_COG24_CATEGORY",
-                                    "COG24 Pathway" = "func_COG24_PATHWAY",
-                                    "KEGG Group" = "func_KEGG_Class_L2",
-                                    "KEGG Class" = "func_KEGG_Class_L3",
-                                    "KEGG Module" = "func_KEGG_Module",
-                                    "RegPrecise Regulons" = "RegPrecise"
-                                  ),
-                                  selected = "func_COG24_CATEGORY")
-                    ),
+                    uiOutput("compareGseaControlsUI"),
                 ),
                 
                 box(title = "Compare Contrast Results", width = 9, status = "primary", collapsible = TRUE,
@@ -259,7 +203,8 @@ server <- function(input, output, session) {
     varpart_obj = reactiveVal(NULL),
     annotation_df = reactiveVal(NULL),
     se_organism = reactiveVal(NULL),
-    filtered_de_df = reactiveVal(NULL)
+    filtered_de_df = reactiveVal(NULL),
+    available_gsea_columns = reactiveVal(list())
   )
   
   # Reactive organism type from SE metadata

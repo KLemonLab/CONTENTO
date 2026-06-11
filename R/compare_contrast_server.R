@@ -1,6 +1,47 @@
 compare_contrast_server <- function(input, output, session, state, organism) {
   
   #==============================
+  # UI: Render dynamic GSEA controls
+  #==============================
+  output$compareGseaControlsUI <- renderUI({
+    if (!is.null(organism()) && organism() == "Human") {
+      # MSigDB for Human
+      return(tagList(
+        selectInput("compare_gs_collection", "MSigDB Collection",
+                    choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"),
+                    selected = "H"),
+        conditionalPanel(
+          condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
+          textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
+        ),
+        tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
+                 tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                        target = "_blank",
+                        icon("external-link-alt"),
+                        "MSigDB"))
+      ))
+    } else if (!is.null(organism()) && organism() == "Bacteria") {
+      # All annotation columns for Bacteria
+      avail_cols <- state$available_gsea_columns()
+      
+      if (length(avail_cols) == 0) {
+        return(div(class = "alert alert-warning",
+                   icon("exclamation-triangle"),
+                   "No annotation columns available. Upload annotation file."))
+      }
+      
+      return(selectInput("bacterial_geneset_source_compare", "Functional Annotation",
+                         choices = avail_cols,
+                         selected = avail_cols[[1]]))
+    } else {
+      return(div(class = "alert alert-info",
+                 icon("info-circle"),
+                 "Awaiting SE file upload..."))
+    }
+  })
+  
+  
+  #==============================
   # UI: Contrast selection
   #==============================
   output$multiContrastSelect <- renderUI({
@@ -855,10 +896,14 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       rect_gp = grid::gpar(col = "grey60", lwd = 0.5),
       
       # Title
-      column_title = paste0("GSEA: ", input$compare_gs_collection, 
-                            if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) 
-                              paste0(" - ", input$compare_gs_subcollection) else "",
-                            " (FDR < 0.05)"),
+      column_title = if (!is.null(organism()) && organism() == "Bacteria") {
+        paste0("GSEA: ", input$bacterial_geneset_source_compare, " (FDR < 0.05)")
+      } else {
+        paste0("GSEA: ", input$compare_gs_collection, 
+               if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) 
+                 paste0(" - ", input$compare_gs_subcollection) else "",
+               " (FDR < 0.05)")
+      },
       column_title_gp = grid::gpar(fontsize = 14, fontface = "bold")
     )
     
@@ -882,7 +927,16 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       }
       contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
       
-      gs_str <- paste0(input$compare_gs_collection, if (nzchar(input$compare_gs_subcollection)) paste0("_", input$compare_gs_subcollection) else "")
+      # Get gene set source name (handles both Human and Bacteria)
+      if (!is.null(organism()) && organism() == "Bacteria") {
+        gs_str <- if (!is.null(input$bacterial_geneset_source_compare)) {
+          gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source_compare)
+        } else {
+          "unknown"
+        }
+      } else {
+        gs_str <- paste0(input$compare_gs_collection, if (nzchar(input$compare_gs_subcollection)) paste0("_", input$compare_gs_subcollection) else "")
+      }
       file_name <- paste(file_base, contrasts_str, "GSEA", gs_str, sep = "__")
       
       # Prepare wide format table with NES values
