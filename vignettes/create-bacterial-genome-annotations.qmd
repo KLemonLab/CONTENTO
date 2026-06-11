@@ -18,9 +18,8 @@ format:
 This tutorial shows how to create a functional annotation file with gene IDs, descriptions, and annotations to be used in the RNASeqApp.
 
 Annotation files are R data frames saved as `.rds` files with the following structure:
-- **Required column:** `Geneid` (character) — matches `rownames(SE)` from your SummarizedExperiment object
-- **Recommended column:** `symbol` (character) — gene name, product, or common identifier
-- **Functional columns:** Any additional columns (KEGG pathways, COG categories, etc.) available for GSEA enrichment analysis
+- **Required column:** `Geneid` that matches `rownames(SE)` from your SummarizedExperiment object.
+- **Functional columns:** Any additional columns (KEGG pathways, COG categories, etc.) available for GSEA enrichment analysis. Multiple annotations per gene are concatenated using `!!!` as a separator (e.g., `"GO:0006415!!!GO:0016149"`). CONTENTO will parse these and count the gene as belonging to each category for functional enrichment analysis.
 
 ------------------------------------------------------------------------
 
@@ -115,20 +114,23 @@ annotations <- gff_cds |>
   ungroup() |>
   unnest_wider(attr_list, names_repair = "universal") |> # Unnest all key=value pairs as columns
   select(-attributes) |>
-  rename(Geneid = locus_tag, # Required column for CONTENTO
-         symbol = gene) # Recommended column name for gene name or product
+  rename(Geneid = locus_tag) # Required column for CONTENTO
+
+# Replace commas in GO-related annotation fields with "!!!" to be used in multiple groupings in functional analysis
+annotations <- annotations |>
+  mutate(across(c(Ontology_term, go_function, go_process, go_component), ~ gsub(",", "!!!", .x)))
 
 # Aggregate CDS fragments into gene-level annotations (handles programmed frameshifts)
 annotations <- annotations |>
   group_by(Geneid) |>
   summarise(
-    seqname = first(seqname),
-    start = min(start),
-    end   = max(end),
-    strand = first(strand),
-    symbol = first(symbol),
-    product = first(product),
-    protein_id = first(protein_id),
+    start  = min(start),
+    end    = max(end),
+    strand = unique(strand),   # should be invariant per gene
+    across(
+      -c(start, end, strand, frame),
+      first
+    ),
     .groups = "drop"
   )
 
