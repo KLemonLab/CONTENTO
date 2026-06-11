@@ -14,8 +14,8 @@ get_gsea_columns <- function(annot_df) {
   
   # Exclude metadata/ID/structural columns not useful for enrichment
   exclude_cols <- c(
-    # GFF3 structural columns
-    "seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes",
+    # Structural columns
+    "Geneid", "symbol", "seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes",
     # GFF3 metadata attributes
     "ID", "Parent", "Dbxref", "Name", "Ontology_term", "gbkey", "gene", "inference",
     "locus_tag", "product", "protein_id", "transl_table", "Note", "partial", "pseudo",
@@ -50,7 +50,7 @@ build_bacterial_genesets <- function(annot_df, column_name) {
   annot_df %>%
     dplyr::filter(!is.na(.data[[column_name]]) & .data[[column_name]] != "") %>%
     dplyr::select(Geneid, pathway = dplyr::all_of(column_name)) %>%
-    dplyr::mutate(pathway = strsplit(as.character(pathway), ",")) %>%
+    dplyr::mutate(pathway = strsplit(as.character(pathway), "!!!")) %>%
     tidyr::unnest(pathway) %>%
     dplyr::mutate(pathway = trimws(pathway)) %>%
     dplyr::filter(pathway != "") %>%

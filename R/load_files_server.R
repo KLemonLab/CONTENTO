@@ -55,7 +55,7 @@ load_files_server <- function(input, output, session, state) {
   }
   
   # Merge annotation data frame into the contrast data frame.
-  # Handles both human (Geneid) and bacterial (locus_tag) gene ID columns.
+  # SIMPLIFIED: Only requires 'Geneid' column in annotation (works for human & bacterial).
   # Returns a list with:
   #   $result: merged data frame or NULL
   #   $message: diagnostic message (only present if result is NULL)
@@ -69,88 +69,44 @@ load_files_server <- function(input, output, session, state) {
       return(list(result = NULL, message = "Annotation file is empty"))
     }
     
-    # Check for exact "Geneid" match first (Expected for Human)
-    if ("Geneid" %in% colnames(de_df) && "Geneid" %in% colnames(annot)) {
-      if (!is.character(annot[["Geneid"]])) {
-        return(list(
-          result = NULL,
-          message = paste0("Column 'Geneid' is type ", class(annot[["Geneid"]])[1], 
-                           " (expected character). Cannot join.")
-        ))
-      }
-      
-      merged <- tryCatch(
-        dplyr::left_join(de_df, annot, by = "Geneid"),
-        error = function(e) NULL
-      )
-      if (!is.null(merged)) {
-        return(list(result = merged))
-      } else {
-        return(list(result = NULL, message = "Join by 'Geneid' failed"))
-      }
+    # Check for required 'Geneid' column
+    if (!("Geneid" %in% colnames(de_df))) {
+      return(list(result = NULL, message = "DE data missing 'Geneid' column (internal error)"))
     }
     
-    # Check for exact "Geneid" match first (Expected for Bacteria)
-    if ("Geneid" %in% colnames(de_df) && "locus_tag" %in% colnames(annot)) {
-      if (!is.character(annot[["locus_tag"]])) {
-        return(list(
-          result = NULL,
-          message = paste0("Column 'locus_tag' is type ", class(annot[["locus_tag"]])[1], 
-                           " (expected character). Cannot join.")
-        ))
-      }
-      
-      # Join by locus_tag (bacterial case)
-      merged <- tryCatch(
-        dplyr::left_join(de_df, annot, by = c("Geneid" = "locus_tag")),
-        error = function(e) NULL
-      )
-      if (!is.null(merged)) {
-        return(list(result = merged))
-      } else {
-        return(list(result = NULL, message = "Join by 'locus_tag' failed"))
-      }
+    if (!("Geneid" %in% colnames(annot))) {
+      return(list(
+        result = NULL,
+        message = paste0("Annotation file must contain a 'Geneid' column. ",
+                         "Found columns: ", paste(colnames(annot), collapse = ", "))
+      ))
     }
     
-    # Search for gene ID column using strict pattern
-    # Matches: geneid, gene_id, ensembl_gene_id, locus_tag, locus_tags, etc.
-    # Does NOT match: gene_callers_id, other_id, etc.
-    gene_id_pattern <- "^(.*_)?(gene[_\\s]?id|locus_tag)s?$"
-    annot_gene_col <- grep(gene_id_pattern, colnames(annot), 
-                           ignore.case = TRUE, value = TRUE)
-    
-    if (length(annot_gene_col) > 0) {
-      annot_gene_col <- annot_gene_col[1]
-      
-      if (!is.character(annot[[annot_gene_col]])) {
-        return(list(
-          result = NULL, 
-          message = paste0("Column '", annot_gene_col, "' is type ", 
-                           class(annot[[annot_gene_col]])[1], 
-                           " (expected character). Cannot join with Geneid.")
-        ))
-      }
-      
-      merged <- tryCatch(
-        dplyr::left_join(de_df, annot, by = c("Geneid" = annot_gene_col)),
-        error = function(e) NULL
-      )
-      
-      if (!is.null(merged)) {
-        return(list(result = merged))
-      } else {
-        return(list(result = NULL, message = paste0("Join by '", annot_gene_col, "' failed")))
-      }
+    # Validate that Geneid is character type
+    if (!is.character(annot[["Geneid"]])) {
+      return(list(
+        result = NULL,
+        message = paste0("Column 'Geneid' must be character type, got ", 
+                         class(annot[["Geneid"]])[1], ". Cannot join.")
+      ))
     }
     
-    # No usable join column found
-    return(list(result = NULL, message = "No compatible gene ID column found (expected 'Geneid', 'locus_tag', or similar pattern)"))
+    # Perform join
+    merged <- tryCatch(
+      dplyr::left_join(de_df, annot, by = "Geneid"),
+      error = function(e) NULL
+    )
+    
+    if (!is.null(merged)) {
+      return(list(result = merged))
+    } else {
+      return(list(result = NULL, message = "Join operation failed (internal error)"))
+    }
   }
   
   # Create (or update) the 'symbol' column in a data frame using primary and
-  # optional fallback columns.  When the primary value is NA or empty the
-  # fallback is used.  Returns the data frame unchanged if primary_col is not
-  # present.
+  # optional fallback columns. When the primary value is NA or empty the
+  # fallback is used. Returns the data frame unchanged if primary_col is not present.
   apply_symbol <- function(df, primary_col, secondary_col = "none") {
     if (!primary_col %in% colnames(df)) return(df)
     if (!is.null(secondary_col) && secondary_col != "none" &&
@@ -169,7 +125,7 @@ load_files_server <- function(input, output, session, state) {
   
   # Determine default primary symbol column from available annotation columns.
   default_symbol_col <- function(annot_cols) {
-    found <- intersect(c("product", "Gene", "gene", "hgnc_symbol", "gene_name", "symbol"), annot_cols)
+    found <- intersect(c("gene", "Gene", "product", "symbol", "hgnc_symbol", "gene_name"), annot_cols)
     if (length(found) > 0) found[1] else annot_cols[1]
   }
   
@@ -304,7 +260,7 @@ load_files_server <- function(input, output, session, state) {
             annot_status  <- "loaded"
             annot_message <- "Annotation loaded"
           } else {
-            annot_status  <- "no_join_col"
+            annot_status  <- "failed"
             annot_message <- merged_result$message
           }
         }
@@ -344,14 +300,7 @@ load_files_server <- function(input, output, session, state) {
         tagList(
           info_panel,
           tags$p(icon("exclamation-triangle"),
-                 HTML(
-                   if (annot_status == "no_join_col") annot_message
-                   else if (annot_status == "not_found")
-                     paste0(annot_message,
-                            ". Upload an annotation file or fix the annotation name in your SE object metadata.")
-                   else
-                     "Annotation not found in SE metadata. Upload an annotation file or add the annotation to your SE object metadata."
-                 ),
+                 annot_message,
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )

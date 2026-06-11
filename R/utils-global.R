@@ -6,15 +6,11 @@ if (getRversion() >= "2.15.1") {
     c(
       # gene / DE result columns
       "Geneid", "symbol", "gene", "padj", "pval", "log2FC", "log2FC_shrunk",
-      "regulated", "DE", "hgnc_symbol", "ensembl_gene_id",
+      "regulated", "DE",
       
       # contrast / pathway / GSEA names
       "contrast", "contrast_str", "file_base", "pathway_str", "pathways_list",
-      "pathway",  # Added for build_bacterial_genesets()
-      "vst_matrix", "gesecaRes", "tableplot",
-      
-      # KEGG-specific
-      "func_KEGG_Class", "kegg_class", "levels",
+      "pathway",  "vst_matrix", "gesecaRes", "tableplot",
       
       # matrices / leading edge / upset
       "leadingEdge", "leading_edge_matrix", "leading_edge_data", "upset_df",
