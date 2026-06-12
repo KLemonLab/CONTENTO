@@ -65,6 +65,41 @@ ui <- dashboardPage(
   
   dashboardBody(
     
+    tags$style(HTML("
+  /* === FIX PILLS VISIBILITY === */
+
+  .nav-pills {
+    margin-bottom: 15px;
+  }
+
+  .nav-pills > li > a {
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 6px;
+    margin-right: 6px;
+    
+    /* make them look like buttons */
+    background-color: #f4f6f9;
+    border: 1px solid #d2d6de;
+    color: #444;
+  }
+
+  /* hover feedback */
+  .nav-pills > li > a:hover {
+    background-color: #e6f0fa;
+    color: #2c7fb8;
+  }
+
+  /* ACTIVE (match dashboard blue) */
+  .nav-pills > li.active > a,
+  .nav-pills > li.active > a:hover {
+    background-color: #3c8dbc;  /* AdminLTE blue */
+    color: white;
+    border: 1px solid #3c8dbc;
+  }
+")),
+    
     tabItems(
       
       ## ---- Getting Started -----
@@ -84,7 +119,7 @@ ui <- dashboardPage(
               
               ### Second row: three main app sections
               fluidRow(
-                box(title = tagList(icon("layer-group"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
+                box(title = tagList(icon("chart-line"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
                     p("Select a contrast to explore its results."),
                     tags$ul(
                       tags$li(strong("Selected Genes:"), " Table of differential expression results. You can save a .csv file with the filtered results."),
@@ -121,15 +156,41 @@ ui <- dashboardPage(
       ## ---- Explore by Contrast -----
       tabItem(tabName = "contrast",
               fluidRow(
-                box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    uiOutput("contrastSelect"),
-                    hr(),
-                    h4("Gene Sets (GSEA)"),
-                    uiOutput("gseaControlsUI")
-                ),
-                
-                box(title = "Explore Results by Contrast", width = 9, status = "primary", collapsible = TRUE,
-                    uiOutput("contrastSubTabs")
+                box(
+                  width = 12, status = "info", solidHeader = TRUE,
+                  title = tagList(icon("chart-line"), "Explore by Contrast"),
+                  
+                  fluidRow(
+                    # LEFT: description
+                    column(
+                      width = 8,
+                      div(
+                        span("Choose a contrast to explore differential expression results."),
+                        tags$ul(
+                          style = "margin: 5px 0 0 15px; padding:0;",
+                          tags$li("Adjust log2FC and p-value cutoffs in the sidebar"),
+                          tags$li("Filter, review and download significant genes"),
+                          tags$li("Explore interactive volcano plot and perform functional enrichment (GSEA)")
+                        )
+                      )
+                    ),
+                    
+                    # RIGHT: selector
+                    column(
+                      width = 4,
+                      div(
+                        style = "padding-left:10px;",
+                        uiOutput("contrastSelect")
+                      )
+                    )
+                  )
+                )
+              ),
+              
+              fluidRow(
+                box(
+                  width = 12, status = "primary", solidHeader = TRUE,
+                  uiOutput("contrastSubTabs")
                 )
               )
       ),

@@ -11,7 +11,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   output$contrastSelect <- renderUI({
     req(state$de_df())
     contrast_choices <- unique(state$de_df()$contrast)
-    selectInput("contrast", "Select Contrast", choices = contrast_choices)
+    selectInput("contrast", "Select Contrast from Summarized Experiment:", choices = contrast_choices)
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,40 +23,55 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                withSpinner(DTOutput("DETable"), type = 5),
                tags$div(
                  style = "margin-top: 15px; display: flex; gap: 10px;",
-                 downloadButton("downloadAllContrastData", "Download All Genes for Selected Contrast", class = "btn btn-primary"),
-                 downloadButton("downloadFilteredContrastData", "Download Filtered Genes in Table", class = "btn btn-primary")
-               )),
-      tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5))
+                 downloadButton("downloadAllContrastData", "Download All Genes for Selected Contrast", class = "btn btn-warning"),
+                 downloadButton("downloadFilteredContrastData", "Download Filtered Genes in Table", class = "btn btn-warning")
+               )
+      ),
+      tabPanel("Volcano Plot", 
+               withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5)
+      )
     )
     
     if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
       tabs <- append(tabs, 
                      list(
-                       tabPanel("GSEA",
-                                tabsetPanel(
-                                  tabPanel("Overview",
-                                           h4("Top 20 GSEA Results"),
-                                           withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
-                                           hr(),
-                                           h4("All GSEA Results"),
-                                           withSpinner(DTOutput("gseaResultsTable"), type = 5)
+                       tabPanel("Functional Enrichment ",
+                                fluidRow(
+                                  # LEFT: explanation
+                                  column(
+                                    width = 8,
+                                    div(
+                                      span("Choose an annotation column to perform  GSEA."),
+                                      tags$ul(
+                                        style = "margin: 5px 0 0 15px; padding:0;",
+                                        tags$li("Table includes Gene Sets ranked by NES (Normalized Enrichment Score)"),
+                                        tags$li("Plot represents Top 20 significant pathways (FDR < 0.05) with leading edge genes highlighted")
+                                      )
+                                    )
                                   ),
-                                  tabPanel("Pathway Detail",
-                                           fluidRow(
-                                             column(12,
-                                                    uiOutput("pathwaySelectUI_gsea"),
-                                                    hr(),
-                                                    withSpinner(plotOutput("enrichmentPlot", height = "400px"), type = 5)
-                                             )
-                                           )
+                                  
+                                  # RIGHT: controls
+                                  column(
+                                    width = 4,
+                                    div(
+                                      style = "padding-left:10px;",
+                                      uiOutput("gseaControlsUI")
+                                    )
                                   )
-                                )
+                                ),
+                                
+                                hr(),
+                                withSpinner(DTOutput("gseaResultsTable"), type = 5),
+                                hr(),
+                                h4("Top 20 Enriched Pathways (FDR < 0.05)"),
+                                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5)
                        )
                      )
       )
+      
     }
     
-    do.call(tabsetPanel, tabs)
+    do.call(tabsetPanel, c(list(type = "pills"), tabs))
   }) 
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,7 +104,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                    "No annotation columns available. Upload annotation file with functional information."))
       }
       
-      return(selectInput("bacterial_geneset_source", "Functional Annotation",
+      return(selectInput("bacterial_geneset_source", "Select Gene Sets from Annotation",
                          choices = avail_cols,
                          selected = avail_cols[[1]]))
     } else {
@@ -356,9 +371,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         rownames = FALSE,
         filter = 'top',
         options = list(
-          pageLength = 30,
+          pageLength = 15,
           scrollX = TRUE,
-          dom = 't'  
+          dom = 'frtip'  
         )
       )
       
@@ -452,7 +467,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         options = list(
           pageLength = 15,
           scrollX = TRUE,
-          dom = 'Bfrtip',
+          dom = 'rtip',
           columnDefs = list(
             list(
               targets = 6,  
@@ -462,14 +477,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                 "  return '<div style=\"max-width:300px; overflow-x:auto; white-space:nowrap;\">' + data + '</div>';",
                 "}"
               )
-            )
-          ),
-          buttons = list(
-            list(
-              extend = 'csv',
-              text = 'Download Filtered GSEA Results',
-              filename = file_name,
-              exportOptions = list(modifier = list(page = "all"))
             )
           )
         )
