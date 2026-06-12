@@ -65,40 +65,7 @@ ui <- dashboardPage(
   
   dashboardBody(
     
-    tags$style(HTML("
-  /* === FIX PILLS VISIBILITY === */
-
-  .nav-pills {
-    margin-bottom: 15px;
-  }
-
-  .nav-pills > li > a {
-    font-size: 15px;
-    font-weight: 600;
-    padding: 10px 18px;
-    border-radius: 6px;
-    margin-right: 6px;
-    
-    /* make them look like buttons */
-    background-color: #f4f6f9;
-    border: 1px solid #d2d6de;
-    color: #444;
-  }
-
-  /* hover feedback */
-  .nav-pills > li > a:hover {
-    background-color: #e6f0fa;
-    color: #2c7fb8;
-  }
-
-  /* ACTIVE (match dashboard blue) */
-  .nav-pills > li.active > a,
-  .nav-pills > li.active > a:hover {
-    background-color: #3c8dbc;  /* AdminLTE blue */
-    color: white;
-    border: 1px solid #3c8dbc;
-  }
-")),
+    includeCSS("www/styles.css"),
     
     tabItems(
       
@@ -226,19 +193,7 @@ ui <- dashboardPage(
                         uiOutput("multiContrastSelectHeader"),
                         div(
                           style = "max-height: 160px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px 12px; margin-top: 4px;",
-                          tags$style(HTML("
-  #compare_contrasts .shiny-options-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 20px;
-    align-items: start;
-  }
-  #compare_contrasts .shiny-options-group .checkbox {
-    margin-top: 0;
-    margin-bottom: 4px;
-  }
-")),
-                          uiOutput("multiContrastCheckboxes")
+                                          uiOutput("multiContrastCheckboxes")
                         )
                       )
                     )
