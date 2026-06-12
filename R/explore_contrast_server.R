@@ -1,8 +1,61 @@
 explore_contrast_server <- function(input, output, session, state, organism) {
   
-  #==============================
-  # UI: Render dynamic GSEA controls
-  #==============================
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 1: UI RENDERING ####
+  # Dynamic UI controls that respond to user inputs and state changes
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Contrast Dropdown #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$contrastSelect <- renderUI({
+    req(state$de_df())
+    contrast_choices <- unique(state$de_df()$contrast)
+    selectInput("contrast", "Select Contrast", choices = contrast_choices)
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Conditional Tab Layout #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$contrastSubTabs <- renderUI({
+    tabs <- list(
+      tabPanel("Selected Genes", withSpinner(DTOutput("DETable"), type = 5)),
+      tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5))
+    )
+    
+    if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
+      tabs <- append(tabs, 
+                     list(
+                       tabPanel("GSEA",
+                                tabsetPanel(
+                                  tabPanel("Overview",
+                                           h4("Top 20 GSEA Results"),
+                                           withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
+                                           hr(),
+                                           h4("All GSEA Results"),
+                                           withSpinner(DTOutput("gseaResultsTable"), type = 5)
+                                  ),
+                                  tabPanel("Pathway Detail",
+                                           fluidRow(
+                                             column(12,
+                                                    uiOutput("pathwaySelectUI_gsea"),
+                                                    hr(),
+                                                    withSpinner(plotOutput("enrichmentPlot", height = "400px"), type = 5)
+                                             )
+                                           )
+                                  )
+                                )
+                       )
+                     )
+      )
+    }
+    
+    do.call(tabsetPanel, tabs)
+  }) 
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Dynamic GSEA Controls #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$gseaControlsUI <- renderUI({
     if (!is.null(organism()) && organism() == "Human") {
       # MSigDB for Human
@@ -40,57 +93,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     }
   })
   
-  #==============================
-  # UI: Contrast dropdown 
-  #==============================
-  output$contrastSelect <- renderUI({
-    req(state$de_df())
-    contrast_choices <- unique(state$de_df()$contrast)
-    selectInput("contrast", "Select Contrast", choices = contrast_choices)
-  })
-  
-  #==============================
-  # UI: Conditional Sub-tabs
-  #==============================
-  output$contrastSubTabs <- renderUI({
-    tabs <- list(
-      tabPanel("Selected Genes", withSpinner(DTOutput("DETable"), type = 5)),
-      tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5))
-    )
-    
-    if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
-      tabs <- append(tabs, 
-                     list(
-                       tabPanel("GSEA",
-                                tabsetPanel(
-                                  tabPanel("Overview",
-                                           h4("Top 20 GSEA Results"),
-                                           withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
-                                           hr(),
-                                           h4("All GSEA Results"),
-                                           withSpinner(DTOutput("gseaResultsTable"), type = 5)
-                                  ),
-                                  tabPanel("Pathway Detail",
-                                           fluidRow(
-                                             column(12,
-                                                    uiOutput("pathwaySelectUI_gsea"),
-                                                    hr(),
-                                                    withSpinner(plotOutput("enrichmentPlot", height = "400px"), type = 5)
-                                             )
-                                           )
-                                  )
-                                )
-                       )
-                     )
-      )
-    }
-    
-    do.call(tabsetPanel, tabs)
-  }) 
-  
-  #==============================
-  # UI: Selectors for GSEA
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Pathway Selection for GSEA Detail Tab #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$pathwaySelectUI_gsea <- renderUI({
     req(gsea_result())
     
@@ -113,9 +118,15 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     }
   })
   
-  #==============================
-  # Reactive: Filtered DE data
-  #==============================
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 2: DATA PROCESSING & FILTERING ####
+  # Reactive expressions that filter, transform, and prepare data for display
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: DE Filtered by User-Defined Cutoffs #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   selected_data <- reactive({
     req(state$de_df(), input$contrast)
     
@@ -143,15 +154,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           ),
           DE = !is.na(regulated)
         )
-    }, error = function(e) {
-      showNotification(paste("Error filtering data:", e$message), type = "error")
-      NULL
-    })
+    }, error = handle_filter_data_error)
   })
   
-  #==============================
-  # Reactive: Export table with full annotations for single contrast
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: DE Filtered Merged with Annotations #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   selected_data_export <- reactive({
     req(selected_data(), state$annotation_df())
     
@@ -173,20 +181,23 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       select(all_of(first_cols), everything())
   })
   
-  #==============================
-  # Reactive: Gene sets from MSigDB or Bacterial Annotations
-  #==============================
+
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS (GSEA) ####
+  # Load gene sets and perform GSEA
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Load Gene Sets (MSigDB or Bacterial) #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets <- reactive({
-    # For Bacteria: use functional annotations
+    # For Bacteria: use user-provided annotation columns
     if (!is.null(organism()) && organism() == "Bacteria") {
       req(state$annotation_df(), input$bacterial_geneset_source)
-      
-      tryCatch({
-        build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source)
-      }, error = function(e) {
-        showNotification(paste("Error loading bacterial gene sets:", e$message), type = "error")
-        NULL
-      })
+      tryCatch(
+        build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source),
+        error = handle_geneset_error
+      )
       
     } else {
       # For Human: use MSigDB
@@ -198,16 +209,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         } else {
           msigdbr(species = "Homo sapiens", collection = input$gs_collection)
         }
-      }, error = function(e) {
-        showNotification(paste("Error loading gene sets:", e$message), type = "error")
-        NULL
-      })
+      }, error = handle_msigdb_error)
     }
   })
   
-  #==============================
-  # Reactive: GSEA Analysis
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: GSEA Analysis #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   gsea_result <- reactive({
     req(state$de_df(), input$contrast, genesets())
     
@@ -269,16 +277,19 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       }
       
       list(tableplot = tableplot, fgseaRes = fgseaRes, ranks_vec = ranks_vec, pathways_list = pathways_list)
-      
-    }, error = function(e) {
-      showNotification(paste("Error running GSEA:", e$message), type = "error")
-      NULL
-    })
+    },     
+    error = handle_gsea_error)
   })
   
-  #==============================
-  # Output: DE Table
-  #==============================
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 4: OUTPUT RENDERING ####
+  # Display tables, plots, and interactive visualizations
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: DE Results Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$DETable <- renderDT(
     {
       req(selected_data())
@@ -335,55 +346,11 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           )
       }
       dt
-    },
-    server = FALSE   
-  )
+    }, server = FALSE)
   
-  #==============================
-  # Download Handler: Full annotations with user's filter
-  #==============================
-  output$downloadDETableFull <- downloadHandler(
-    filename = function() {
-      file_base <- get_download_filename(input, state)
-      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
-      
-      paste(file_base, contrast_str, fc_str, "full.csv", sep = "__")
-    },
-    content = function(file) {
-      req(input$DETable_rows_all)
-      
-      # Get full export data
-      full_data <- selected_data_export() %>%
-        mutate(
-          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
-          padj = formatC(padj, format = "e", digits = 2)
-        )
-      
-      # Get filtered row indices from DT
-      filtered_indices <- input$DETable_rows_all
-      
-      # Get the display data to extract Geneids
-      display_data <- selected_data() %>%
-        filter(DE) %>%
-        arrange(desc(abs(log2FC)))
-      
-      # Extract Geneids from filtered rows
-      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
-      
-      # Filter full data to match user's selection
-      filtered_full <- full_data %>%
-        filter(Geneid %in% filtered_geneids)
-      
-      write.csv(filtered_full, file, row.names = FALSE)
-    }
-  )
-  
-  #==============================
-  # Output: Volcano Plot of Top DE Genes
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Volcano Plot Top DE Genes #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$volcanoPlot <- renderPlotly({
     req(selected_data())
     
@@ -403,9 +370,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     ggplotly(gg, tooltip = "text")
   })
   
-  #==============================
-  # Output: GSEA Table Plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GSEA Table Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$gseaTablePlot <- renderPlot({
     req(gsea_result())
     
@@ -417,9 +384,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     }
   })
   
-  #==============================
-  # Output: GSEA Results Table
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GSEA Results Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$gseaResultsTable <- renderDT(
     {
       req(gsea_result())
@@ -480,14 +447,11 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           )
         )
       )
-    },
-    server = FALSE
-  )
-
+    }, server = FALSE)
   
-  #==============================
-  # Output: GSEA Enrichment Plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GSEA Enrichment Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$enrichmentPlot <- renderPlot({
     req(gsea_result(), input$selected_pathway_gsea)
     
@@ -507,9 +471,85 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         theme_minimal() +
         theme(plot.title = element_text(size = 10))
       
-    }, error = function(e) {
-      plot.new()
-      text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
-    })
+    }, error = handle_enrichment_plot_error)
   })
+  
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 5: DOWNLOAD HANDLERS ####
+  # Manage file downloads with proper naming and filtering
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download Handler: DE Filtered Merged with Annotations #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadDETableFull <- downloadHandler(
+    filename = function() {
+      file_base <- get_download_filename(input, state)
+      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
+      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
+      
+      paste(file_base, contrast_str, fc_str, "full.csv", sep = "__")
+    },
+    content = function(file) {
+      req(input$DETable_rows_all)
+      
+      # Get full export data
+      full_data <- selected_data_export() %>%
+        mutate(
+          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
+          padj = formatC(padj, format = "e", digits = 2)
+        )
+      
+      # Get filtered row indices from DT
+      filtered_indices <- input$DETable_rows_all
+      
+      # Get the display data to extract Geneids
+      display_data <- selected_data() %>%
+        filter(DE) %>%
+        arrange(desc(abs(log2FC)))
+      
+      # Extract Geneids from filtered rows
+      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
+      
+      # Filter full data to match user's selection
+      filtered_full <- full_data %>%
+        filter(Geneid %in% filtered_geneids)
+      
+      write.csv(filtered_full, file, row.names = FALSE)
+    }
+  )
+  
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 6: ERROR HANDLERS ####
+  # Helper functions for error management
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  handle_filter_data_error <- \(e) {
+    showNotification(paste("Error filtering data:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_geneset_error <- \(e) {
+    showNotification(paste("Error loading gene sets:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_msigdb_error <- \(e) {
+    showNotification(paste("Error loading gene sets:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_gsea_error <- \(e) {
+    showNotification(paste("Error running GSEA:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_enrichment_plot_error <- \(e) {
+    plot.new()
+    text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
+  }
 }
