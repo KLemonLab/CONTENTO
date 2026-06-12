@@ -200,20 +200,47 @@ ui <- dashboardPage(
       ## ---- Compare Contrast -----
       tabItem(tabName = "compare",
               fluidRow(
-                box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    uiOutput("multiContrastSelect"),
-                    h4("Gene Sets (GSEA/GESECA)"),
-                    uiOutput("compareGseaControlsUI"),
-                ),
-                
-                box(title = "Compare Contrast Results", width = 9, status = "primary", collapsible = TRUE,
-                    uiOutput("compareSubTabs"),
-                    hr(),
-                    tags$div(style = "text-align: center;",
-                             downloadButton("downloadCompareTableFull",
-                                            "Download Filtered DEGs (Full Annotations)",
-                                            class = "btn-primary")
+                box(
+                  width = 12, status = "info", solidHeader = TRUE,
+                  title = tagList(icon("exchange-alt"), "Compare Contrast"),
+                  
+                  fluidRow(
+                    # LEFT: description
+                    column(
+                      width = 8,
+                      div(
+                        span("Select multiple contrasts to compare results side by side."),
+                        tags$ul(
+                          style = "margin: 5px 0 0 15px; padding:0;",
+                          tags$li("Adjust log2FC and p-value cutoffs in the sidebar"),
+                          tags$li("Explore heatmaps, DEG overlap, and cross-contrast enrichment (GSEA / GESECA)")
+                        )
+                      )
+                    ),
+                    
+                    # RIGHT: contrast selector + gene set controls
+                    column(
+                      width = 4,
+                      div(
+                        style = "padding-left:10px;",
+                        uiOutput("multiContrastSelect"),
+                        uiOutput("compareGseaControlsUI")
+                      )
                     )
+                  )
+                )
+              ),
+              
+              fluidRow(
+                box(
+                  width = 12, status = "primary", solidHeader = TRUE,
+                  uiOutput("compareSubTabs"),
+                  hr(),
+                  tags$div(style = "text-align: center;",
+                           downloadButton("downloadCompareTableFull",
+                                          "Download Filtered DEGs (Full Annotations)",
+                                          class = "btn-primary")
+                  )
                 )
               )
       ),
@@ -272,7 +299,6 @@ ui <- dashboardPage(
 )
 
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
-
 # ============================== Server ====================================
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 

@@ -1,49 +1,13 @@
 compare_contrast_server <- function(input, output, session, state, organism) {
   
-  #==============================
-  # UI: Render dynamic GSEA controls
-  #==============================
-  output$compareGseaControlsUI <- renderUI({
-    if (!is.null(organism()) && organism() == "Human") {
-      # MSigDB for Human
-      return(tagList(
-        selectInput("compare_gs_collection", "MSigDB Collection",
-                    choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"),
-                    selected = "H"),
-        conditionalPanel(
-          condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
-          textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
-        ),
-        tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                 tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
-                        target = "_blank",
-                        icon("external-link-alt"),
-                        "MSigDB"))
-      ))
-    } else if (!is.null(organism()) && organism() == "Bacteria") {
-      # All annotation columns for Bacteria
-      avail_cols <- state$available_gsea_columns()
-      
-      if (length(avail_cols) == 0) {
-        return(div(class = "alert alert-warning",
-                   icon("exclamation-triangle"),
-                   "No annotation columns available. Upload annotation file."))
-      }
-      
-      return(selectInput("bacterial_geneset_source_compare", "Functional Annotation",
-                         choices = avail_cols,
-                         selected = avail_cols[[1]]))
-    } else {
-      return(div(class = "alert alert-info",
-                 icon("info-circle"),
-                 "Awaiting SE file upload..."))
-    }
-  })
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 1: UI RENDERING ####
+  # Dynamic UI controls that respond to user inputs and state changes
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
-  
-  #==============================
-  # UI: Contrast selection
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Contrast Checkbox Selection #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$multiContrastSelect <- renderUI({
     req(state$de_df())
     contrast_choices <- unique(state$de_df()$contrast)
@@ -64,9 +28,57 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     )
   })
   
-  #==============================
-  # UI: Conditional Sub-tabs
-  #==============================
+  observeEvent(input$select_all_contrasts, {
+    req(state$de_df())
+    contrast_choices <- unique(state$de_df()$contrast)
+    updateCheckboxGroupInput(session, "compare_contrasts", selected = contrast_choices)
+  })
+  
+  observeEvent(input$clear_all_contrasts, {
+    updateCheckboxGroupInput(session, "compare_contrasts", selected = character(0))
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Dynamic GSEA Controls #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$compareGseaControlsUI <- renderUI({
+    if (!is.null(organism()) && organism() == "Human") {
+      return(tagList(
+        selectInput("compare_gs_collection", "MSigDB Collection",
+                    choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"),
+                    selected = "H"),
+        conditionalPanel(
+          condition = "!(input.compare_gs_collection == 'H' || input.compare_gs_collection == 'C1' || input.compare_gs_collection == 'C6' || input.compare_gs_collection == 'C8')",
+          textInput("compare_gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
+        ),
+        tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
+                 tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
+                        target = "_blank",
+                        icon("external-link-alt"),
+                        "MSigDB"))
+      ))
+    } else if (!is.null(organism()) && organism() == "Bacteria") {
+      avail_cols <- state$available_gsea_columns()
+      
+      if (length(avail_cols) == 0) {
+        return(div(class = "alert alert-warning",
+                   icon("exclamation-triangle"),
+                   "No annotation columns available. Upload annotation file."))
+      }
+      
+      return(selectInput("bacterial_geneset_source_compare", "Functional Annotation",
+                         choices = avail_cols,
+                         selected = avail_cols[[1]]))
+    } else {
+      return(div(class = "alert alert-info",
+                 icon("info-circle"),
+                 "Awaiting SE file upload..."))
+    }
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Conditional Sub-tabs #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareSubTabs <- renderUI({
     tabs <- list(
       tabPanel("Expression Heatmap",
@@ -84,6 +96,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                      list(
                        tabPanel("GSEA Overlap",
                                 tabsetPanel(
+                                  type = "pills",
                                   tabPanel("Overview",
                                            h4("GSEA Heatmap: Pathways Significant in At Least One Contrast"),
                                            fluidRow(
@@ -122,6 +135,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                        ),
                        tabPanel("GESECA",
                                 tabsetPanel(
+                                  type = "pills",
                                   tabPanel("Overview",
                                            h4("Top 20 GESECA Results"),
                                            withSpinner(plotOutput("gesecaTablePlot", height = "600px"), type = 5),
@@ -145,12 +159,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       )
     }
     
-    do.call(tabsetPanel, tabs)
-  }) 
-  
-  #==============================
-  # UI: Heatmap controls
-  #==============================
+    do.call(tabsetPanel, c(list(type = "pills"), tabs))
+  })
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Heatmap Controls #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$heatmapControlsUI <- renderUI({
     fluidRow(
       column(6,
@@ -164,22 +178,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     )
   })
   
-  #==============================
-  # Select All / Clear All actions
-  #==============================
-  observeEvent(input$select_all_contrasts, {
-    req(state$de_df())
-    contrast_choices <- unique(state$de_df()$contrast)
-    updateCheckboxGroupInput(session, "compare_contrasts", selected = contrast_choices)
-  })
-  
-  observeEvent(input$clear_all_contrasts, {
-    updateCheckboxGroupInput(session, "compare_contrasts", selected = character(0))
-  })
-  
-  #==============================
-  # UI: Pathway selector for comparison (GSEA)
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Pathway Selector for GSEA Detail #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$pathwaySelectUI_compare <- renderUI({
     req(compare_gsea_data())
     
@@ -199,9 +200,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     }
   })
   
-  #==============================
-  # UI: Selectors for GESECA
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Selectors for GESECA Detail #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$pathwaySelectUI_geseca <- renderUI({
     req(geseca_result())
     
@@ -228,7 +229,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     
     available_vars <- colnames(colData(state$se_obj()))
     
-    # Try to get default from metadata
     default_var <- tryCatch({
       meta <- metadata(state$se_obj())
       if (!is.null(meta$design_formula)) {
@@ -252,13 +252,18 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     )
   })
   
-  #==============================
-  # Reactive: Data for DEGs upset plot 
-  #==============================
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 2: DATA PROCESSING & FILTERING ####
+  # Reactive expressions that filter, transform, and prepare data for display
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: DEG Data for Upset Plot & Heatmap #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   compare_data <- reactive({
     req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
     
-    # Get global cutoffs (with defaults)
     padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
       input$global_padj_cutoff
     } else {
@@ -270,7 +275,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       2
     }
     
-    # For each contrast, get genes that pass cutoffs
     deg_list <- map(input$compare_contrasts, function(ct) {
       state$de_df() %>%
         filter(
@@ -282,7 +286,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         pull(Geneid)
     }) %>% set_names(input$compare_contrasts)
     
-    # Check if any genes exist
     if (all(lengths(deg_list) == 0)) {
       return(NULL)
     }
@@ -293,13 +296,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       pivot_wider(names_from = contrast, values_from = value, values_fill = FALSE)
   })
   
-  #==============================
-  # Reactive: Table of DEGs in all selected contrasts
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: DEG Comparison Table Data #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   compare_table_data <- reactive({
     req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
     
-    # Get global cutoffs (with defaults)
     padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
       input$global_padj_cutoff
     } else {
@@ -314,7 +316,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     has_symbol <- "symbol" %in% colnames(state$de_df())
     id_cols <- if (has_symbol) c("Geneid", "symbol") else "Geneid"
     
-    # Get genes that pass in at least one selected contrast
     passing_genes <- state$de_df() %>%
       filter(
         contrast %in% input$compare_contrasts,
@@ -329,7 +330,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       return(NULL)
     }
     
-    # Get ALL data for these genes across selected contrasts
     filtered <- state$de_df() %>%
       filter(
         contrast %in% input$compare_contrasts,
@@ -337,7 +337,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       ) %>%
       select(all_of(c(id_cols, "contrast", "log2FC")))
     
-    # Pivot to wide format
     wide_data <- filtered %>%
       pivot_wider(
         id_cols = all_of(id_cols),
@@ -346,15 +345,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       ) %>%
       mutate(across(-any_of(id_cols), ~ round(., 2)))
     
-    # Get contrast column names
     contrast_cols <- setdiff(names(wide_data), id_cols)
     
-    # Add TRUE/FALSE indicator columns for each contrast
     for(col in contrast_cols) {
       wide_data[[paste0(col, "_DE")]] <- !is.na(wide_data[[col]])
     }
     
-    # Arrange and reorder columns to group each contrast with its indicator
     col_order <- id_cols
     for(col in contrast_cols) {
       col_order <- c(col_order, col, paste0(col, "_DE"))
@@ -365,16 +361,14 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       arrange(Geneid)
   })
   
-  #==============================
-  # Reactive: Export table with full annotations for Compare
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Full Annotation Export Data #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   compare_table_export <- reactive({
     req(compare_table_data(), state$annotation_df())
     
-    # Get the display table
     display_data <- compare_table_data()
     
-    # Merge with full annotations
     display_data %>%
       select(Geneid) %>%
       distinct() %>%
@@ -385,14 +379,19 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       left_join(state$annotation_df(), by = "Geneid")
   })
   
-  #==============================
-  # Reactive: GSEA Results for Multiple Contrasts
-  #==============================
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS (GSEA) ####
+  # Load gene sets and perform multi-contrast GSEA and GESECA
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Multi-Contrast GSEA Results #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   compare_gsea_data <- reactive({
     req(state$de_df(), input$compare_contrasts)
     
     tryCatch({
-      # Load gene sets based on organism
       if (!is.null(organism()) && organism() == "Bacteria") {
         req(input$bacterial_geneset_source_compare, state$annotation_df())
         pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source_compare)
@@ -404,13 +403,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
           msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection)
         }
         
-        # Convert to pathway list
         pathways_list <- genesets %>%
           split(.$gs_name) %>%
           lapply(function(x) x$ensembl_gene)
       }
       
-      # Run GSEA for each selected contrast
       fgsea_results <- map(input$compare_contrasts, function(ct) {
         ranks <- state$de_df() %>%
           filter(contrast == ct, !is.na(stat))
@@ -427,7 +424,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         )
       }) %>% set_names(input$compare_contrasts)
       
-      # Remove NULL results
       fgsea_results <- fgsea_results[!sapply(fgsea_results, is.null)]
       
       if (length(fgsea_results) == 0) {
@@ -435,7 +431,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      # Extract NES and padj for all pathways
       nes_df <- map_dfr(names(fgsea_results), ~ {
         fgsea_results[[.x]] %>%
           as_tibble() %>%
@@ -443,7 +438,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
           mutate(contrast = .x)
       })
       
-      # Find pathways significant in at least one contrast
       sig_pathways <- nes_df %>%
         filter(padj < 0.05) %>%
         pull(pathway) %>%
@@ -454,7 +448,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      # Create NES matrix
       nes_matrix <- nes_df %>%
         filter(pathway %in% sig_pathways) %>%
         select(pathway, contrast, NES) %>%
@@ -462,7 +455,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         column_to_rownames("pathway") %>%
         as.matrix()
       
-      # Create padj matrix
       padj_matrix <- nes_df %>%
         filter(pathway %in% sig_pathways) %>%
         select(pathway, contrast, padj) %>%
@@ -470,44 +462,37 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         column_to_rownames("pathway") %>%
         as.matrix()
       
-      # Calculate range of NES for sorting (highlights pathways with most variation)
       nes_range <- apply(nes_matrix, 1, function(x) max(x) - min(x))
       sort_order <- order(nes_range, decreasing = TRUE)
       
-      # Sort both matrices
-      nes_matrix <- nes_matrix[sort_order, , drop = FALSE]
+      nes_matrix  <- nes_matrix[sort_order,  , drop = FALSE]
       padj_matrix <- padj_matrix[sort_order, , drop = FALSE]
       
-      # Limit to top N pathways if specified
       if (!is.null(input$max_pathways) && nrow(nes_matrix) > input$max_pathways) {
-        nes_matrix <- nes_matrix[1:input$max_pathways, , drop = FALSE]
+        nes_matrix  <- nes_matrix[1:input$max_pathways,  , drop = FALSE]
         padj_matrix <- padj_matrix[1:input$max_pathways, , drop = FALSE]
       }
       
       list(
-        nes_matrix = nes_matrix,
-        padj_matrix = padj_matrix,
-        nes_df = nes_df %>% filter(pathway %in% sig_pathways),
+        nes_matrix    = nes_matrix,
+        padj_matrix   = padj_matrix,
+        nes_df        = nes_df %>% filter(pathway %in% sig_pathways),
         fgsea_results = fgsea_results
       )
       
-    }, error = function(e) {
-      showNotification(paste("Error running multi-contrast GSEA:", e$message), type = "error")
-      NULL
-    })
+    }, error = handle_compare_gsea_error)
   })
   
-  #==============================
-  # Reactive: Leading Edge Analysis for Selected Pathway
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Leading Edge Analysis for Selected Pathway #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   leading_edge_data <- reactive({
     req(compare_gsea_data(), input$selected_pathway_compare)
     
     tryCatch({
       fgsea_results <- compare_gsea_data()$fgsea_results
-      pathway_name <- input$selected_pathway_compare
+      pathway_name  <- input$selected_pathway_compare
       
-      # Extract leading edge genes for each contrast
       leading_edge_list <- map(
         names(fgsea_results),
         ~ {
@@ -522,14 +507,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
           le_genes <- res$leadingEdge[[1]]
           
           tibble(
-            contrast = .x,
-            gene = le_genes,
+            contrast        = .x,
+            gene            = le_genes,
             in_leading_edge = TRUE
           )
         }
       )
       
-      # Combine all contrasts
       le_df <- bind_rows(leading_edge_list)
       
       if (nrow(le_df) == 0) {
@@ -537,61 +521,52 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      # Create presence/absence matrix
       le_matrix <- le_df %>%
         mutate(present = 1) %>%
         pivot_wider(names_from = contrast, values_from = present, values_fill = 0) %>%
         column_to_rownames("gene") %>%
         select(-in_leading_edge)
       
-      # Calculate overlap statistics
-      all_genes <- unique(le_df$gene)
-      contrasts <- names(fgsea_results)
+      all_genes  <- unique(le_df$gene)
+      contrasts  <- names(fgsea_results)
+      genes_all  <- rownames(le_matrix)[rowSums(le_matrix) == length(contrasts)]
       
-      genes_all <- rownames(le_matrix)[rowSums(le_matrix) == length(contrasts)]
-      
-      # Genes unique to each contrast
       genes_unique <- map(contrasts, ~ {
         genes_in_contrast <- le_df %>% filter(contrast == .x) %>% pull(gene)
-        genes_in_others <- le_df %>% filter(contrast != .x) %>% pull(gene) %>% unique()
+        genes_in_others   <- le_df %>% filter(contrast != .x) %>% pull(gene) %>% unique()
         setdiff(genes_in_contrast, genes_in_others)
       }) %>% set_names(contrasts)
       
       overlap_stats <- list(
-        total_genes = length(all_genes),
-        genes_in_all = length(genes_all),
-        genes_in_any = length(all_genes),
+        total_genes    = length(all_genes),
+        genes_in_all   = length(genes_all),
+        genes_in_any   = length(all_genes),
         genes_in_all_list = genes_all,
-        genes_unique = genes_unique
+        genes_unique   = genes_unique
       )
       
-      # Convert to upset format
       upset_df <- le_matrix %>%
         as.data.frame() %>%
         rownames_to_column("gene") %>%
         mutate(across(-gene, ~ as.logical(.)))
       
       list(
-        leading_edge_df = le_df,
+        leading_edge_df     = le_df,
         leading_edge_matrix = le_matrix,
-        upset_df = upset_df,
-        overlap_stats = overlap_stats
+        upset_df            = upset_df,
+        overlap_stats       = overlap_stats
       )
       
-    }, error = function(e) {
-      showNotification(paste("Error extracting leading edge:", e$message), type = "error")
-      NULL
-    })
+    }, error = handle_leading_edge_error)
   })
   
-  #==============================
-  # Reactive: GESECA Analysis
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: GESECA Analysis #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   geseca_result <- reactive({
     req(state$se_obj())
     
     tryCatch({
-      # Get gene sets based on organism
       if (!is.null(organism()) && organism() == "Bacteria") {
         req(input$bacterial_geneset_source_compare, state$annotation_df())
         pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source_compare)
@@ -613,7 +588,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      # Get VST-transformed matrix
       vst_matrix <- assays(state$se_obj())[["vst"]]
       
       if (is.null(vst_matrix)) {
@@ -621,28 +595,25 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      # Run GESECA 
       gesecaRes <- geseca(
         pathways = pathways_list,
-        E = vst_matrix,
-        minSize = 15,
-        maxSize = 500
+        E        = vst_matrix,
+        minSize  = 15,
+        maxSize  = 500
       ) %>%
         arrange(padj, pval)
       
-      # Select top pathways by pctVar
       topPathways <- gesecaRes %>%
         filter(padj < 0.05) %>%
         arrange(desc(abs(pctVar))) %>%
         slice_head(n = 20) %>%
         pull(pathway)
       
-      # Generate table plot (only if there are significant pathways)
       tableplot <- if (length(topPathways) > 0) {
         plotGesecaTable(
           gesecaRes = gesecaRes,
-          pathways = pathways_list[topPathways], 
-          E = vst_matrix
+          pathways  = pathways_list[topPathways], 
+          E         = vst_matrix
         )
       } else {
         NULL
@@ -650,20 +621,22 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       
       list(tableplot = tableplot, gesecaRes = gesecaRes, vst_matrix = vst_matrix, pathways_list = pathways_list)
       
-    }, error = function(e) {
-      showNotification(paste("Error running GESECA:", e$message), type = "error")
-      NULL
-    })
+    }, error = handle_geseca_error)
   })
   
-  #==============================
-  # Output: Heatmap of Top DE Genes Across All Contrasts
-  #==============================
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 4: OUTPUT RENDERING ####
+  # Display tables, plots, and interactive visualizations
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Expression Heatmap #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$heatmapPlot <- renderPlot({
     req(compare_data(), state$se_obj())
     req(input$top_n, input$viridis_palette)
     
-    # Get all genes from the compare_data upset df (already filtered by contrasts + cutoffs)
     all_genes <- compare_data()$Geneid
     
     if (length(all_genes) == 0) {
@@ -672,7 +645,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       return()
     }
     
-    # Get log2FC for these genes to rank them
     top_genes <- state$de_df() %>%
       filter(
         Geneid %in% all_genes,
@@ -696,19 +668,19 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     Heatmap(
       scale(vsd_mat),
       col = viridis(100, option = input$viridis_palette),
-      column_names_gp = grid::gpar(fontsize = 12),
-      row_names_gp = grid::gpar(fontsize = 10),
+      column_names_gp    = grid::gpar(fontsize = 12),
+      row_names_gp       = grid::gpar(fontsize = 10),
       heatmap_legend_param = list(title = "Z-scores"),
-      cluster_rows = TRUE,
-      cluster_columns = TRUE,
-      show_row_dend = TRUE,
-      show_column_dend = TRUE
+      cluster_rows       = TRUE,
+      cluster_columns    = TRUE,
+      show_row_dend      = TRUE,
+      show_column_dend   = TRUE
     )
   })
   
-  #==============================
-  # Output: DEGs Upset plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: DEG Overlap UpSet Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareUpsetPlot <- renderPlot({
     req(compare_data())
     
@@ -723,21 +695,20 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         )
       ),
       themes = upset_default_themes(
-        text = element_text(size = 16),       # general text
-        axis.title = element_text(size = 16), # axis titles
-        axis.text = element_text(size = 14)   # axis labels
+        text       = element_text(size = 16),
+        axis.title = element_text(size = 16),
+        axis.text  = element_text(size = 14)
       )
     )
   })
   
-  #==============================
-  # Output: DEGs Comparison Table
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: DEG Comparison Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareTable <- renderDT(
     {
       req(compare_table_data())
       
-      # Display table (simplified)
       df_display <- compare_table_data()
       id_cols    <- intersect(c("Geneid", "symbol"), colnames(df_display))
       lfc_cols   <- setdiff(colnames(df_display), id_cols)
@@ -771,58 +742,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     server = FALSE
   )
   
-  #==============================
-  # Download Handler: Full annotations with user's filter
-  #==============================
-  output$downloadCompareTableFull <- downloadHandler(
-    filename = function() {
-      file_base <- get_download_filename(input, state)
-      
-      contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
-        paste(input$compare_contrasts, collapse = "-")
-      } else {
-        "contrasts"
-      }
-      contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
-      
-      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
-      
-      paste(file_base, contrasts_str, fc_str, "full.csv", sep = "__")
-    },
-    content = function(file) {
-      req(input$compareTable_rows_all)
-      
-      # Get full export data
-      full_data <- compare_table_export()
-      
-      # Get filtered row indices from DT
-      filtered_indices <- input$compareTable_rows_all
-      
-      # Get the display data to match filtering
-      display_data <- compare_table_data()
-      
-      # Extract Geneids from filtered rows
-      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
-      
-      # Filter full data to match user's selection
-      filtered_full <- full_data %>%
-        filter(Geneid %in% filtered_geneids)
-      
-      write.csv(filtered_full, file, row.names = FALSE)
-    }
-  )
-  
-  #==============================
-  # Output: GSEA Heatmap
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GSEA Heatmap #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareGSEAPlot <- renderPlot({
     req(compare_gsea_data())
     
-    nes_mat <- compare_gsea_data()$nes_matrix
+    nes_mat  <- compare_gsea_data()$nes_matrix
     padj_mat <- compare_gsea_data()$padj_matrix
     
-    # Truncate pathway names if needed
     original_names <- rownames(nes_mat)
     if (!is.null(input$pathway_name_length) && input$pathway_name_length > 0) {
       display_names <- ifelse(
@@ -830,72 +758,58 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         paste0(substr(original_names, 1, input$pathway_name_length), "..."),
         original_names
       )
-      rownames(nes_mat) <- display_names
+      rownames(nes_mat)  <- display_names
       rownames(padj_mat) <- display_names
     }
     
-    # Create significance markers as text matrix
     sig_text <- matrix("", nrow = nrow(padj_mat), ncol = ncol(padj_mat))
     sig_text[padj_mat < 0.05] <- "*"
     
-    # Create color function
     col_fun <- circlize::colorRamp2(
       c(-3, 0, 3),
       c("#009ad1", "#fefbea", "#AD1457")
     )
     
-    # Calculate dynamic font size based on number of pathways
-    n_pathways <- nrow(nes_mat)
+    n_pathways   <- nrow(nes_mat)
     row_fontsize <- max(8, min(12, 400 / n_pathways))
+    n_contrasts  <- ncol(nes_mat)
     
-    # Calculate column width based on number of contrasts
-    n_contrasts <- ncol(nes_mat)
-    col_width <- unit(15 / n_contrasts, "cm")  # Total 15cm divided among contrasts
-    
-    # Create heatmap
     ht <- Heatmap(
       nes_mat,
       name = "NES",
-      col = col_fun,
+      col  = col_fun,
       
-      # Column width control
-      width = unit(15, "cm"),
-      column_gap = unit(2, "mm"),
+      width        = unit(15, "cm"),
+      column_gap   = unit(2, "mm"),
       
-      # Clustering
-      cluster_rows = FALSE,
+      cluster_rows    = FALSE,
       cluster_columns = FALSE,
-      show_row_dend = FALSE,
+      show_row_dend   = FALSE,
       show_column_dend = FALSE,
       
-      # Labels
-      row_names_side = "left",
-      row_names_gp = grid::gpar(fontsize = row_fontsize),
+      row_names_side      = "left",
+      row_names_gp        = grid::gpar(fontsize = row_fontsize),
       row_names_max_width = unit(12, "cm"),
-      column_names_gp = grid::gpar(fontsize = 11),
-      column_names_rot = 45,
+      column_names_gp     = grid::gpar(fontsize = 11),
+      column_names_rot    = 45,
       column_names_centered = FALSE,
       
-      # Cell annotations for significance
       cell_fun = function(j, i, x, y, width, height, fill) {
         if (sig_text[i, j] == "*") {
           grid::grid.text("*", x, y, gp = grid::gpar(fontsize = 14, col = "black"))
         }
       },
       
-      # Legend
       heatmap_legend_param = list(
-        title = "NES",
-        direction = "vertical",
+        title          = "NES",
+        direction      = "vertical",
         title_position = "topcenter",
-        legend_height = unit(4, "cm")
+        legend_height  = unit(4, "cm")
       ),
       
-      # Borders
-      border = TRUE,
+      border  = TRUE,
       rect_gp = grid::gpar(col = "grey60", lwd = 0.5),
       
-      # Title
       column_title = if (!is.null(organism()) && organism() == "Bacteria") {
         paste0("GSEA: ", input$bacterial_geneset_source_compare, " (FDR < 0.05)")
       } else {
@@ -910,14 +824,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     draw(ht, heatmap_legend_side = "right")
   })
   
-  #==============================
-  # Output: GSEA Comparison Table
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GSEA Comparison Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareGSEATable <- renderDT(
     {
       req(compare_gsea_data())
       
-      # Prepare file name
       file_base <- get_download_filename(input, state)
       
       contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
@@ -927,7 +840,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       }
       contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
       
-      # Get gene set source name (handles both Human and Bacteria)
       if (!is.null(organism()) && organism() == "Bacteria") {
         gs_str <- if (!is.null(input$bacterial_geneset_source_compare)) {
           gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source_compare)
@@ -939,15 +851,14 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       }
       file_name <- paste(file_base, contrasts_str, "GSEA", gs_str, sep = "__")
       
-      # Prepare wide format table with NES values
       df <- compare_gsea_data()$nes_df %>%
         mutate(
-          padj_fmt = formatC(padj, format = "e", digits = 2),
+          padj_fmt    = formatC(padj, format = "e", digits = 2),
           NES_display = paste0(round(NES, 2), " (", padj_fmt, ")")
         ) %>%
         select(pathway, contrast, NES_display) %>%
         pivot_wider(
-          names_from = contrast,
+          names_from  = contrast,
           values_from = NES_display,
           values_fill = "NS"
         )
@@ -955,8 +866,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       datatable(
         df,
         extensions = 'Buttons',
-        rownames = FALSE,
-        filter = 'top',
+        rownames   = FALSE,
+        filter     = 'top',
         options = list(
           pageLength = 20,
           scrollX = TRUE,
@@ -975,16 +886,16 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     server = FALSE
   )
   
-  #==============================
-  # Output: Leading Edge UpSet Plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Leading Edge UpSet Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$leadingEdgeUpsetPlot <- renderPlot({
     req(leading_edge_data())
     
     upset(
       leading_edge_data()$upset_df,
       colnames(leading_edge_data()$leading_edge_matrix),
-      name = "Leading Edge Genes",
+      name     = "Leading Edge Genes",
       min_size = 1,
       base_annotations = list(
         'Intersection size' = intersection_size(
@@ -992,16 +903,16 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         )
       ),
       themes = upset_default_themes(
-        text = element_text(size = 16),
+        text       = element_text(size = 16),
         axis.title = element_text(size = 16),
-        axis.text = element_text(size = 14)
+        axis.text  = element_text(size = 14)
       )
     )
   })
   
-  #==============================
-  # Output: Leading Edge Summary
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Leading Edge Summary #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$leadingEdgeSummary <- renderText({
     req(leading_edge_data())
     
@@ -1009,7 +920,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     
     summary_text <- paste0(
       "Total Leading Edge Genes: ", stats$total_genes, "\n",
-      "Genes in ALL Contrasts: ", stats$genes_in_all, "\n\n",
+      "Genes in ALL Contrasts: ",   stats$genes_in_all, "\n\n",
       "Genes Unique to Each Contrast:\n"
     )
     
@@ -1020,25 +931,21 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     paste0(summary_text, paste(unique_counts, collapse = "\n"))
   })
   
-  #==============================
-  # Output: Leading Edge Table
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Leading Edge Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$leadingEdgeTable <- renderDT(
     {
       req(leading_edge_data(), state$de_df())
       
-      # Prepare file name
-      file_base <- get_download_filename(input, state)
+      file_base    <- get_download_filename(input, state)
+      pathway_str  <- gsub("[^A-Za-z0-9._-]+", "__", input$selected_pathway_compare)
+      file_name    <- paste(file_base, pathway_str, "LeadingEdge", sep = "__")
       
-      pathway_str <- gsub("[^A-Za-z0-9._-]+", "__", input$selected_pathway_compare)
-      file_name <- paste(file_base, pathway_str, "LeadingEdge", sep = "__")
-      
-      # Get gene symbols from DE results
       gene_symbols <- state$de_df() %>%
         select(Geneid, symbol) %>%
         distinct()
       
-      # Create display table with presence markers and symbols
       df <- leading_edge_data()$leading_edge_matrix %>%
         as.data.frame() %>%
         rownames_to_column("gene") %>%
@@ -1049,8 +956,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       datatable(
         df,
         extensions = 'Buttons',
-        rownames = FALSE,
-        filter = 'top',
+        rownames   = FALSE,
+        filter     = 'top',
         options = list(
           pageLength = 20,
           scrollX = TRUE,
@@ -1069,9 +976,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     server = FALSE
   )
   
-  #==============================
-  # Output: GESECA Table Plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GESECA Table Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$gesecaTablePlot <- renderPlot({
     req(geseca_result())
     
@@ -1083,9 +990,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     }
   })
   
-  #==============================
-  # Output: GESECA Results Table
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GESECA Results Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$gesecaResultsTable <- renderDT(
     {
       req(geseca_result())
@@ -1104,15 +1011,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       
       df <- geseca_result()$gesecaRes %>%
         mutate(
-          across(c(pval, padj), ~ formatC(.x, format = "e", digits = 2)),
-          across(c(pctVar, log2err), ~ round(.x, 3))
+          across(c(pval, padj),       ~ formatC(.x, format = "e", digits = 2)),
+          across(c(pctVar, log2err),  ~ round(.x, 3))
         ) 
       
       datatable(
         df,
         extensions = 'Buttons',
-        rownames = FALSE,
-        filter = 'top',
+        rownames   = FALSE,
+        filter     = 'top',
         options = list(
           pageLength = 15,
           scrollX = TRUE,
@@ -1131,9 +1038,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     server = FALSE
   )
   
-  #==============================
-  # Output: GESECA Co-regulation Plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: GESECA Co-regulation Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$CoregulationPlot <- renderPlot({
     req(geseca_result(), input$selected_pathway_geseca)
     
@@ -1146,7 +1053,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return()
       }
       
-      # Get color and sort variables
       color_variable <- if (!is.null(input$geseca_color_var) && nzchar(input$geseca_color_var)) {
         input$geseca_color_var
       } else {
@@ -1159,31 +1065,94 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         colnames(colData(state$se_obj()))[1]
       }
       
-      # Extract and sort data
       color_conditions <- colData(state$se_obj())[[color_variable]]
-      sort_conditions <- colData(state$se_obj())[[sort_variable]]
+      sort_conditions  <- colData(state$se_obj())[[sort_variable]]
       
-      sample_order <- order(sort_conditions)
-      vst_sorted <- geseca_result()$vst_matrix[, sample_order]
+      sample_order            <- order(sort_conditions)
+      vst_sorted              <- geseca_result()$vst_matrix[, sample_order]
       color_conditions_sorted <- color_conditions[sample_order]
       
-      # Create plot
       plotCoregulationProfile(
         pathway_genes, 
         vst_sorted, 
         conditions = color_conditions_sorted,
-        scale = TRUE
+        scale      = TRUE
       ) +
         labs(title = input$selected_pathway_geseca) +
         theme_minimal() +
         theme(
-          plot.title = element_text(size = 10),
+          plot.title  = element_text(size = 10),
           axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
         )
       
-    }, error = function(e) {
-      plot.new()
-      text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
-    })
+    }, error = handle_coregulation_plot_error)
   })
+  
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 5: DOWNLOAD HANDLERS ####
+  # Manage file downloads with proper naming and filtering
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download Handler: DEG Comparison Table (Full Annotations) #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadCompareTableFull <- downloadHandler(
+    filename = function() {
+      file_base <- get_download_filename(input, state)
+      
+      contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
+        paste(input$compare_contrasts, collapse = "-")
+      } else {
+        "contrasts"
+      }
+      contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
+      
+      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+      fc_str  <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
+      
+      paste(file_base, contrasts_str, fc_str, "full.csv", sep = "__")
+    },
+    content = function(file) {
+      req(input$compareTable_rows_all)
+      
+      full_data       <- compare_table_export()
+      filtered_indices <- input$compareTable_rows_all
+      display_data    <- compare_table_data()
+      
+      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
+      
+      filtered_full <- full_data %>%
+        filter(Geneid %in% filtered_geneids)
+      
+      write.csv(filtered_full, file, row.names = FALSE)
+    }
+  )
+  
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 6: ERROR HANDLERS ####
+  # Helper functions for error management
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  handle_compare_gsea_error <- \(e) {
+    showNotification(paste("Error running multi-contrast GSEA:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_leading_edge_error <- \(e) {
+    showNotification(paste("Error extracting leading edge:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_geseca_error <- \(e) {
+    showNotification(paste("Error running GESECA:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_coregulation_plot_error <- \(e) {
+    plot.new()
+    text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
+  }
+  
 }
