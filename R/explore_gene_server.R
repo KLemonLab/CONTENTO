@@ -1,20 +1,36 @@
 explore_gene_server <- function(input, output, session, state, organism) {
   
-  #==============================
-  # UI: Update gene plot selectInputs when DDS loaded
-  #==============================
-  observe({
-    req(state$se_obj())
-    col_vars <- colnames(colData(state$se_obj()))
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 1: UI RENDERING ####
+  # Dynamic UI controls that respond to user inputs and state changes
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Conditional Tab Layout #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$geneSubTabs <- renderUI({
+    tabs <- list(
+      tabPanel("Gene Info", DTOutput("geneDetails")),
+      tabPanel("Expression Plot", 
+               tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
+               plotOutput("genePlot", height = "600px")),
+      tabPanel("Gene Table", DTOutput("geneContrasts"))
+    )
     
-    updateSelectInput(session, "x_col", choices = col_vars)
-    updateSelectInput(session, "color_col", choices = col_vars)
-    updateSelectInput(session, "shape_col", choices = col_vars)
+    if (!is.null(state$varpart_obj())) {
+      tabs <- append(tabs, list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px"))))
+    }
+    
+    if (!is.null(organism()) && organism() == "Bacteria") {
+      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", girafeOutput("neighbourhoodPlot", height = "600px"))))
+    }
+    
+    do.call(tabsetPanel, tabs)
   })
   
-  #==============================
-  # UI: Update gene_select choices with symbol + Geneid
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Update Gene Select Choices #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   observe({
     req(state$de_df())
     
@@ -22,7 +38,6 @@ explore_gene_server <- function(input, output, session, state, organism) {
       select(Geneid, symbol) %>%
       distinct()
     
-    # Create lookup table: display "symbol [Geneid]", value = Geneid
     if ("symbol" %in% colnames(gene_df)) {
       choices_df <- gene_df %>%
         mutate(
@@ -45,9 +60,36 @@ explore_gene_server <- function(input, output, session, state, organism) {
                          selected = character(0))  # Start empty
   })
   
-  #==============================
-  # Reactive: Filter gene data and calculate DE based on global cutoffs
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Update Plot Variable Choices #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  observe({
+    req(state$se_obj())
+    col_vars <- colnames(colData(state$se_obj()))
+    
+    updateSelectInput(session, "x_col", choices = col_vars)
+    updateSelectInput(session, "color_col", choices = col_vars)
+    updateSelectInput(session, "shape_col", choices = col_vars)
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Contrast Dropdown for Neighbourhood Analysis #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$contrastSelectGene <- renderUI({
+    req(state$de_df())
+    contrast_choices <- unique(state$de_df()$contrast)
+    selectInput("contrast", "Select Contrast", choices = contrast_choices)
+  })
+  
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 2: DATA PROCESSING & FILTERING ####
+  # Reactive expressions that filter, transform, and prepare data for display
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: DE Filtered by User-Defined Cutoffs #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   selected_gene_data <- reactive({
     req(input$gene_select, state$de_df())
     
@@ -71,9 +113,15 @@ explore_gene_server <- function(input, output, session, state, organism) {
       )
   })
   
-  #==============================
-  # UI: Display gene symbol
-  #==============================
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 3: OUTPUT RENDERING ####
+  # Display tables, plots, and interactive visualizations
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Gene Symbol Text #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneSymbol <- renderText({
     req(input$gene_select, state$de_df())
     if (!"symbol" %in% colnames(state$de_df())) return(paste("Gene:", input$gene_select))
@@ -88,32 +136,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
     }
   })
   
-  #==============================
-  # UI: Conditional Sub-tabs
-  #==============================
-  output$geneSubTabs <- renderUI({
-    tabs <- list(
-      tabPanel("Gene Info", DTOutput("geneDetails")),
-      tabPanel("Expression Plot", 
-               tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
-               plotOutput("genePlot", height = "600px")),
-      tabPanel("Gene Table", DTOutput("geneContrasts"))
-    )
-    
-    if (!is.null(state$varpart_obj())) {
-      tabs <- append(tabs, list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px"))))
-    }
-    
-    if (!is.null(organism()) && organism() == "Bacteria") {
-      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", girafeOutput("neighbourhoodPlot", height = "600px"))))
-    }
-    
-    do.call(tabsetPanel, tabs)
-  })
-  
-  #==============================
-  # Output: Gene table Info
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Gene Info Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneDetails <- renderDT({
     req(input$gene_select)
     
@@ -142,19 +167,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
     )
   })
   
-  
-  #==============================
-  # UI: Contrast dropdown 
-  #==============================
-  output$contrastSelectGene <- renderUI({
-    req(state$de_df())
-    contrast_choices <- unique(state$de_df()$contrast)
-    selectInput("contrast", "Select Contrast", choices = contrast_choices)
-  })
-  
-  #==============================
-  # Output: Gene expression plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Gene Expression Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$genePlot <- renderPlot({
     req(input$gene_select, input$x_col, state$se_obj())
     vst_mat <- assay(state$se_obj(), "vst")
@@ -184,9 +199,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
       )
   })
   
-  #==============================
-  # Output: Gene table for all contrasts
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Gene Contrasts Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneContrasts <- renderDT({
     req(selected_gene_data())
     
@@ -216,9 +231,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
     dt
   })
   
-  #==============================
-  # Output: Variance decomposition plot
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Variance Decomposition Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$varPartPlot <- renderPlot({
     req(input$gene_select, state$varpart_obj())
     gene_id <- input$gene_select
@@ -240,9 +255,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
       )
   })
   
-  #==============================
-  # Output: Neighbourhood Analysis
-  #==============================
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Neighbourhood Analysis #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$neighbourhoodPlot <- renderGirafe({
     req(state$de_df(), input$contrast, input$gene_select, input$neigh_window)
     
