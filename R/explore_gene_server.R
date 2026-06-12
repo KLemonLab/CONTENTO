@@ -6,29 +6,6 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Conditional Tab Layout #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$geneSubTabs <- renderUI({
-    tabs <- list(
-      tabPanel("Gene Info", DTOutput("geneDetails")),
-      tabPanel("Expression Plot", 
-               tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
-               plotOutput("genePlot", height = "600px")),
-      tabPanel("Gene Table", DTOutput("geneContrasts"))
-    )
-    
-    if (!is.null(state$varpart_obj())) {
-      tabs <- append(tabs, list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px"))))
-    }
-    
-    if (!is.null(organism()) && organism() == "Bacteria") {
-      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", girafeOutput("neighbourhoodPlot", height = "600px"))))
-    }
-    
-    do.call(tabsetPanel, tabs)
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Update Gene Select Choices #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   observe({
@@ -56,10 +33,41 @@ explore_gene_server <- function(input, output, session, state, organism) {
     
     updateSelectizeInput(session, "gene_select", 
                          choices = choice_vec, 
-                         server = TRUE,  # This enables server-side filtering
-                         selected = character(0))  # Start empty
+                         server = TRUE,  
+                         selected = character(0))  
   })
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Conditional Tab Layout #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$geneSubTabs <- renderUI({
+    tabs <- list(
+      tabPanel("Gene Info", 
+               DTOutput("geneDetails")),
+      tabPanel("Expression Plot", 
+               selectInput("x_col", "X-axis", choices = NULL),
+               selectInput("color_col", "Color", choices = NULL),
+               selectInput("shape_col", "Shape", choices = NULL),
+               tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
+               plotOutput("genePlot", height = "600px")),
+      tabPanel("Gene Table", 
+               DTOutput("geneContrasts"))
+    )
+    
+    if (!is.null(state$varpart_obj())) {
+      tabs <- append(tabs, list(tabPanel("Variance Decomposition", plotOutput("varPartPlot", height = "600px"))))
+    }
+    
+    if (!is.null(organism()) && organism() == "Bacteria") {
+      tabs <- append(tabs, list(tabPanel("Neighbourhood Analysis", 
+                                         uiOutput("contrastSelectGene"),
+                                         numericInput("neigh_window", "Neighbourhood window (nt)", value = 10000, step = 100, min = 0),
+                                         girafeOutput("neighbourhoodPlot", height = "600px"))))
+    }
+    
+    do.call(tabsetPanel, c(list(type = "pills"), tabs))
+  })
+
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Update Plot Variable Choices #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -67,9 +75,41 @@ explore_gene_server <- function(input, output, session, state, organism) {
     req(state$se_obj())
     col_vars <- colnames(colData(state$se_obj()))
     
-    updateSelectInput(session, "x_col", choices = col_vars)
-    updateSelectInput(session, "color_col", choices = col_vars)
-    updateSelectInput(session, "shape_col", choices = col_vars)
+    selected_x <- if (!is.null(input$x_col) && input$x_col %in% col_vars) {
+      input$x_col
+    } else if ("condition" %in% col_vars) {
+      "condition"
+    } else {
+      col_vars[1]
+    }
+    
+    selected_color <- if (!is.null(input$color_col) && input$color_col %in% col_vars) {
+      input$color_col
+    } else if ("condition" %in% col_vars) {
+      "condition"
+    } else {
+      col_vars[1]
+    }
+    
+    selected_shape <- if (!is.null(input$shape_col) && input$shape_col %in% col_vars) {
+      input$shape_col
+    } else if ("exp" %in% col_vars) {
+      "exp"
+    } else {
+      col_vars[1]
+    }
+    
+    updateSelectInput(session, "x_col",
+                      choices = col_vars,
+                      selected = selected_x)
+    
+    updateSelectInput(session, "color_col",
+                      choices = col_vars,
+                      selected = selected_color)
+    
+    updateSelectInput(session, "shape_col",
+                      choices = col_vars,
+                      selected = selected_shape)
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -193,10 +233,11 @@ explore_gene_server <- function(input, output, session, state, organism) {
       n_colors <- length(unique(meta[[input$color_col]]))
       palette_colors <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
       
-      ggplot(meta, aes_string(x = input$x_col, y = "expression")) +
-        geom_boxplot(aes_string(color = input$color_col), outliers = FALSE, show.legend = FALSE) +
-        geom_jitter(aes_string(color = input$color_col, shape = input$shape_col),
-                    width = 0.2, size = 3, alpha = 0.9) +
+      ggplot(meta, aes(.data[[input$x_col]], expression)) +
+        geom_boxplot(aes(color = .data[[input$color_col]]), 
+                     outliers = FALSE, show.legend = FALSE) +
+        geom_jitter(aes(color = .data[[input$color_col]], shape = .data[[input$shape_col]], 
+                        width = 0.2, size = 3, alpha = 0.9)) +
         scale_color_manual(values = palette_colors) +
         labs(y = "VST expression", x = input$x_col) +
         theme_bw(base_size = 20) +

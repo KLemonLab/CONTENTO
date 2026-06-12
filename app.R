@@ -153,6 +153,7 @@ ui <- dashboardPage(
               )
       ),
       
+      
       ## ---- Explore by Contrast -----
       tabItem(tabName = "contrast",
               fluidRow(
@@ -195,6 +196,7 @@ ui <- dashboardPage(
               )
       ),
       
+      
       ## ---- Compare Contrast -----
       tabItem(tabName = "compare",
               fluidRow(
@@ -216,27 +218,52 @@ ui <- dashboardPage(
               )
       ),
       
+      
       ## ---- Explore by Gene -----
       tabItem(tabName = "gene",
               fluidRow(
-                box(title = "Controls", width = 3, status = "info", collapsible = TRUE,
-                    selectizeInput("gene_select", 
-                                   "Search Gene (Symbol or ID):", 
-                                   choices = NULL,  
-                                   options = list(
-                                     placeholder = 'Start typing gene name or ID...',
-                                     maxOptions = 20,
-                                     loadThrottle = 200
-                                   )),
-                    selectInput("x_col", "X-axis", choices = NULL),
-                    selectInput("color_col", "Color", choices = NULL),
-                    selectInput("shape_col", "Shape", choices = NULL),
-                    uiOutput("contrastSelectGene"),
-                    numericInput("neigh_window", "Neighbourhood window (nt)", value = 10000, step = 100, min = 0)
-                ),
-                
-                box(title = "Explore Results by Gene", width = 9, status = "primary", collapsible = TRUE,
-                    uiOutput("geneSubTabs")
+                box(
+                  width = 12, status = "info", solidHeader = TRUE,
+                  title = tagList(icon("dna"), "Explore by Gene"),
+                  
+                  fluidRow(
+                    # LEFT: description
+                    column(
+                      width = 8,
+                      div(
+                        span("Choose a gene to explore explore expression and annotations."),
+                        tags$ul(
+                          style = "margin: 5px 0 0 15px; padding:0;",
+                          tags$li("Adjust plotting variables to customize visualization of gene expression across samples"),
+                          tags$li("Review gene-level statistics across contrasts, including DE results and variance partitioning (if available)"),
+                          tags$li("Examine genomic neighbourhood and gene context in bacterial datasets")
+                        )
+                      )
+                    ),
+                    
+                    # RIGHT: selector
+                    column(
+                      width = 4,
+                      div(
+                        style = "padding-left:10px;",
+                        selectizeInput("gene_select", 
+                                       "Select Gene (Search by GeneID of Symbol selected column):", 
+                                       choices = NULL,  
+                                       options = list(
+                                         placeholder = 'Start typing gene name or ID...',
+                                         maxOptions = 20,
+                                         loadThrottle = 200
+                                       )),
+                      )
+                    )
+                  )
+                )
+              ),
+              
+              fluidRow(
+                box(
+                  width = 12, status = "primary", solidHeader = TRUE,
+                  uiOutput("geneSubTabs")
                 )
               )
       )
@@ -245,6 +272,7 @@ ui <- dashboardPage(
 )
 
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
+
 # ============================== Server ====================================
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 

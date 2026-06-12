@@ -133,7 +133,7 @@ load_files_server <- function(input, output, session, state) {
   build_symbol_select_ui <- function(annot_cols, primary_sel) {
     tagList(
       selectInput("symbolPrimaryCol",
-                  "Select symbol column (Geneid used as fallback):",
+                  "Select column used as Symbol (Geneid used as fallback):",
                   choices  = annot_cols,
                   selected = primary_sel)
     )
