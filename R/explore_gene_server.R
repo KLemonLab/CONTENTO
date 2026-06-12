@@ -96,23 +96,29 @@ explore_gene_server <- function(input, output, session, state, organism) {
     lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
     padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
     
-    df <- state$de_df() %>%
-      filter(Geneid == input$gene_select)
-    
-    if (!"log2FC" %in% colnames(df)) df$log2FC <- NA_real_
-    if (!"padj"   %in% colnames(df)) df$padj   <- NA_real_
-    
-    df %>%
-      mutate(
-        regulated = case_when(
-          !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
-          !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
-          TRUE ~ NA_character_
-        ),
-        DE = !is.na(regulated)
-      )
+    tryCatch({
+      df <- state$de_df() %>%
+        filter(Geneid == input$gene_select)
+      
+      # Validate required columns exist
+      required_cols <- c("log2FC", "padj")
+      missing_cols <- setdiff(required_cols, colnames(df))
+      
+      if (length(missing_cols) > 0) {
+        stop("SE object is missing required DE statistics: ", paste(missing_cols, collapse = ", "))
+      }
+      
+      df %>%
+        mutate(
+          regulated = case_when(
+            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
+            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
+            TRUE ~ NA_character_
+          ),
+          DE = !is.na(regulated)
+        )
+    }, error = handle_gene_filter_error)
   })
-  
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 3: OUTPUT RENDERING ####
@@ -172,31 +178,34 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$genePlot <- renderPlot({
     req(input$gene_select, input$x_col, state$se_obj())
-    vst_mat <- assay(state$se_obj(), "vst")
     
-    validate(
-      need(input$gene_select %in% rownames(vst_mat), "Gene not found in dataset")
-    )
-    
-    expr_values <- vst_mat[input$gene_select, ]
-    meta <- as.data.frame(colData(state$se_obj()))
-    meta$expression <- expr_values
-    
-    n_colors <- length(unique(meta[[input$color_col]]))
-    palette_colors <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
-    
-    ggplot(meta, aes_string(x = input$x_col, y = "expression")) +
-      geom_boxplot(aes_string(color = input$color_col), outliers = FALSE, show.legend = FALSE) +
-      geom_jitter(aes_string(color = input$color_col, shape = input$shape_col),
-                  width = 0.2, size = 3, alpha = 0.9) +
-      scale_color_manual(values = palette_colors) +
-      labs(y = "VST expression", x = input$x_col) +
-      theme_bw(base_size = 20) +
-      theme(
-        axis.text = element_text(angle = 45, hjust = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank()
-      )
+    tryCatch({
+      vst_mat <- assay(state$se_obj(), "vst")
+      
+      if (!input$gene_select %in% rownames(vst_mat)) {
+        stop("Gene not found in dataset")
+      }
+      
+      expr_values <- vst_mat[input$gene_select, ]
+      meta <- as.data.frame(colData(state$se_obj()))
+      meta$expression <- expr_values
+      
+      n_colors <- length(unique(meta[[input$color_col]]))
+      palette_colors <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
+      
+      ggplot(meta, aes_string(x = input$x_col, y = "expression")) +
+        geom_boxplot(aes_string(color = input$color_col), outliers = FALSE, show.legend = FALSE) +
+        geom_jitter(aes_string(color = input$color_col, shape = input$shape_col),
+                    width = 0.2, size = 3, alpha = 0.9) +
+        scale_color_manual(values = palette_colors) +
+        labs(y = "VST expression", x = input$x_col) +
+        theme_bw(base_size = 20) +
+        theme(
+          axis.text = element_text(angle = 45, hjust = 1),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank()
+        )
+    }, error = handle_gene_plot_error)
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -261,96 +270,119 @@ explore_gene_server <- function(input, output, session, state, organism) {
   output$neighbourhoodPlot <- renderGirafe({
     req(state$de_df(), input$contrast, input$gene_select, input$neigh_window)
     
-    de <- state$de_df()
-    
-    # Find central gene
-    central_gene <- de %>% 
-      filter(contrast == input$contrast, Geneid == input$gene_select)
-    req(nrow(central_gene) >= 1)
-    
-    # Define genomic window
-    window_start <- central_gene$start[1] - input$neigh_window
-    window_end   <- central_gene$end[1] + input$neigh_window
-    
-    # Filter genes in window
-    plot_df <- de %>%
-      filter(contrast == input$contrast) %>%
-      filter(start <= window_end & end >= window_start) %>%
-      mutate(
-        is_central = Geneid == input$gene_select,
-        tooltip = paste0(
-          "GeneID: ", Geneid, "<br>",
-          "Symbol: ", symbol, "<br>",
-          "log2FC: ", round(log2FC, 2)
+    tryCatch({
+      de <- state$de_df()
+      
+      # Find central gene
+      central_gene <- de %>% 
+        filter(contrast == input$contrast, Geneid == input$gene_select)
+      req(nrow(central_gene) >= 1)
+      
+      # Define genomic window
+      window_start <- central_gene$start[1] - input$neigh_window
+      window_end   <- central_gene$end[1] + input$neigh_window
+      
+      # Filter genes in window
+      plot_df <- de %>%
+        filter(contrast == input$contrast) %>%
+        filter(start <= window_end & end >= window_start) %>%
+        mutate(
+          is_central = Geneid == input$gene_select,
+          tooltip = paste0(
+            "GeneID: ", Geneid, "<br>",
+            "Symbol: ", symbol, "<br>",
+            "log2FC: ", round(log2FC, 2)
+          )
         )
-      )
-    
-    # Assign tracks separately per strand
-    plot_df <- plot_df %>%
-      arrange(strand, start) %>%
-      group_by(strand) %>%
-      mutate(track = NA_integer_)
-    
-    for (s in c("+", "-")) {
-      strand_rows <- which(plot_df$strand == s)
-      tracks <- list()
-      for (i in strand_rows) {
-        placed <- FALSE
-        for (t in seq_along(tracks)) {
-          if (plot_df$start[i] > tracks[[t]]) {
-            plot_df$track[i] <- t
-            tracks[[t]] <- plot_df$end[i]
-            placed <- TRUE
-            break
+      
+      # Assign tracks separately per strand
+      plot_df <- plot_df %>%
+        arrange(strand, start) %>%
+        group_by(strand) %>%
+        mutate(track = NA_integer_)
+      
+      for (s in c("+", "-")) {
+        strand_rows <- which(plot_df$strand == s)
+        tracks <- list()
+        for (i in strand_rows) {
+          placed <- FALSE
+          for (t in seq_along(tracks)) {
+            if (plot_df$start[i] > tracks[[t]]) {
+              plot_df$track[i] <- t
+              tracks[[t]] <- plot_df$end[i]
+              placed <- TRUE
+              break
+            }
+          }
+          if (!placed) {
+            tracks[[length(tracks) + 1]] <- plot_df$end[i]
+            plot_df$track[i] <- length(tracks)
           }
         }
-        if (!placed) {
-          tracks[[length(tracks) + 1]] <- plot_df$end[i]
-          plot_df$track[i] <- length(tracks)
-        }
       }
-    }
-    
-    plot_df <- ungroup(plot_df) %>%
-      mutate(
-        strand = factor(strand, levels = c("+", "-"),
-                        labels = c("Forward", "Reverse")),
-        # Make track a factor with consistent levels
-        track = factor(track)
+      
+      plot_df <- ungroup(plot_df) %>%
+        mutate(
+          strand = factor(strand, levels = c("+", "-"),
+                          labels = c("Forward", "Reverse")),
+          # Make track a factor with consistent levels
+          track = factor(track)
+        )
+      
+      # Create ggplot with interactive rectangles
+      gg <- ggplot(plot_df) +
+        geom_rect_interactive(aes(
+          xmin = start, xmax = end,
+          ymin = as.numeric(track) - 0.4,
+          ymax = as.numeric(track) + 0.4,
+          fill = log2FC,
+          tooltip = tooltip
+        ), color = "black") +
+        scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+        labs(y = NULL, x = "Genomic Position", fill = "log2FC") +
+        facet_grid(strand ~ ., scales = "free_y", space = "free_y", drop = TRUE) +
+        theme_minimal() +
+        theme(
+          panel.grid = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          strip.background = element_rect(fill = "grey90", color = "black", size = 1),
+          strip.text = element_text(face = "bold", size = 12),
+          #panel.border = element_rect(color = "black", fill = NA, size = 1),
+          panel.spacing = unit(0.5, "lines")  
+        )
+      
+      # Render interactive plot with tooltips
+      girafe(
+        ggobj = gg,
+        options = list(
+          opts_tooltip(opacity = 0.9, offx = 10, offy = -10),
+          opts_sizing(rescale = TRUE)
+        )
       )
-    
-    # Create ggplot with interactive rectangles
-    gg <- ggplot(plot_df) +
-      geom_rect_interactive(aes(
-        xmin = start, xmax = end,
-        ymin = as.numeric(track) - 0.4,
-        ymax = as.numeric(track) + 0.4,
-        fill = log2FC,
-        tooltip = tooltip
-      ), color = "black") +
-      scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-      labs(y = NULL, x = "Genomic Position", fill = "log2FC") +
-      facet_grid(strand ~ ., scales = "free_y", space = "free_y", drop = TRUE) +
-      theme_minimal() +
-      theme(
-        panel.grid = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        strip.background = element_rect(fill = "grey90", color = "black", size = 1),
-        strip.text = element_text(face = "bold", size = 12),
-        #panel.border = element_rect(color = "black", fill = NA, size = 1),
-        panel.spacing = unit(0.5, "lines")  
-      )
-    
-    # Render interactive plot with tooltips
-    girafe(
-      ggobj = gg,
-      options = list(
-        opts_tooltip(opacity = 0.9, offx = 10, offy = -10),
-        opts_sizing(rescale = TRUE)
-      )
-    )
+    }, error = handle_neighbourhood_plot_error)
   })
+  
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 4: ERROR HANDLERS ####
+  # Helper functions for error management
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  handle_gene_filter_error <- \(e) {
+    showNotification(paste("Error filtering gene data:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_gene_plot_error <- \(e) {
+    showNotification(paste("Error creating expression plot:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_neighbourhood_plot_error <- \(e) {
+    showNotification(paste("Error creating neighbourhood plot:", e$message), type = "error")
+    NULL
+  }
   
 }

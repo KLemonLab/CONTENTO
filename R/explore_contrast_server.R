@@ -137,8 +137,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       df <- state$de_df() %>%
         filter(contrast == input$contrast)
       
-      if (!"log2FC" %in% colnames(df)) df$log2FC <- NA_real_
-      if (!"padj"   %in% colnames(df)) df$padj   <- NA_real_
+      # Validate required columns exist
+      required_cols <- c("log2FC", "padj")
+      missing_cols <- setdiff(required_cols, colnames(df))
+      
+      if (length(missing_cols) > 0) {
+        stop("SE object is missing required DE statistics: ", paste(missing_cols, collapse = ", "))
+      }
       
       df %>%
         mutate(
@@ -354,20 +359,22 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   output$volcanoPlot <- renderPlotly({
     req(selected_data())
     
-    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
-    
-    x_col <- if ("log2FC_shrunk" %in% colnames(selected_data())) "log2FC_shrunk" else "log2FC"
-    
-    gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
-      geom_point(aes(color = DE), alpha = 0.6) +
-      scale_color_manual(values = c("TRUE" = "red", "FALSE" = "gray"), guide = "none") +
-      geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed") +
-      geom_hline(yintercept = -log10(padj_cut), linetype = "dashed") +
-      labs(x = paste0("log2 Fold Change", if (x_col == "log2FC_shrunk") " (shrunken)" else ""), y = "-log10(FDR)") +
-      theme_minimal()
-    
-    ggplotly(gg, tooltip = "text")
+    tryCatch({
+      lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
+      padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
+      
+      x_col <- if ("log2FC_shrunk" %in% colnames(selected_data())) "log2FC_shrunk" else "log2FC"
+      
+      gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
+        geom_point(aes(color = DE), alpha = 0.6) +
+        scale_color_manual(values = c("TRUE" = "red", "FALSE" = "gray"), guide = "none") +
+        geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed") +
+        geom_hline(yintercept = -log10(padj_cut), linetype = "dashed") +
+        labs(x = paste0("log2 Fold Change", if (x_col == "log2FC_shrunk") " (shrunken)" else ""), y = "-log10(FDR)") +
+        theme_minimal()
+      
+      ggplotly(gg, tooltip = "text")
+    }, error = handle_volcano_plot_error)
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -529,7 +536,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   handle_filter_data_error <- \(e) {
-    showNotification(paste("Error filtering data:", e$message), type = "error")
+    showNotification(paste("Error filtering contrast data:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_volcano_plot_error <- \(e) {
+    showNotification(paste("Error creating volcano plot:", e$message), type = "error")
     NULL
   }
   
@@ -539,7 +551,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   }
   
   handle_msigdb_error <- \(e) {
-    showNotification(paste("Error loading gene sets:", e$message), type = "error")
+    showNotification(paste("Error loading MSigDB:", e$message), type = "error")
     NULL
   }
   
