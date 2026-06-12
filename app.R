@@ -1,6 +1,6 @@
-#== == == == == == == == == == == == == == == == ==
-#===== DESeq2 Explorer App  =======================
-#== == == == == == == == == == == == == == == == ==
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+# ========================= DESeq2 Explorer App  ===========================
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 library(shiny)
 library(shinydashboard)
@@ -35,9 +35,9 @@ source("R/explore_contrast_server.R")
 source("R/compare_contrast_server.R")
 source("R/explore_gene_server.R")
 
-#== == == == == == == == == == == == == == == == ==
-#===== UI =========================================
-#== == == == == == == == == == == == == == == == ==
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+# ============================= UI =========================================
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 ui <- dashboardPage(
   dashboardHeader(title = "RNASeq Explorer"),
@@ -70,7 +70,7 @@ ui <- dashboardPage(
       ## ---- Getting Started -----
       tabItem(tabName = "intro",
               
-              # First box: Required Inputs
+              ### First box: Required Inputs
               fluidRow(
                 box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12, status = "info", solidHeader = TRUE,
                     tags$h4("Required Inputs (Upload on the left sidebar):"),
@@ -82,7 +82,7 @@ ui <- dashboardPage(
                 )
               ),
               
-              # Second row: three main app sections
+              ### Second row: three main app sections
               fluidRow(
                 box(title = tagList(icon("layer-group"), "Explore by Contrast"), width = 12, status = "success", solidHeader = TRUE,
                     p("Select a contrast to explore its results."),
@@ -189,9 +189,9 @@ ui <- dashboardPage(
   )
 )
 
-#== == == == == == == == == == == == == == == == ==
-#===== Server =====================================
-#== == == == == == == == == == == == == == == == ==
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+# ============================== Server ====================================
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 200 * 1024^2)
@@ -228,8 +228,8 @@ server <- function(input, output, session) {
   explore_gene_server(input, output, session, state, organism)
 }
 
-#== == == == == == == == == == == == == == == == ==
-#===== Run App ====================================
-#== == == == == == == == == == == == == == == == ==
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+# ============================= Run App ====================================
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 shinyApp(ui, server)
