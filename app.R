@@ -158,7 +158,7 @@ ui <- dashboardPage(
       tabItem(tabName = "contrast",
               fluidRow(
                 box(
-                  width = 12, status = "info", solidHeader = TRUE,
+                  width = 12, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                   title = tagList(icon("chart-line"), "Explore by Contrast"),
                   
                   fluidRow(
@@ -196,35 +196,50 @@ ui <- dashboardPage(
               )
       ),
       
-      
       ## ---- Compare Contrast -----
       tabItem(tabName = "compare",
               fluidRow(
                 box(
-                  width = 12, status = "info", solidHeader = TRUE,
+                  width = 12, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                   title = tagList(icon("exchange-alt"), "Compare Contrast"),
                   
                   fluidRow(
-                    # LEFT: description
+                    # LEFT: description + GSEA controls
                     column(
-                      width = 8,
+                      width = 4,
                       div(
+                        style = "padding-right: 20px;",
                         span("Select multiple contrasts to compare results side by side."),
                         tags$ul(
-                          style = "margin: 5px 0 0 15px; padding:0;",
+                          style = "margin: 5px 0 12px 15px; padding:0;",
                           tags$li("Adjust log2FC and p-value cutoffs in the sidebar"),
                           tags$li("Explore heatmaps, DEG overlap, and cross-contrast enrichment (GSEA / GESECA)")
                         )
                       )
                     ),
                     
-                    # RIGHT: contrast selector + gene set controls
+                    # RIGHT: contrast checkboxes
                     column(
-                      width = 4,
+                      width = 8,
                       div(
-                        style = "padding-left:10px;",
-                        uiOutput("multiContrastSelect"),
-                        uiOutput("compareGseaControlsUI")
+                        style = "padding-left: 10px;",
+                        uiOutput("multiContrastSelectHeader"),
+                        div(
+                          style = "max-height: 160px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px 12px; margin-top: 4px;",
+                          tags$style(HTML("
+  #compare_contrasts .shiny-options-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 20px;
+    align-items: start;
+  }
+  #compare_contrasts .shiny-options-group .checkbox {
+    margin-top: 0;
+    margin-bottom: 4px;
+  }
+")),
+                          uiOutput("multiContrastCheckboxes")
+                        )
                       )
                     )
                   )
@@ -245,12 +260,11 @@ ui <- dashboardPage(
               )
       ),
       
-      
       ## ---- Explore by Gene -----
       tabItem(tabName = "gene",
               fluidRow(
                 box(
-                  width = 12, status = "info", solidHeader = TRUE,
+                  width = 12, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                   title = tagList(icon("dna"), "Explore by Gene"),
                   
                   fluidRow(

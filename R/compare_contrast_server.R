@@ -8,23 +8,24 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Contrast Checkbox Selection #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$multiContrastSelect <- renderUI({
+  output$multiContrastSelectHeader <- renderUI({
+    req(state$de_df())
+    div(
+      style = "display: flex; align-items: center; gap: 10px;",
+      strong("Select Contrasts:"),
+      actionLink("select_all_contrasts", "Select All"),
+      actionLink("clear_all_contrasts", "Clear All")
+    )
+  })
+  
+  output$multiContrastCheckboxes <- renderUI({
     req(state$de_df())
     contrast_choices <- unique(state$de_df()$contrast)
-    
-    tagList(
-      div(
-        style = "display: flex; align-items: center; gap: 10px;",
-        strong("Select Contrasts:"),
-        actionLink("select_all_contrasts", "Select All"),
-        actionLink("clear_all_contrasts", "Clear All")
-      ),
-      checkboxGroupInput(
-        inputId = "compare_contrasts",
-        label = NULL,
-        choices = contrast_choices,
-        selected = NULL 
-      )
+    checkboxGroupInput(
+      inputId = "compare_contrasts",
+      label   = NULL,
+      choices = contrast_choices,
+      selected = NULL
     )
   })
   
@@ -41,9 +42,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Dynamic GSEA Controls #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$compareGseaControlsUI <- renderUI({
+  # Shared helper — called by both tab-specific outputs below
+  gsea_controls_ui <- function() {
     if (!is.null(organism()) && organism() == "Human") {
-      return(tagList(
+      tagList(
         selectInput("compare_gs_collection", "MSigDB Collection",
                     choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"),
                     selected = "H"),
@@ -56,7 +58,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                         target = "_blank",
                         icon("external-link-alt"),
                         "MSigDB"))
-      ))
+      )
     } else if (!is.null(organism()) && organism() == "Bacteria") {
       avail_cols <- state$available_gsea_columns()
       
@@ -66,15 +68,18 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                    "No annotation columns available. Upload annotation file."))
       }
       
-      return(selectInput("bacterial_geneset_source_compare", "Functional Annotation",
-                         choices = avail_cols,
-                         selected = avail_cols[[1]]))
+      selectInput("bacterial_geneset_source_compare", "",
+                  choices  = avail_cols,
+                  selected = avail_cols[[1]])
     } else {
-      return(div(class = "alert alert-info",
-                 icon("info-circle"),
-                 "Awaiting SE file upload..."))
+      div(class = "alert alert-info",
+          icon("info-circle"),
+          "Awaiting SE file upload...")
     }
-  })
+  }
+  
+  output$compareGseaControlsUI_gsea   <- renderUI({ gsea_controls_ui() })
+  output$compareGseaControlsUI_geseca <- renderUI({ gsea_controls_ui() })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Conditional Sub-tabs #####
@@ -95,6 +100,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       tabs <- append(tabs, 
                      list(
                        tabPanel("GSEA Overlap",
+                                hr(style = "margin: 8px 0;"),
+                                h5("Gene Sets (GSEA / GESECA)", style = "margin-top: 0; margin-bottom: 8px; font-weight: bold;"),
+                                uiOutput("compareGseaControlsUI_gsea"),
                                 tabsetPanel(
                                   type = "pills",
                                   tabPanel("Overview",
@@ -134,6 +142,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                 )
                        ),
                        tabPanel("GESECA",
+                                hr(style = "margin: 8px 0;"),
+                                h5("Gene Sets (GSEA / GESECA)", style = "margin-top: 0; margin-bottom: 8px; font-weight: bold;"),
+                                uiOutput("compareGseaControlsUI_geseca"),
                                 tabsetPanel(
                                   type = "pills",
                                   tabPanel("Overview",
@@ -381,7 +392,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS (GSEA) ####
+  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS ####
   # Load gene sets and perform multi-contrast GSEA and GESECA
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   

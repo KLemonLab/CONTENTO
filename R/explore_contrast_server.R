@@ -205,7 +205,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS (GSEA) ####
+  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS ####
   # Load gene sets and perform GSEA
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
