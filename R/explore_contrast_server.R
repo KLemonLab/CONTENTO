@@ -19,7 +19,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$contrastSubTabs <- renderUI({
     tabs <- list(
-      tabPanel("Selected Genes", withSpinner(DTOutput("DETable"), type = 5)),
+      tabPanel("Selected Genes", 
+               withSpinner(DTOutput("DETable"), type = 5),
+               tags$div(
+                 style = "margin-top: 15px; display: flex; gap: 10px;",
+                 downloadButton("downloadAllContrastData", "Download All Genes for Selected Contrast", class = "btn btn-primary"),
+                 downloadButton("downloadFilteredContrastData", "Download Filtered Genes in Table", class = "btn btn-primary")
+               )),
       tabPanel("Volcano Plot", withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5))
     )
     
@@ -123,6 +129,28 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   #### SECTION 2: DATA PROCESSING & FILTERING ####
   # Reactive expressions that filter, transform, and prepare data for display
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: All Contrast Data Merged with Annotations #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  all_contrast_data_export <- reactive({
+    req(state$de_df(), input$contrast, state$annotation_df())
+    
+    # Get ALL genes for this contrast (no filtering)
+    all_data <- state$de_df() %>%
+      filter(contrast == input$contrast) %>%
+      select(Geneid, log2FC, log2FC_shrunk, stat, padj, regulated) %>%
+      arrange(desc(abs(log2FC)))
+    
+    # Merge with full annotations
+    merged <- all_data %>%
+      left_join(state$annotation_df(), by = "Geneid")
+    
+    # Put Geneid first, then symbol if it exists, then everything else
+    first_cols <- intersect(c("Geneid", "symbol"), colnames(merged))
+    merged %>%
+      select(all_of(first_cols), everything())
+  })
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: DE Filtered by User-Defined Cutoffs #####
@@ -186,7 +214,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       select(all_of(first_cols), everything())
   })
   
-
+  
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 3: GENE SET ENRICHMENT ANALYSIS (GSEA) ####
   # Load gene sets and perform GSEA
@@ -328,17 +356,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         rownames = FALSE,
         filter = 'top',
         options = list(
-          pageLength = 15,
+          pageLength = 30,
           scrollX = TRUE,
-          dom = 'Bfrtip',
-          buttons = list(
-            list(
-              extend = 'csv',
-              text = 'Download DE Genes',
-              filename = file_name,
-              exportOptions = list(modifier = list(page = "all"))
-            )
-          )
+          dom = 't'  
         )
       )
       
@@ -435,7 +455,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           dom = 'Bfrtip',
           columnDefs = list(
             list(
-              targets = 6,  # leadingEdge column (0-indexed)
+              targets = 6,  
               width = '300px',
               render = JS(
                 "function(data, type, row, meta) {",
@@ -447,7 +467,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           buttons = list(
             list(
               extend = 'csv',
-              text = 'Download Full GSEA Results',
+              text = 'Download Filtered GSEA Results',
               filename = file_name,
               exportOptions = list(modifier = list(page = "all"))
             )
@@ -488,9 +508,32 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: DE Filtered Merged with Annotations #####
+  ##### Download Handler: Download All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$downloadDETableFull <- downloadHandler(
+  output$downloadAllContrastData <- downloadHandler(
+    filename = function() {
+      file_base <- get_download_filename(input, state)
+      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
+      
+      paste(file_base, contrast_str, "all_genes.csv", sep = "__")
+    },
+    content = function(file) {
+      # Get all genes for this contrast with annotations
+      full_data <- all_contrast_data_export() %>%
+        mutate(
+          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
+          padj = formatC(padj, format = "e", digits = 2)
+        )
+      
+      write.csv(full_data, file, row.names = FALSE)
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download Handler: Download Filtered Genes in Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadFilteredContrastData <- downloadHandler(
     filename = function() {
       file_base <- get_download_filename(input, state)
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"

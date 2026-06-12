@@ -129,13 +129,7 @@ ui <- dashboardPage(
                 ),
                 
                 box(title = "Explore Results by Contrast", width = 9, status = "primary", collapsible = TRUE,
-                    uiOutput("contrastSubTabs"),
-                    hr(),
-                    tags$div(style = "text-align: center;",
-                             downloadButton("downloadDETableFull",
-                                            "Download Filtered DE Genes (Full Annotations)",
-                                            class = "btn-primary")
-                    )
+                    uiOutput("contrastSubTabs")
                 )
               )
       ),
