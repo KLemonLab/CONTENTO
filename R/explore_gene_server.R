@@ -123,8 +123,8 @@ explore_gene_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 2: DATA PROCESSING & FILTERING ####
-  # Reactive expressions that filter, transform, and prepare data for display
+  #### SECTION 2: DATA PROCESSING & ANALYSIS ####
+  # Reactive expressions that transform and analyze data based on user selections and inputs
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

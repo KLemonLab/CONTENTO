@@ -24,7 +24,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                tags$div(
                  style = "margin-top: 15px; display: flex; gap: 10px;",
                  downloadButton("downloadAllContrastData", "Download All Genes for Selected Contrast", class = "btn btn-warning"),
-                 downloadButton("downloadFilteredContrastData", "Download Filtered Genes in Table", class = "btn btn-warning")
+                 downloadButton("downloadFilteredContrastData", "Download Differentially Expresssed Genes", class = "btn btn-warning")
                )
       ),
       tabPanel("Volcano Plot", 
@@ -115,34 +115,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 2: DATA PROCESSING & FILTERING ####
-  # Reactive expressions that filter, transform, and prepare data for display
+  #### SECTION 2: DATA PROCESSING & ANALYSIS ####
+  # Reactive expressions that transform and analyze data based on user selections and inputs
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: All Contrast Data Merged with Annotations #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  all_contrast_data_export <- reactive({
-    req(state$de_df(), input$contrast, state$annotation_df())
-    
-    # Get ALL genes for this contrast (no filtering)
-    all_data <- state$de_df() %>%
-      filter(contrast == input$contrast) %>%
-      select(Geneid, log2FC, log2FC_shrunk, stat, padj, regulated) %>%
-      arrange(desc(abs(log2FC)))
-    
-    # Merge with full annotations
-    merged <- all_data %>%
-      left_join(state$annotation_df(), by = "Geneid")
-    
-    # Put Geneid first, then symbol if it exists, then everything else
-    first_cols <- intersect(c("Geneid", "symbol"), colnames(merged))
-    merged %>%
-      select(all_of(first_cols), everything())
-  })
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: DE Filtered by User-Defined Cutoffs #####
+  ##### Reactive: DE for the Selected Contrast with DE info based on User-Defined Cutoffs #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   selected_data <- reactive({
     req(state$de_df(), input$contrast)
@@ -179,35 +157,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     }, error = handle_filter_data_error)
   })
   
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: DE Filtered Merged with Annotations #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  selected_data_export <- reactive({
-    req(selected_data(), state$annotation_df())
-    
-    # Get DE genes with their stats (select only columns that exist)
-    stat_cols <- intersect(c("Geneid", "log2FC", "log2FC_shrunk", "stat", "padj", "regulated"),
-                           colnames(selected_data()))
-    de_data <- selected_data() %>%
-      filter(DE) %>%
-      select(all_of(stat_cols)) %>%
-      arrange(desc(abs(log2FC)))
-    
-    # Merge with full annotations
-    merged <- de_data %>%
-      left_join(state$annotation_df(), by = "Geneid")
-    
-    # Put Geneid first, then symbol if it exists, then everything else
-    first_cols <- intersect(c("Geneid", "symbol"), colnames(merged))
-    merged %>%
-      select(all_of(first_cols), everything())
-  })
-  
-  
-  # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS ####
-  # Load gene sets and perform GSEA
-  # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: Load Gene Sets (MSigDB or Bacterial) #####
@@ -305,7 +254,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 4: OUTPUT RENDERING ####
+  #### SECTION 3: OUTPUT RENDERING ####
   # Display tables, plots, and interactive visualizations
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
@@ -315,14 +264,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   output$DETable <- renderDT(
     {
       req(selected_data())
-      
-      file_base <- get_download_filename(input, state)
-      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
-      file_name <- paste(file_base, contrast_str, fc_str, sep = "__")
-      
+    
       display_cols <- intersect(c("Geneid", "symbol", "log2FC", "log2FC_shrunk", "stat", "padj", "regulated"),
                                 colnames(selected_data()))
       
@@ -347,7 +289,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         options = list(
           pageLength = 15,
           scrollX = TRUE,
-          dom = 'frtip'  
+          dom = 'rtip'  
         )
       )
       
@@ -459,7 +401,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
 
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 5: DOWNLOAD HANDLERS ####
+  #### SECTION 4: DOWNLOAD HANDLERS ####
   # Manage file downloads with proper naming and filtering
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
@@ -474,20 +416,19 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       
       paste(file_base, contrast_str, "all_genes.csv", sep = "__")
     },
+    
     content = function(file) {
-      # Get all genes for this contrast with annotations
-      full_data <- all_contrast_data_export() %>%
-        mutate(
-          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
-          padj = formatC(padj, format = "e", digits = 2)
-        )
+      req(selected_data())
       
-      write.csv(full_data, file, row.names = FALSE)
+      selected_data() %>%
+        arrange(desc(abs(log2FC))) %>%
+        select(-any_of(c("tooltip", "DE"))) %>%
+        write.csv(file, row.names = FALSE)
     }
   )
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: Download Filtered Genes in Table #####
+  ##### Download Handler: Download DE Genes based on Filters #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadFilteredContrastData <- downloadHandler(
     filename = function() {
@@ -496,35 +437,19 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
       lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
       fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
-      
-      paste(file_base, contrast_str, fc_str, "full.csv", sep = "__")
+      pvl_str <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) input$global_padj_cutoff else 0.05
+      pvl_str <- paste0("FDR", gsub("\\.", "p", as.character(pvl_str)))
+      paste(file_base, contrast_str, fc_str, pvl_str, "filtered.csv", sep = "__")
     },
+    
     content = function(file) {
-      req(input$DETable_rows_all)
-      
-      # Get full export data
-      full_data <- selected_data_export() %>%
-        mutate(
-          across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
-          padj = formatC(padj, format = "e", digits = 2)
-        )
-      
-      # Get filtered row indices from DT
-      filtered_indices <- input$DETable_rows_all
-      
-      # Get the display data to extract Geneids
-      display_data <- selected_data() %>%
+      req(selected_data(), nrow(selected_data()) > 0)
+
+      selected_data() %>%
         filter(DE) %>%
-        arrange(desc(abs(log2FC)))
-      
-      # Extract Geneids from filtered rows
-      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
-      
-      # Filter full data to match user's selection
-      filtered_full <- full_data %>%
-        filter(Geneid %in% filtered_geneids)
-      
-      write.csv(filtered_full, file, row.names = FALSE)
+        arrange(desc(abs(log2FC))) %>%
+        select(-any_of(c("tooltip", "DE"))) %>%
+        write.csv(file, row.names = FALSE)
     }
   )
   
