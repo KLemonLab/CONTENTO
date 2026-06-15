@@ -1,135 +1,12 @@
 load_files_server <- function(input, output, session, state) {
   
-  #== == == == == == == == == == == == == == == == ==
-  #===== HELPERS ====================================
-  #== == == == == == == == == == == == == == == == ==
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 1: UI RENDERING ####
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
-  # Locate a built-in annotation file for the given annotation name.
-  find_annotation_path <- function(annotation) {
-    path <- system.file("annotations", paste0(annotation, ".rds"), package = "RNASeqApp")
-    if (nzchar(path)) {
-      path
-    } else {
-      local_path <- file.path("inst", "annotations", paste0(annotation, ".rds"))
-      if (file.exists(local_path)) local_path else NULL
-    }
-  }
-  
-  # Extract all contrasts from SE rowData into a long-format data frame.
-  extract_contrasts <- function(se) {
-    rd       <- as.data.frame(SummarizedExperiment::rowData(se))
-    gene_ids <- rownames(se)
-    
-    meta <- tryCatch(
-      metadata(se),
-      error = function(e) list()
-    )
-    
-    contrast_names <- meta$contrasts
-    
-    if (is.null(contrast_names) || length(contrast_names) == 0) {
-      stop("No contrasts found in metadata(se)$contrasts. ",
-           "Ensure the SE object includes metadata(se)$contrasts as a character vector of contrast names.")
-    }
-    
-    de_list <- lapply(contrast_names, function(cname) {
-      get_col <- function(prefix) {
-        col <- paste0(prefix, cname)
-        if (col %in% colnames(rd)) rd[[col]] else rep(NA_real_, nrow(rd))
-      }
-      data.frame(
-        Geneid        = gene_ids,
-        contrast      = cname,
-        baseMean      = get_col("baseMean_"),
-        log2FC        = get_col("log2FoldChange_"),
-        log2FC_shrunk = get_col("log2FoldChange_shrunk_"),
-        lfcSE         = get_col("lfcSE_"),
-        stat          = get_col("stat_"),
-        pvalue        = get_col("pvalue_"),
-        padj          = get_col("padj_"),
-        stringsAsFactors = FALSE
-      )
-    })
-    
-    do.call(rbind, de_list)
-  }
-  
-  # Merge annotation data frame into the contrast data frame.
-  # SIMPLIFIED: Only requires 'Geneid' column in annotation (works for human & bacterial).
-  # Returns a list with:
-  #   $result: merged data frame or NULL
-  #   $message: diagnostic message (only present if result is NULL)
-  merge_annotation <- function(de_df, annot) {
-    # Validate inputs
-    if (!is.data.frame(de_df) || !is.data.frame(annot)) {
-      return(list(result = NULL, message = "Invalid data frame structure"))
-    }
-    
-    if (nrow(annot) == 0) {
-      return(list(result = NULL, message = "Annotation file is empty"))
-    }
-    
-    # Check for required 'Geneid' column
-    if (!("Geneid" %in% colnames(de_df))) {
-      return(list(result = NULL, message = "DE data missing 'Geneid' column (internal error)"))
-    }
-    
-    if (!("Geneid" %in% colnames(annot))) {
-      return(list(
-        result = NULL,
-        message = paste0("Annotation file must contain a 'Geneid' column. ",
-                         "Found columns: ", paste(colnames(annot), collapse = ", "))
-      ))
-    }
-    
-    # Validate that Geneid is character type
-    if (!is.character(annot[["Geneid"]])) {
-      return(list(
-        result = NULL,
-        message = paste0("Column 'Geneid' must be character type, got ", 
-                         class(annot[["Geneid"]])[1], ". Cannot join.")
-      ))
-    }
-    
-    # Perform join
-    merged <- tryCatch(
-      dplyr::left_join(de_df, annot, by = "Geneid"),
-      error = function(e) NULL
-    )
-    
-    if (!is.null(merged)) {
-      return(list(result = merged))
-    } else {
-      return(list(result = NULL, message = "Join operation failed (internal error)"))
-    }
-  }
-  
-  # Create (or update) the 'symbol' column in a data frame using primary and
-  # optional fallback columns. When the primary value is NA or empty the
-  # fallback is used. Returns the data frame unchanged if primary_col is not present.
-  apply_symbol <- function(df, primary_col, secondary_col = "none") {
-    if (!primary_col %in% colnames(df)) return(df)
-    if (!is.null(secondary_col) && secondary_col != "none" &&
-        secondary_col %in% colnames(df)) {
-      df |>
-        dplyr::mutate(symbol = ifelse(
-          is.na(.data[[primary_col]]) | as.character(.data[[primary_col]]) == "",
-          as.character(.data[[secondary_col]]),
-          as.character(.data[[primary_col]])
-        ))
-    } else {
-      df |>
-        dplyr::mutate(symbol = as.character(.data[[primary_col]]))
-    }
-  }
-  
-  # Determine default primary symbol column from available annotation columns.
-  default_symbol_col <- function(annot_cols) {
-    found <- intersect(c("gene", "Gene", "product", "symbol", "hgnc_symbol", "gene_name"), annot_cols)
-    if (length(found) > 0) found[1] else annot_cols[1]
-  }
-  
-  # Build the single-dropdown symbol-column selection UI from annotation columns.
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Symbol Column Selection #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   build_symbol_select_ui <- function(annot_cols, primary_sel) {
     tagList(
       selectInput("symbolPrimaryCol",
@@ -139,7 +16,9 @@ load_files_server <- function(input, output, session, state) {
     )
   }
   
-  # Build the SE metadata info panel.
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: SE Information Display #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   se_info_ui <- function(se, organism = NULL, annotation = NULL) {
     meta        <- tryCatch(metadata(se), error = function(e) list())
     n_contrasts <- length(meta$contrasts)
@@ -160,26 +39,68 @@ load_files_server <- function(input, output, session, state) {
     )
   }
   
-  #== == == == == == == == == == == == == == == == ==
-  #===== EVENT HANDLERS =============================
-  #== == == == == == == == == == == == == == == == ==
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Annotation Status Panel #####
+  # output$annotationStatus — It is rendered inside observeEvents
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-  ## ---- SE file upload: validation, contrast extraction, and initial annotation -----
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Organism (conditional UI bridge) #####
+  # Exposes se_organism to conditionalPanel() in the UI layer
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$se_organism <- reactive({ state$se_organism() })
+  outputOptions(output, "se_organism", suspendWhenHidden = FALSE)
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 2: ERROR HANDLERS ####
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  handle_se_read_error <- \(e) {
+    showModal(modalDialog(
+      title = "SE File error",
+      paste("Error reading SE file:", e$message),
+      easyClose = TRUE,
+      footer = NULL
+    ))
+    NULL
+  }
+  
+  handle_contrast_extraction_error <- \(e) {
+    showModal(modalDialog(
+      title = "Contrast extraction error",
+      paste("Error extracting contrasts:", e$message),
+      easyClose = TRUE,
+      footer = NULL
+    ))
+    NULL
+  }
+  
+  handle_annotation_read_error <- \(e) {
+    showModal(modalDialog(
+      title = "Annotation error",
+      paste("Error reading annotation file:", e$message),
+      easyClose = TRUE,
+      footer = NULL
+    ))
+    NULL
+  }
+  
+  handle_annotation_load_error <- \(e) {
+    showNotification(paste("Annotation load error:", e$message), type = "error")
+    NULL
+  }
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 3: FILE LOADING & DATA PROCESSING ####
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Event: SE File Upload #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   observeEvent(input$seFile, {
     req(input$seFile)
     
-    se <- tryCatch(
-      readRDS(input$seFile$datapath),
-      error = function(e) {
-        showModal(modalDialog(
-          title = "File error",
-          paste("Error reading file:", e$message),
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        NULL
-      }
-    )
+    se <- tryCatch(readRDS(input$seFile$datapath), error = handle_se_read_error)
     req(se)
     
     if (!inherits(se, "SummarizedExperiment")) {
@@ -194,22 +115,12 @@ load_files_server <- function(input, output, session, state) {
     
     state$se_obj(se)
     
-    de_df <- tryCatch(
-      extract_contrasts(se),
-      error = function(e) {
-        showModal(modalDialog(
-          title = "Contrast extraction error",
-          e$message,
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        NULL
-      }
-    )
+    de_df <- tryCatch(extract_de_results(se), error = handle_contrast_extraction_error)
+    
     req(de_df)
     
     # Extract variance partition if varpart_* columns are present.
-    rd           <- as.data.frame(SummarizedExperiment::rowData(se))
+    rd           <- as.data.frame(rowData(se))
     varpart_cols <- grep("^varpart_", colnames(rd), value = TRUE)
     if (length(varpart_cols) > 0) {
       vp_mat <- as.data.frame(rd[, varpart_cols, drop = FALSE])
@@ -237,13 +148,8 @@ load_files_server <- function(input, output, session, state) {
       annot_path <- find_annotation_path(annotation)
       
       if (!is.null(annot_path)) {
-        annot <- tryCatch(
-          readRDS(annot_path),
-          error = function(e) {
-            showNotification(paste("Annotation load error:", e$message), type = "error")
-            NULL
-          }
-        )
+        annot <- tryCatch(readRDS(annot_path), error = handle_annotation_load_error)
+        
         if (!is.null(annot)) {
           merged_result <- merge_annotation(de_df, annot)
           
@@ -308,22 +214,13 @@ load_files_server <- function(input, output, session, state) {
     })
   })
   
-  ## ---- Custom annotation upload -----
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Event: Custom Annotation Upload #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   observeEvent(input$annotFile, {
     req(input$annotFile, state$de_df())
     
-    annot <- tryCatch(
-      readRDS(input$annotFile$datapath),
-      error = function(e) {
-        showModal(modalDialog(
-          title = "Annotation error",
-          paste("Error reading annotation file:", e$message),
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        NULL
-      }
-    )
+    annot <- tryCatch(readRDS(input$annotFile$datapath), error = handle_annotation_read_error)
     req(annot)
     
     se_current <- state$se_obj()
@@ -378,7 +275,9 @@ load_files_server <- function(input, output, session, state) {
     }
   })
   
-  ## ---- Symbol-column selection -----
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Event: Symbol Column Selection #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   observeEvent(input$symbolPrimaryCol, {
     req(input$symbolPrimaryCol, state$de_df())
     
@@ -405,31 +304,4 @@ load_files_server <- function(input, output, session, state) {
     )
   })
   
-  #== == == == == == == == == == == == == == == == ==
-  #===== OUTPUTS FOR UI CONDITIONALS =================
-  #== == == == == == == == == == == == == == == == ==
-  
-  # Output organism for conditional UI in app.R
-  output$se_organism <- reactive({
-    state$se_organism()
-  })
-  outputOptions(output, "se_organism", suspendWhenHidden = FALSE)
-  
-  
-  #== == == == == == == == == == == == == == == == ==
-  #===== REACTIVES ==================================
-  #== == == == == == == == == == == == == == == == ==
-  
-  ## ---- Filtered DE table with global cutoffs -----
-  filtered_de_df <- reactive({
-    req(state$de_df())
-    df <- state$de_df()
-    if (!"log2FC" %in% colnames(df)) df$log2FC <- NA_real_
-    if (!"padj"   %in% colnames(df)) df$padj   <- NA_real_
-    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
-    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-    df |>
-      dplyr::filter(!is.na(padj) & !is.na(log2FC) & padj <= padj_cut & abs(log2FC) >= lfc_cut)
-  })
-  state$filtered_de_df <- filtered_de_df
 }

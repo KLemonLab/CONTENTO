@@ -281,7 +281,6 @@ server <- function(input, output, session) {
     varpart_obj = reactiveVal(NULL),
     annotation_df = reactiveVal(NULL),
     se_organism = reactiveVal(NULL),
-    filtered_de_df = reactiveVal(NULL),
     available_gsea_columns = reactiveVal(list())
   )
   
