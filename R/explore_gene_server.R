@@ -133,30 +133,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
   selected_gene_data <- reactive({
     req(input$gene_select, state$de_df())
     
-    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
-    
     tryCatch({
-      df <- state$de_df() %>%
-        filter(Geneid == input$gene_select)
-      
-      # Validate required columns exist
-      required_cols <- c("log2FC", "padj")
-      missing_cols <- setdiff(required_cols, colnames(df))
-      
-      if (length(missing_cols) > 0) {
-        stop("SE object is missing required DE statistics: ", paste(missing_cols, collapse = ", "))
-      }
-      
-      df %>%
-        mutate(
-          regulated = case_when(
-            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
-            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
-            TRUE ~ NA_character_
-          ),
-          DE = !is.na(regulated)
-        )
+      state$de_df() %>%
+        filter(Geneid == input$gene_select) %>%
+        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff)
     }, error = handle_gene_filter_error)
   })
   

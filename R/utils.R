@@ -148,6 +148,25 @@ merge_annotation <- function(de_df, annot) {
 }
 
 
+#' Add regulated/DE flag columns to a DE data frame
+#'
+#' @param df   Data frame with \code{log2FC} and \code{padj} columns
+#' @param lfc_cut  Numeric log2FC threshold
+#' @param padj_cut Numeric adjusted p-value threshold
+#' @return \code{df} with two new columns: \code{regulated} ("up"/"down"/NA)
+#'   and \code{DE} (logical)
+add_de_flags <- function(df, lfc_cut, padj_cut) {
+  df |>
+    mutate(
+      regulated = case_when(
+        !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
+        !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
+        TRUE ~ NA_character_
+      ),
+      DE = !is.na(regulated)
+    )
+}
+
 #' Get all potential gsea columns available in dataframe
 #'
 #' Returns all column names except common metadata columns (Geneid, symbol, locus_tag, etc.)

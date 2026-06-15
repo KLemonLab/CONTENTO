@@ -125,20 +125,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   selected_data <- reactive({
     req(state$de_df(), input$contrast)
     
-    lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-    padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
-    
     tryCatch({
       df <- state$de_df() %>%
         filter(contrast == input$contrast)
-      
-      # Validate required columns exist
-      required_cols <- c("log2FC", "padj")
-      missing_cols <- setdiff(required_cols, colnames(df))
-      
-      if (length(missing_cols) > 0) {
-        stop("SE object is missing required DE statistics: ", paste(missing_cols, collapse = ", "))
-      }
       
       df %>%
         mutate(
@@ -146,14 +135,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
             if ("symbol" %in% names(.)) .data$symbol else .data$Geneid, " (", Geneid, ")",
             "\nlog2FC: ", round(log2FC, 2),
             "\nFDR: ", signif(padj, 3)
-          ),
-          regulated = case_when(
-            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
-            !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
-            TRUE ~ NA_character_
-          ),
-          DE = !is.na(regulated)
-        )
+          )
+        ) %>%
+        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff)
+      
     }, error = handle_filter_data_error)
   })
   
@@ -311,16 +296,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     req(selected_data())
     
     tryCatch({
-      lfc_cut  <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-      padj_cut <- if (!is.null(input$global_padj_cutoff)   && !is.na(input$global_padj_cutoff))   input$global_padj_cutoff   else 0.05
-      
       x_col <- if ("log2FC_shrunk" %in% colnames(selected_data())) "log2FC_shrunk" else "log2FC"
       
       gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
         geom_point(aes(color = DE), alpha = 0.6) +
         scale_color_manual(values = c("TRUE" = "red", "FALSE" = "gray"), guide = "none") +
-        geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed") +
-        geom_hline(yintercept = -log10(padj_cut), linetype = "dashed") +
+        geom_vline(xintercept = c(-input$global_log2FC_cutoff, input$global_log2FC_cutoff), linetype = "dashed") +
+        geom_hline(yintercept = -log10(input$global_padj_cutoff), linetype = "dashed") +
         labs(x = paste0("log2 Fold Change", if (x_col == "log2FC_shrunk") " (shrunken)" else ""), y = "-log10(FDR)") +
         theme_minimal()
       
@@ -435,16 +417,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       file_base <- get_download_filename(input, state)
       contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
-      fc_str <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
-      pvl_str <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) input$global_padj_cutoff else 0.05
-      pvl_str <- paste0("FDR", gsub("\\.", "p", as.character(pvl_str)))
+      fc_str  <- paste0("FC",  gsub("\\.", "p", as.character(input$global_log2FC_cutoff)))
+      pvl_str <- paste0("FDR", gsub("\\.", "p", as.character(input$global_padj_cutoff)))
       paste(file_base, contrast_str, fc_str, pvl_str, "filtered.csv", sep = "__")
     },
-    
     content = function(file) {
       req(selected_data(), nrow(selected_data()) > 0)
-
       selected_data() %>%
         filter(DE) %>%
         arrange(desc(abs(log2FC))) %>%
