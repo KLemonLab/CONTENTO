@@ -273,26 +273,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Reactive: DEG Data for Upset Plot & Heatmap #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   compare_data <- reactive({
-    req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
-    
-    padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
-      input$global_padj_cutoff
-    } else {
-      0.05
-    }
-    lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) {
-      input$global_log2FC_cutoff
-    } else {
-      2
-    }
+    req(state$de_df(), input$compare_contrasts)
     
     deg_list <- map(input$compare_contrasts, function(ct) {
       state$de_df() %>%
         filter(
           contrast == ct,
           !is.na(padj) & !is.na(log2FC),
-          padj <= padj_cut,
-          abs(log2FC) >= lfc_cut
+          padj <= input$global_padj_cutoff,
+          abs(log2FC) >= input$global_log2FC_cutoff
         ) %>%
         pull(Geneid)
     }) %>% set_names(input$compare_contrasts)
@@ -311,18 +300,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Reactive: DEG Comparison Table Data #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   compare_table_data <- reactive({
-    req(state$de_df(), input$compare_contrasts, input$global_log2FC_cutoff)
-    
-    padj_cut <- if (!is.null(input$global_padj_cutoff) && !is.na(input$global_padj_cutoff)) {
-      input$global_padj_cutoff
-    } else {
-      0.05
-    }
-    lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) {
-      input$global_log2FC_cutoff
-    } else {
-      2
-    }
+    req(state$de_df(), input$compare_contrasts)
     
     has_symbol <- "symbol" %in% colnames(state$de_df())
     id_cols <- if (has_symbol) c("Geneid", "symbol") else "Geneid"
@@ -331,8 +309,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       filter(
         contrast %in% input$compare_contrasts,
         !is.na(padj) & !is.na(log2FC),
-        padj <= padj_cut,
-        abs(log2FC) >= lfc_cut
+        padj <= input$global_padj_cutoff,
+        abs(log2FC) >= input$global_log2FC_cutoff
       ) %>%
       pull(Geneid) %>%
       unique()
@@ -1118,11 +1096,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         "contrasts"
       }
       contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
-      
-      lfc_cut <- if (!is.null(input$global_log2FC_cutoff) && !is.na(input$global_log2FC_cutoff)) input$global_log2FC_cutoff else 2
       fc_str  <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
+      padj_str <- paste0("padj", gsub("\\.", "p", as.character(padj_cut)))
       
-      paste(file_base, contrasts_str, fc_str, "full.csv", sep = "__")
+      paste(file_base, contrasts_str, fc_str, padj_str, "full.csv", sep = "__")
     },
     content = function(file) {
       req(input$compareTable_rows_all)
