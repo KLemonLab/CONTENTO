@@ -168,7 +168,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     req(state$de_df(), input$contrast, genesets())
     
     tryCatch({
-      # Prepare ranked gene list
+      # Prepare ranked gene list for GSEA
       ranks <- state$de_df() |>
         filter(contrast == input$contrast) |>
         filter(!is.na(stat))
@@ -177,9 +177,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         showNotification("No valid statistics found for GSEA", type = "warning")
         return(NULL)
       }
-      
       ranks_vec <- setNames(ranks$stat, ranks$Geneid)
-
+      
+      # Get gene sets for GSEA
       pathways_list <- genesets()
       
       if (length(pathways_list) == 0) {

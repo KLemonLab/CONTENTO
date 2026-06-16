@@ -198,9 +198,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### UI: Pathway Selector for GSEA Detail #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$pathwaySelectUI_compare <- renderUI({
-    req(compare_gsea_data())
+    req(gsea_results())
     
-    pathways <- rownames(compare_gsea_data()$nes_matrix)
+    pathways <- rownames(gsea_results()$nes_matrix)
     
     if (length(pathways) > 0) {
       selectInput("selected_pathway_compare", "Select Pathway:", 
@@ -222,8 +222,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$pathwaySelectUI_geseca <- renderUI({
     req(geseca_result())
     
-    pathways <- geseca_result()$gesecaRes %>%
-      arrange(padj) %>%
+    pathways <- geseca_result()$gesecaRes |>
+      arrange(padj) |>
       pull(pathway)
     
     if (length(pathways) > 0) {
@@ -299,36 +299,53 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: Multi-Contrast GSEA Results #####
+  ##### Reactive: Load Gene Sets (MSigDB or Bacterial) #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  compare_gsea_data <- reactive({
-    req(state$de_df(), input$compare_contrasts)
-    
-    # Validate inputs depending on organism
-    if (!is.null(organism()) && organism() == "Bacteria") {
-      req(input$bacterial_geneset_source_compare, state$annotation_df())
+  genesets_compare <- reactive({
+    gs <- if (!is.null(organism()) && organism() == "Bacteria") {
+      req(state$annotation_df(), input$bacterial_geneset_source_compare)
+      
+      tryCatch(
+        load_genesets(
+          organism(),
+          annotation_df    = state$annotation_df(),
+          bacterial_source = input$bacterial_geneset_source_compare
+        ),
+        error = handle_compare_geneset_error
+      )
+      
     } else {
       req(input$compare_gs_collection)
+      
+      tryCatch(
+        load_genesets(
+          organism(),
+          gs_collection    = input$compare_gs_collection,
+          gs_subcollection = input$compare_gs_subcollection
+        ),
+        error = handle_compare_msigdb_error
+      )
     }
     
-    # Load gene sets
-    pathways_list <- load_genesets(
-      organism(),
-      annotation_df    = state$annotation_df(),
-      bacterial_source = input$bacterial_geneset_source_compare,
-      gs_collection    = input$compare_gs_collection,
-      gs_subcollection = input$compare_gs_subcollection
-    )
-    
-    if (length(pathways_list) == 0) {
+    if (length(gs) == 0) {
       showNotification("No pathways found in selected gene set", type = "warning")
       return(NULL)
     }
     
+    gs
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Multi-Contrast GSEA Analysis #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  gsea_results <- reactive({
+    req(state$de_df(), input$compare_contrasts, genesets_compare())
+    pathways_list <- genesets_compare()
+    
     # Run fgsea per contrast (robust handling)
     fgsea_results <- purrr::map(input$compare_contrasts, function(ct) {
       
-      ranks <- state$de_df() %>%
+      ranks <- state$de_df() |>
         dplyr::filter(contrast == ct, !is.na(stat))
       
       if (nrow(ranks) == 0) return(NULL)
@@ -363,16 +380,16 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     
     # Combine results
     nes_df <- purrr::map_dfr(names(fgsea_results), function(ct) {
-      fgsea_results[[ct]] %>%
-        tibble::as_tibble() %>%
-        dplyr::select(pathway, NES, padj) %>%
+      fgsea_results[[ct]] |>
+        tibble::as_tibble() |>
+        dplyr::select(pathway, NES, padj) |>
         dplyr::mutate(contrast = ct)
     })
     
     # Keep only significant pathways
-    sig_pathways <- nes_df %>%
-      dplyr::filter(padj < 0.05) %>%
-      dplyr::pull(pathway) %>%
+    sig_pathways <- nes_df |>
+      dplyr::filter(padj < 0.05) |>
+      dplyr::pull(pathway) |>
       unique()
     
     if (length(sig_pathways) == 0) {
@@ -381,18 +398,18 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     }
     
     # Build matrices
-    nes_matrix <- nes_df %>%
-      dplyr::filter(pathway %in% sig_pathways) %>%
-      dplyr::select(pathway, contrast, NES) %>%
-      tidyr::pivot_wider(names_from = contrast, values_from = NES, values_fill = 0) %>%
-      tibble::column_to_rownames("pathway") %>%
+    nes_matrix <- nes_df |>
+      dplyr::filter(pathway %in% sig_pathways) |>
+      dplyr::select(pathway, contrast, NES) |>
+      tidyr::pivot_wider(names_from = contrast, values_from = NES, values_fill = 0) |>
+      tibble::column_to_rownames("pathway") |>
       as.matrix()
     
-    padj_matrix <- nes_df %>%
-      dplyr::filter(pathway %in% sig_pathways) %>%
-      dplyr::select(pathway, contrast, padj) %>%
-      tidyr::pivot_wider(names_from = contrast, values_from = padj, values_fill = 1) %>%
-      tibble::column_to_rownames("pathway") %>%
+    padj_matrix <- nes_df |>
+      dplyr::filter(pathway %in% sig_pathways) |>
+      dplyr::select(pathway, contrast, padj) |>
+      tidyr::pivot_wider(names_from = contrast, values_from = padj, values_fill = 1) |>
+      tibble::column_to_rownames("pathway") |>
       as.matrix()
     
     # Order by variability
@@ -412,7 +429,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     list(
       nes_matrix    = nes_matrix,
       padj_matrix   = padj_matrix,
-      nes_df        = nes_df %>% dplyr::filter(pathway %in% sig_pathways),
+      nes_df        = nes_df |> dplyr::filter(pathway %in% sig_pathways),
       fgsea_results = fgsea_results
     )
   })
@@ -421,17 +438,17 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Reactive: Leading Edge Analysis for Selected Pathway #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   leading_edge_data <- reactive({
-    req(compare_gsea_data(), input$selected_pathway_compare)
+    req(gsea_results(), input$selected_pathway_compare)
     
     tryCatch({
-      fgsea_results <- compare_gsea_data()$fgsea_results
+      fgsea_results <- gsea_results()$fgsea_results
       pathway_name  <- input$selected_pathway_compare
       
       leading_edge_list <- map(
         names(fgsea_results),
         ~ {
-          res <- fgsea_results[[.x]] %>%
-            as_tibble() %>%
+          res <- fgsea_results[[.x]] |>
+            as_tibble() |>
             filter(pathway == pathway_name)
           
           if (nrow(res) == 0) {
@@ -455,10 +472,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      le_matrix <- le_df %>%
-        mutate(present = 1) %>%
-        pivot_wider(names_from = contrast, values_from = present, values_fill = 0) %>%
-        column_to_rownames("gene") %>%
+      le_matrix <- le_df |>
+        mutate(present = 1) |>
+        pivot_wider(names_from = contrast, values_from = present, values_fill = 0) |>
+        column_to_rownames("gene") |>
         select(-in_leading_edge)
       
       all_genes  <- unique(le_df$gene)
@@ -466,10 +483,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       genes_all  <- rownames(le_matrix)[rowSums(le_matrix) == length(contrasts)]
       
       genes_unique <- map(contrasts, ~ {
-        genes_in_contrast <- le_df %>% filter(contrast == .x) %>% pull(gene)
-        genes_in_others   <- le_df %>% filter(contrast != .x) %>% pull(gene) %>% unique()
+        genes_in_contrast <- le_df |> filter(contrast == .x) |> pull(gene)
+        genes_in_others   <- le_df |> filter(contrast != .x) |> pull(gene) |> unique()
         setdiff(genes_in_contrast, genes_in_others)
-      }) %>% set_names(contrasts)
+      }) |> set_names(contrasts)
       
       overlap_stats <- list(
         total_genes    = length(all_genes),
@@ -479,9 +496,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         genes_unique   = genes_unique
       )
       
-      upset_df <- le_matrix %>%
-        as.data.frame() %>%
-        rownames_to_column("gene") %>%
+      upset_df <- le_matrix |>
+        as.data.frame() |>
+        rownames_to_column("gene") |>
         mutate(across(-gene, ~ as.logical(.)))
       
       list(
@@ -498,48 +515,35 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Reactive: GESECA Analysis #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   geseca_result <- reactive({
-    req(state$se_obj())
+    req(state$se_obj(), genesets_compare())
+    pathways_list <- genesets_compare()
     
     tryCatch({
-      if (!is.null(organism()) && organism() == "Bacteria") {
-        req(input$bacterial_geneset_source_compare, state$annotation_df())
-      } else {
-        req(input$compare_gs_collection)
-      }
-      pathways_list <- load_genesets(
-        organism(),
-        annotation_df    = state$annotation_df(),
-        bacterial_source = input$bacterial_geneset_source_compare,
-        gs_collection    = input$compare_gs_collection,
-        gs_subcollection = input$compare_gs_subcollection
-      )
-      
-      if (length(pathways_list) == 0) {
-        showNotification("No pathways found in selected gene set", type = "warning")
-        return(NULL)
-      }
-      
+      # Get VST matrix from SE object
       vst_matrix <- assays(state$se_obj())[["vst"]]
       
       if (is.null(vst_matrix)) {
         showNotification("VST matrix not found in SummarizedExperiment object", type = "error")
         return(NULL)
       }
-      
+
+      # Run GESECA 
       gesecaRes <- geseca(
         pathways = pathways_list,
         E        = vst_matrix,
         minSize  = 15,
         maxSize  = 500
-      ) %>%
+      ) |>
         arrange(padj, pval)
       
-      topPathways <- gesecaRes %>%
-        filter(padj < 0.05) %>%
-        arrange(desc(abs(pctVar))) %>%
-        slice_head(n = 20) %>%
+      # Select top pathways by variance explained
+      topPathways <- gesecaRes |>
+        filter(padj < 0.05) |>
+        arrange(desc(abs(pctVar))) |>
+        slice_head(n = 20) |>
         pull(pathway)
       
+      # Generate table plot (only if there are significant pathways)
       tableplot <- if (length(topPathways) > 0) {
         plotGesecaTable(
           gesecaRes = gesecaRes,
@@ -652,7 +656,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
           )
         ),
         rownames = FALSE
-      ) %>%
+      ) |>
         formatStyle(
           columns = lfc_cols,
           backgroundColor = styleInterval(
@@ -668,10 +672,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Output: GSEA Heatmap #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareGSEAPlot <- renderPlot({
-    req(compare_gsea_data())
+    req(gsea_results())
     
-    nes_mat  <- compare_gsea_data()$nes_matrix
-    padj_mat <- compare_gsea_data()$padj_matrix
+    nes_mat  <- gsea_results()$nes_matrix
+    padj_mat <- gsea_results()$padj_matrix
     
     original_names <- rownames(nes_mat)
     if (!is.null(input$pathway_name_length) && input$pathway_name_length > 0) {
@@ -751,7 +755,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareGSEATable <- renderDT(
     {
-      req(compare_gsea_data())
+      req(gsea_results())
       
       file_base <- get_download_filename(input, state)
       
@@ -773,12 +777,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       }
       file_name <- paste(file_base, contrasts_str, "GSEA", gs_str, sep = "__")
       
-      df <- compare_gsea_data()$nes_df %>%
+      df <- gsea_results()$nes_df |>
         mutate(
           padj_fmt    = formatC(padj, format = "e", digits = 2),
           NES_display = paste0(round(NES, 2), " (", padj_fmt, ")")
-        ) %>%
-        select(pathway, contrast, NES_display) %>%
+        ) |>
+        select(pathway, contrast, NES_display) |>
         pivot_wider(
           names_from  = contrast,
           values_from = NES_display,
@@ -864,15 +868,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       pathway_str  <- gsub("[^A-Za-z0-9._-]+", "__", input$selected_pathway_compare)
       file_name    <- paste(file_base, pathway_str, "LeadingEdge", sep = "__")
       
-      gene_symbols <- state$de_df() %>%
-        select(Geneid, symbol) %>%
+      gene_symbols <- state$de_df() |>
+        select(Geneid, symbol) |>
         distinct()
       
-      df <- leading_edge_data()$leading_edge_matrix %>%
-        as.data.frame() %>%
-        rownames_to_column("gene") %>%
-        left_join(gene_symbols, by = c("gene" = "Geneid")) %>%
-        select(gene, symbol, everything()) %>%
+      df <- leading_edge_data()$leading_edge_matrix |>
+        as.data.frame() |>
+        rownames_to_column("gene") |>
+        left_join(gene_symbols, by = c("gene" = "Geneid")) |>
+        select(gene, symbol, everything()) |>
         mutate(across(-c(gene, symbol), ~ ifelse(. == 1, "TRUE", "FALSE")))
       
       datatable(
@@ -931,7 +935,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       
       file_name <- paste(file_base, "GESECA", gs_str, sep = "__")
       
-      df <- geseca_result()$gesecaRes %>%
+      df <- geseca_result()$gesecaRes |>
         mutate(
           across(c(pval, padj),       ~ formatC(.x, format = "e", digits = 2)),
           across(c(pctVar, log2err),  ~ round(.x, 3))
@@ -1057,11 +1061,20 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     NULL
   }
   
+  handle_compare_geneset_error <- \(e) {
+    showNotification(paste("Error loading gene sets:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_compare_msigdb_error <- \(e) {
+    showNotification(paste("Error loading MSigDB:", e$message), type = "error")
+    NULL
+  }
+  
   handle_fgsea_error <- function(e, ct) {
     message("fgsea failed for contrast: ", ct, " | ", e$message)
     NULL
   }
-  
   
   handle_leading_edge_error <- \(e) {
     showNotification(paste("Error extracting leading edge:", e$message), type = "error")
