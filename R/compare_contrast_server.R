@@ -93,7 +93,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       tabPanel("DEG Overlap", 
                withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5),  
                h4("Table of DEGs in All Selected Contrasts"),
-               withSpinner(DTOutput("compareTable"), type = 5))
+               withSpinner(DTOutput("compareTable"), type = 5),
+               tags$div(
+                 style = "margin-top: 15px; display: flex; gap: 10px;",
+                 downloadButton("downloadAllContrastsData", "Download All Genes for All Selected Contrasts", class = "btn btn-warning")
+               )
+      )
     )
     
     if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
@@ -996,12 +1001,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Download Handler: Download All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$downloadAllContrastData <- downloadHandler(
+  output$downloadAllContrastsData <- downloadHandler(
     filename = function() {
       file_base <- get_download_filename(input, state)
-      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
+        paste(input$compare_contrasts, collapse = "-")
+      } else {
+        "contrast"
+      }
       contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      
       paste(file_base, contrast_str, "all_genes.csv", sep = "__")
     },
     

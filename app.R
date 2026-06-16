@@ -193,7 +193,7 @@ ui <- dashboardPage(
                         uiOutput("multiContrastSelectHeader"),
                         div(
                           style = "max-height: 160px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px 12px; margin-top: 4px;",
-                                          uiOutput("multiContrastCheckboxes")
+                          uiOutput("multiContrastCheckboxes")
                         )
                       )
                     )
@@ -205,12 +205,7 @@ ui <- dashboardPage(
                 box(
                   width = 12, status = "primary", solidHeader = TRUE,
                   uiOutput("compareSubTabs"),
-                  hr(),
-                  tags$div(style = "text-align: center;",
-                           downloadButton("downloadCompareTableFull",
-                                          "Download Filtered DEGs (Full Annotations)",
-                                          class = "btn-primary")
-                  )
+                  hr()
                 )
               )
       ),
