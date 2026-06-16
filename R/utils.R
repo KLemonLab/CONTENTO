@@ -6,6 +6,7 @@
 #' @param input Shiny input object
 #' @param state App state list containing reactive values
 #' @return Character string to use as base filename
+#' @export
 get_download_filename <- function(input, state) {
   # Try SE metadata first
   se_name <- tryCatch(
@@ -33,6 +34,7 @@ get_download_filename <- function(input, state) {
 #'
 #' @param annotation Character string with the annotation name (without extension)
 #' @return Character path to the .rds file, or NULL if not found
+#' @export
 find_annotation_path <- function(annotation) {
   path <- system.file("annotations", paste0(annotation, ".rds"), package = "RNASeqApp")
   if (nzchar(path)) {
@@ -54,6 +56,7 @@ find_annotation_path <- function(annotation) {
 #'   rowData and contrast names in metadata(se)$contrasts
 #' @return A long-format data frame with columns: Geneid, contrast, baseMean,
 #'   log2FC, log2FC_shrunk, lfcSE, stat, pvalue, padj
+#' @export
 extract_de_results <- function(se) {
   rd       <- as.data.frame(rowData(se))
   gene_ids <- rownames(se)
@@ -103,6 +106,7 @@ extract_de_results <- function(se) {
 #' @return Named list with either:
 #'   \item{result}{Merged data frame on success}
 #'   \item{message}{Diagnostic string on failure (result will be NULL)}
+#' @export
 merge_annotation <- function(de_df, annot) {
   if (!is.data.frame(de_df) || !is.data.frame(annot)) {
     return(list(result = NULL, message = "Invalid data frame structure"))
@@ -152,6 +156,7 @@ merge_annotation <- function(de_df, annot) {
 #' @param padj_cut Numeric adjusted p-value threshold
 #' @return \code{df} with two new columns: \code{regulated} ("up"/"down"/NA)
 #'   and \code{DE} (logical)
+#' @export
 add_de_flags <- function(df, lfc_cut, padj_cut) {
   df |>
     mutate(
@@ -173,6 +178,7 @@ add_de_flags <- function(df, lfc_cut, padj_cut) {
 #' @param annot_df Data frame containing annotations
 #' @return Named list where names are column names and values are also column names
 #'         (suitable for use in selectInput choices)
+#' @export
 get_gsea_columns <- function(annot_df) {
   if (!is.data.frame(annot_df) || nrow(annot_df) == 0) {
     return(list())
@@ -207,6 +213,7 @@ get_gsea_columns <- function(annot_df) {
 #' @param annot_df Data frame containing gene annotations with a Geneid column
 #' @param column_name Character string specifying which annotation column to use
 #' @return Named list where each element is a character vector of Geneids
+#' @export
 build_bacterial_genesets <- function(annot_df, column_name) {
   if (!column_name %in% colnames(annot_df)) {
     return(list())
@@ -224,6 +231,7 @@ build_bacterial_genesets <- function(annot_df, column_name) {
     tibble::deframe()
 }
 
+
 #' Determine the default symbol column from available annotation columns
 #'
 #' Checks a prioritised list of common gene name column names and returns
@@ -231,6 +239,7 @@ build_bacterial_genesets <- function(annot_df, column_name) {
 #'
 #' @param annot_cols Character vector of column names from the annotation data frame
 #' @return Character string with the name of the best candidate symbol column
+#' @export
 default_symbol_col <- function(annot_cols) {
   found <- intersect(c("gene", "Gene", "product", "symbol", "hgnc_symbol", "gene_name"), annot_cols)
   if (length(found) > 0) found[1] else annot_cols[1]
@@ -248,6 +257,7 @@ default_symbol_col <- function(annot_cols) {
 #'   to disable fallback (default: "none")
 #' @return The input data frame with a 'symbol' column added or updated.
 #'   Returns df unchanged if primary_col is not present.
+#' @export
 apply_symbol <- function(df, primary_col, secondary_col = "none") {
   if (!primary_col %in% colnames(df)) return(df)
   if (!is.null(secondary_col) && secondary_col != "none" &&
@@ -269,6 +279,7 @@ apply_symbol <- function(df, primary_col, secondary_col = "none") {
 #' @param selected_data Data frame from selected_data() reactive with DE flags
 #' @param top_n Integer number of top genes to return
 #' @return Character vector of Geneids ordered by abs(log2FC)
+#' @export
 get_top_de_genes <- function(selected_data, top_n) {
   selected_data |>
     filter(DE) |>
@@ -285,6 +296,7 @@ get_top_de_genes <- function(selected_data, top_n) {
 #' @param de_df Optional data frame with Geneid and symbol columns for row labelling.
 #'   If NULL or no symbol column, Geneids are used as rownames.
 #' @return Scaled matrix with Geneids as rownames
+#' @export
 get_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
   mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], ]
   if (!is.null(de_df) && "symbol" %in% colnames(de_df)) {
@@ -310,6 +322,7 @@ get_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
 #'   Optionally includes `symbol`.
 #' @param contrasts Character vector of selected contrast names to include in the output.
 #' @return A data frame in wide format with pairs of `log2FC_<contrast>` and `DE_<contrast>` for each contrast.
+#' @export
 build_compare_table <- function(df, contrasts) {
   if (is.null(df)) return(NULL)
   
@@ -363,6 +376,7 @@ build_compare_table <- function(df, contrasts) {
 #'   or "" / NULL to omit
 #' @return Named list of character vectors (Geneids per pathway).
 #'   Returns an empty list if inputs are invalid or nothing is found.
+#' @export
 load_genesets <- function(organism,
                           annotation_df    = NULL,
                           bacterial_source = NULL,
@@ -388,7 +402,4 @@ load_genesets <- function(organism,
       lapply(function(x) x$ensembl_gene)
   }
 }
-
-
-
 
