@@ -32,7 +32,6 @@ get_download_filename <- function(input, state) {
 #' inst/annotations directory (useful during development).
 #'
 #' @param annotation Character string with the annotation name (without extension)
-#'
 #' @return Character path to the .rds file, or NULL if not found
 find_annotation_path <- function(annotation) {
   path <- system.file("annotations", paste0(annotation, ".rds"), package = "RNASeqApp")
@@ -53,7 +52,6 @@ find_annotation_path <- function(annotation) {
 #'
 #' @param se A SummarizedExperiment object with contrast results stored in
 #'   rowData and contrast names in metadata(se)$contrasts
-#'
 #' @return A long-format data frame with columns: Geneid, contrast, baseMean,
 #'   log2FC, log2FC_shrunk, lfcSE, stat, pvalue, padj
 extract_de_results <- function(se) {
@@ -102,7 +100,6 @@ extract_de_results <- function(se) {
 #'
 #' @param de_df Data frame of DE results containing a Geneid column
 #' @param annot Data frame of gene annotations containing a Geneid column
-#'
 #' @return Named list with either:
 #'   \item{result}{Merged data frame on success}
 #'   \item{message}{Diagnostic string on failure (result will be NULL)}
@@ -173,7 +170,6 @@ add_de_flags <- function(df, lfc_cut, padj_cut) {
 #' These are candidate columns for functional enrichment analysis.
 #'
 #' @param annot_df Data frame containing annotations
-#'
 #' @return Named list where names are column names and values are also column names
 #'         (suitable for use in selectInput choices)
 get_gsea_columns <- function(annot_df) {
@@ -208,7 +204,6 @@ get_gsea_columns <- function(annot_df) {
 #'
 #' @param annot_df Data frame containing gene annotations with a Geneid column
 #' @param column_name Character string specifying which annotation column to use
-#'
 #' @return Named list where each element is a character vector of Geneids
 build_bacterial_genesets <- function(annot_df, column_name) {
   if (!column_name %in% colnames(annot_df)) {
@@ -233,7 +228,6 @@ build_bacterial_genesets <- function(annot_df, column_name) {
 #' the first match found, falling back to the first available column.
 #'
 #' @param annot_cols Character vector of column names from the annotation data frame
-#'
 #' @return Character string with the name of the best candidate symbol column
 default_symbol_col <- function(annot_cols) {
   found <- intersect(c("gene", "Gene", "product", "symbol", "hgnc_symbol", "gene_name"), annot_cols)
@@ -250,7 +244,6 @@ default_symbol_col <- function(annot_cols) {
 #' @param primary_col Character string naming the column to use as symbol
 #' @param secondary_col Character string naming the fallback column, or "none"
 #'   to disable fallback (default: "none")
-#'
 #' @return The input data frame with a 'symbol' column added or updated.
 #'   Returns df unchanged if primary_col is not present.
 apply_symbol <- function(df, primary_col, secondary_col = "none") {
@@ -268,3 +261,88 @@ apply_symbol <- function(df, primary_col, secondary_col = "none") {
       dplyr::mutate(symbol = as.character(.data[[primary_col]]))
   }
 }
+
+
+#' Get top DE genes as a character vector of Geneids
+#' @param selected_data Data frame from selected_data() reactive with DE flags
+#' @param top_n Integer number of top genes to return
+#' @return Character vector of Geneids ordered by abs(log2FC)
+get_top_de_genes <- function(selected_data, top_n) {
+  selected_data |>
+    filter(DE) |>
+    arrange(desc(abs(log2FC))) |>
+    distinct(Geneid) |>
+    slice_head(n = top_n) |>
+    pull(Geneid)
+}
+
+
+#' Extract and scale VST matrix for a set of genes
+#' @param se_obj SummarizedExperiment with a vst assay
+#' @param geneids Character vector of Geneids
+#' @param de_df Optional data frame with Geneid and symbol columns for row labelling.
+#'   If NULL or no symbol column, Geneids are used as rownames.
+#' @return Scaled matrix with Geneids as rownames
+get_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
+  mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], ]
+  if (!is.null(de_df) && "symbol" %in% colnames(de_df)) {
+    sym_lookup <- de_df |> distinct(Geneid, symbol)
+    rownames(mat) <- sym_lookup$symbol[match(rownames(mat), sym_lookup$Geneid)]
+  }
+  scale(mat)
+}
+
+
+#' Build a wide comparison table of log2FC and DE status per contrast
+#'
+#' Reshapes a long-format differential expression data frame into a wide table
+#' with one row per gene and paired columns for each contrast:
+#' log2 fold-change and DE flag. Column order follows the user-provided
+#' contrast vector, ensuring consistent display in tables.
+#'
+#' This function assumes DE flags (column `DE`) have already been added,
+#' e.g. via `add_de_flags()`.
+#'
+#' @param df Data frame containing differential expression results.
+#'   Must include columns: `Geneid`, `contrast`, `log2FC`, and `DE`.
+#'   Optionally includes `symbol`.
+#' @param contrasts Character vector of selected contrast names to include in the output.
+#' @return A data frame in wide format with columns: `Geneid`, optional `symbol`, and pairs of `log2FC_<contrast>` and `DE_<contrast>` for each contrast.
+build_compare_table <- function(df, contrasts) {
+  if (is.null(df)) return(NULL)
+  
+  has_symbol <- "symbol" %in% colnames(df)
+  id_cols <- if (has_symbol) c("Geneid", "symbol") else "Geneid"
+  
+  wide <- df |>
+    select(all_of(c(id_cols, "contrast", "log2FC", "DE"))) |>
+    pivot_wider(
+      id_cols = all_of(id_cols),
+      names_from = contrast,
+      values_from = c(log2FC, DE),
+      names_sep = "_"
+    ) |>
+    mutate(
+      across(starts_with("log2FC_"), ~ round(., 2)),
+      across(starts_with("DE_"), ~ tidyr::replace_na(., FALSE))
+    ) |> 
+    filter(rowSums(across(starts_with("DE_"))) > 0)
+  
+  ordered_cols <- id_cols
+  for (ct in contrasts) {
+    ordered_cols <- c(
+      ordered_cols,
+      paste0("log2FC_", ct),
+      paste0("DE_", ct)
+    )
+  }
+  
+  wide |>
+    select(any_of(ordered_cols)) |>
+    arrange(Geneid)
+}
+
+
+
+
+

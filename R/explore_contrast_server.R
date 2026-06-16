@@ -120,7 +120,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: DE for the Selected Contrast with DE info based on User-Defined Cutoffs #####
+  ##### Reactive: DEG for the Selected Contrast with DE based on Global Cutoffs #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   selected_data <- reactive({
     req(state$de_df(), input$contrast)
@@ -429,7 +429,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 6: ERROR HANDLERS ####
+  #### SECTION 5: ERROR HANDLERS ####
   # Helper functions for error management
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   

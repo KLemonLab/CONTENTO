@@ -179,7 +179,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$heatmapControlsUI <- renderUI({
     fluidRow(
       column(6,
-             numericInput("top_n", "Top N genes", value = 50, min = 10, max = 500, step = 10)
+             numericInput("top_n", "Top N genes by |log2FC|", value = 50, min = 10, max = 500, step = 10)
       ),
       column(6,
              selectInput("viridis_palette", "Viridis palette",
@@ -265,114 +265,33 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 2: DATA PROCESSING & FILTERING ####
-  # Reactive expressions that filter, transform, and prepare data for display
+  #### SECTION 2: DATA PROCESSING & ANALYSIS ####
+  # Reactive expressions that transform and analyze data based on user selections and inputs
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: DEG Data for Upset Plot & Heatmap #####
+  ##### Reactive: DEG for the Selected Contrasts with DE based on Global Cutoffs #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  selected_contrast_data <- reactive({
+    req(state$de_df(), input$compare_contrasts)
+    
+    tryCatch({
+      state$de_df() |>
+        filter(contrast %in% input$compare_contrasts) |>
+        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff)
+    }, error = handle_filter_contrasts_error)
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: DEG Comparison Table #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   compare_data <- reactive({
-    req(state$de_df(), input$compare_contrasts)
+    req(selected_contrast_data(), input$compare_contrasts)
     
-    deg_list <- map(input$compare_contrasts, function(ct) {
-      state$de_df() %>%
-        filter(
-          contrast == ct,
-          !is.na(padj) & !is.na(log2FC),
-          padj <= input$global_padj_cutoff,
-          abs(log2FC) >= input$global_log2FC_cutoff
-        ) %>%
-        pull(Geneid)
-    }) %>% set_names(input$compare_contrasts)
-    
-    if (all(lengths(deg_list) == 0)) {
-      return(NULL)
-    }
-    
-    enframe(deg_list, name = "contrast", value = "Geneid") %>%
-      unnest(Geneid) %>%
-      mutate(value = TRUE) %>%
-      pivot_wider(names_from = contrast, values_from = value, values_fill = FALSE)
+    tryCatch({
+      build_compare_table(selected_contrast_data(), input$compare_contrasts)
+    }, error = handle_build_compare_table_error)
   })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: DEG Comparison Table Data #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  compare_table_data <- reactive({
-    req(state$de_df(), input$compare_contrasts)
-    
-    has_symbol <- "symbol" %in% colnames(state$de_df())
-    id_cols <- if (has_symbol) c("Geneid", "symbol") else "Geneid"
-    
-    passing_genes <- state$de_df() %>%
-      filter(
-        contrast %in% input$compare_contrasts,
-        !is.na(padj) & !is.na(log2FC),
-        padj <= input$global_padj_cutoff,
-        abs(log2FC) >= input$global_log2FC_cutoff
-      ) %>%
-      pull(Geneid) %>%
-      unique()
-    
-    if (length(passing_genes) == 0) {
-      return(NULL)
-    }
-    
-    filtered <- state$de_df() %>%
-      filter(
-        contrast %in% input$compare_contrasts,
-        Geneid %in% passing_genes
-      ) %>%
-      select(all_of(c(id_cols, "contrast", "log2FC")))
-    
-    wide_data <- filtered %>%
-      pivot_wider(
-        id_cols = all_of(id_cols),
-        names_from = contrast,
-        values_from = log2FC
-      ) %>%
-      mutate(across(-any_of(id_cols), ~ round(., 2)))
-    
-    contrast_cols <- setdiff(names(wide_data), id_cols)
-    
-    for(col in contrast_cols) {
-      wide_data[[paste0(col, "_DE")]] <- !is.na(wide_data[[col]])
-    }
-    
-    col_order <- id_cols
-    for(col in contrast_cols) {
-      col_order <- c(col_order, col, paste0(col, "_DE"))
-    }
-    
-    wide_data %>%
-      select(all_of(col_order)) %>%
-      arrange(Geneid)
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: Full Annotation Export Data #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  compare_table_export <- reactive({
-    req(compare_table_data(), state$annotation_df())
-    
-    display_data <- compare_table_data()
-    
-    display_data %>%
-      select(Geneid) %>%
-      distinct() %>%
-      left_join(
-        display_data %>% select(-any_of("symbol")),
-        by = "Geneid"
-      ) %>%
-      left_join(state$annotation_df(), by = "Geneid")
-  })
-  
-  
-  # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 3: GENE SET ENRICHMENT ANALYSIS ####
-  # Load gene sets and perform multi-contrast GSEA and GESECA
-  # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: Multi-Contrast GSEA Results #####
@@ -615,7 +534,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 4: OUTPUT RENDERING ####
+  #### SECTION 3: OUTPUT RENDERING ####
   # Display tables, plots, and interactive visualizations
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
@@ -623,39 +542,21 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Output: Expression Heatmap #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$heatmapPlot <- renderPlot({
-    req(compare_data(), state$se_obj())
+    req(selected_contrast_data(), state$se_obj())
     req(input$top_n, input$viridis_palette)
     
-    all_genes <- compare_data()$Geneid
+    geneids <- get_top_de_genes(selected_contrast_data(), input$top_n)
     
-    if (length(all_genes) == 0) {
+    if (length(geneids) == 0) {
       plot.new()
       text(0.5, 0.5, "No DE genes found for heatmap\nAdjust cutoffs or select contrasts", cex = 1.5)
       return()
     }
     
-    top_genes <- state$de_df() %>%
-      filter(
-        Geneid %in% all_genes,
-        contrast %in% input$compare_contrasts
-      ) %>%
-      arrange(desc(abs(log2FC))) %>%
-      slice_head(n = input$top_n) %>%
-      distinct(Geneid, .keep_all = TRUE)
-    
-    if (nrow(top_genes) == 0) {
-      plot.new()
-      text(0.5, 0.5, "No genes to display", cex = 1.5)
-      return()
-    }
-    
-    vsd_mat <- assay(state$se_obj(), "vst")[rownames(state$se_obj()) %in% top_genes$Geneid, ]
-    vsd_mat <- vsd_mat[match(top_genes$Geneid, rownames(vsd_mat)), ]
-    
-    rownames(vsd_mat) <- if ("symbol" %in% colnames(top_genes)) top_genes$symbol else top_genes$Geneid
+    mat <- get_vst_matrix(state$se_obj(), geneids, selected_contrast_data())
     
     Heatmap(
-      scale(vsd_mat),
+      scale(mat),
       col = viridis(100, option = input$viridis_palette),
       column_names_gp    = grid::gpar(fontsize = 12),
       row_names_gp       = grid::gpar(fontsize = 10),
@@ -673,9 +574,18 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$compareUpsetPlot <- renderPlot({
     req(compare_data())
     
+    df <- compare_data()    
+    compare_data_boolean <- df[, sapply(df, is.logical), drop = FALSE]
+    
+    if (nrow(compare_data_boolean) == 0) {
+      plot.new()
+      text(0.5, 0.5, "No DE genes found for selected contrasts\nAdjust cutoffs or selected contrasts", cex = 1.5)
+      return()
+    }
+    
     upset(
-      compare_data(),
-      input$compare_contrasts,
+      compare_data_boolean,
+      colnames(compare_data_boolean),
       name = "DEGs",
       min_size = 1,
       base_annotations = list(
@@ -696,9 +606,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareTable <- renderDT(
     {
-      req(compare_table_data())
+      req(compare_data())
       
-      df_display <- compare_table_data()
+      df_display <- compare_data()
       id_cols    <- intersect(c("Geneid", "symbol"), colnames(df_display))
       lfc_cols   <- setdiff(colnames(df_display), id_cols)
       
@@ -1079,49 +989,47 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 5: DOWNLOAD HANDLERS ####
+  #### SECTION 4: DOWNLOAD HANDLERS ####
   # Manage file downloads with proper naming and filtering
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: DEG Comparison Table (Full Annotations) #####
+  ##### Download Handler: Download All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$downloadCompareTableFull <- downloadHandler(
+  output$downloadAllContrastData <- downloadHandler(
     filename = function() {
       file_base <- get_download_filename(input, state)
+      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
       
-      contrasts_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
-        paste(input$compare_contrasts, collapse = "-")
-      } else {
-        "contrasts"
-      }
-      contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__", contrasts_str)
-      fc_str  <- paste0("FC", gsub("\\.", "p", as.character(lfc_cut)))
-      padj_str <- paste0("padj", gsub("\\.", "p", as.character(padj_cut)))
-      
-      paste(file_base, contrasts_str, fc_str, padj_str, "full.csv", sep = "__")
+      paste(file_base, contrast_str, "all_genes.csv", sep = "__")
     },
+    
     content = function(file) {
-      req(input$compareTable_rows_all)
+      req(selected_contrast_data())
       
-      full_data       <- compare_table_export()
-      filtered_indices <- input$compareTable_rows_all
-      display_data    <- compare_table_data()
-      
-      filtered_geneids <- display_data[filtered_indices, "Geneid", drop = TRUE]
-      
-      filtered_full <- full_data %>%
-        filter(Geneid %in% filtered_geneids)
-      
-      write.csv(filtered_full, file, row.names = FALSE)
+      selected_contrast_data() |>
+        arrange(desc(abs(log2FC))) |>
+        select(-any_of(c("tooltip", "DE"))) |>
+        write.csv(file, row.names = FALSE)
     }
   )
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 6: ERROR HANDLERS ####
+  #### SECTION 5: ERROR HANDLERS ####
   # Helper functions for error management
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  handle_filter_contrasts_error <- \(e) {
+    showNotification(paste("Error filtering contrast data:", e$message), type = "error")
+    NULL
+  }
+  
+  handle_build_compare_table_error <- \(e) {
+    showNotification(paste("Error building comparison table:", e$message), type = "error")
+    NULL
+  }
   
   handle_compare_gsea_error <- \(e) {
     showNotification(paste("Error running multi-contrast GSEA:", e$message), type = "error")
