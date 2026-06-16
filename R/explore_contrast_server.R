@@ -126,22 +126,18 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     req(state$de_df(), input$contrast)
     
     tryCatch({
-      df <- state$de_df() %>%
-        filter(contrast == input$contrast)
-      
-      df %>%
+      state$de_df() |>
+        filter(contrast == input$contrast) |>
+        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff) |>
         mutate(
           tooltip = paste0(
             if ("symbol" %in% names(.)) .data$symbol else .data$Geneid, " (", Geneid, ")",
             "\nlog2FC: ", round(log2FC, 2),
             "\nFDR: ", signif(padj, 3)
           )
-        ) %>%
-        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff)
-      
+        ) 
     }, error = handle_filter_data_error)
   })
-  
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: Load Gene Sets (MSigDB or Bacterial) #####
@@ -177,8 +173,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     
     tryCatch({
       # Prepare ranked gene list
-      ranks <- state$de_df() %>%
-        filter(contrast == input$contrast) %>%
+      ranks <- state$de_df() |>
+        filter(contrast == input$contrast) |>
         filter(!is.na(stat))
       
       if (nrow(ranks) == 0) {
@@ -194,8 +190,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       if (!is.null(organism()) && organism() == "Bacteria") {
         pathways_list <- genesets()
       } else {
-        pathways_list <- genesets() %>%
-          split(.$gs_name) %>%
+        pathways_list <- genesets() |>
+          split(.$gs_name) |>
           lapply(function(x) x$ensembl_gene)
       }
       
@@ -210,14 +206,14 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         stats = ranks_vec,
         minSize = 15,
         maxSize = 500
-      ) %>%
+      ) |>
         arrange(padj, pval)
       
       # Select top pathways by absolute NES
-      topPathways <- fgseaRes %>%
-        filter(padj < 0.05) %>%
-        arrange(desc(abs(NES))) %>%
-        slice_head(n = 20) %>%
+      topPathways <- fgseaRes |>
+        filter(padj < 0.05) |>
+        arrange(desc(abs(NES))) |>
+        slice_head(n = 20) |>
         pull(pathway)
       
       # Generate table plot (only if there are significant pathways)
@@ -253,13 +249,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       display_cols <- intersect(c("Geneid", "symbol", "log2FC", "log2FC_shrunk", "stat", "padj", "regulated"),
                                 colnames(selected_data()))
       
-      df <- selected_data() %>%
-        filter(DE) %>%
+      df <- selected_data() |>
+        filter(DE) |>
         mutate(
           across(any_of(c("log2FC", "log2FC_shrunk", "stat")), ~ round(.x, 2)),
           padj = formatC(padj, format = "e", digits = 2)
-        ) %>%
-        arrange(desc(abs(log2FC))) %>%
+        ) |>
+        arrange(desc(abs(log2FC))) |>
         select(all_of(display_cols))
       
       if (nrow(df) == 0) {
@@ -279,7 +275,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       )
       
       if ("regulated" %in% colnames(df)) {
-        dt <- dt %>%
+        dt <- dt |>
           formatStyle(
             'regulated',
             target = 'row',
@@ -349,12 +345,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       file_name <- paste(file_base, contrast_str, "GSEA", gs_str, sep = "__")
       
       # Format the dataframe
-      df <- gsea_result()$fgseaRes %>%
+      df <- gsea_result()$fgseaRes |>
         mutate(
           across(c(pval, padj), ~ formatC(.x, format = "e", digits = 2)),
           across(c(ES, NES), ~ round(.x, 3)),
           leadingEdge = sapply(leadingEdge, function(x) paste(head(x, 10), collapse = "; "))
-        ) %>%
+        ) |>
         select(pathway, pval, padj, ES, NES, size, leadingEdge)
       
       datatable(
@@ -402,9 +398,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     content = function(file) {
       req(selected_data())
       
-      selected_data() %>%
-        arrange(desc(abs(log2FC))) %>%
-        select(-any_of(c("tooltip", "DE"))) %>%
+      selected_data() |>
+        arrange(desc(abs(log2FC))) |>
+        select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
     }
   )
@@ -423,10 +419,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     },
     content = function(file) {
       req(selected_data(), nrow(selected_data()) > 0)
-      selected_data() %>%
-        filter(DE) %>%
-        arrange(desc(abs(log2FC))) %>%
-        select(-any_of(c("tooltip", "DE"))) %>%
+      selected_data() |>
+        filter(DE) |>
+        arrange(desc(abs(log2FC))) |>
+        select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
     }
   )
