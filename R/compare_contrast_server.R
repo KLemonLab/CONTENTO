@@ -304,93 +304,117 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   compare_gsea_data <- reactive({
     req(state$de_df(), input$compare_contrasts)
     
-    tryCatch({
-      if (!is.null(organism()) && organism() == "Bacteria") {
-        req(input$bacterial_geneset_source_compare, state$annotation_df())
-      } else {
-        req(input$compare_gs_collection)
-      }
-      pathways_list <- load_genesets(
-        organism(),
-        annotation_df    = state$annotation_df(),
-        bacterial_source = input$bacterial_geneset_source_compare,
-        gs_collection    = input$compare_gs_collection,
-        gs_subcollection = input$compare_gs_subcollection
-      )
+    # Validate inputs depending on organism
+    if (!is.null(organism()) && organism() == "Bacteria") {
+      req(input$bacterial_geneset_source_compare, state$annotation_df())
+    } else {
+      req(input$compare_gs_collection)
+    }
+    
+    # Load gene sets
+    pathways_list <- load_genesets(
+      organism(),
+      annotation_df    = state$annotation_df(),
+      bacterial_source = input$bacterial_geneset_source_compare,
+      gs_collection    = input$compare_gs_collection,
+      gs_subcollection = input$compare_gs_subcollection
+    )
+    
+    if (length(pathways_list) == 0) {
+      showNotification("No pathways found in selected gene set", type = "warning")
+      return(NULL)
+    }
+    
+    # Run fgsea per contrast (robust handling)
+    fgsea_results <- purrr::map(input$compare_contrasts, function(ct) {
       
-      fgsea_results <- map(input$compare_contrasts, function(ct) {
-        ranks <- state$de_df() %>%
-          filter(contrast == ct, !is.na(stat))
-        
-        if (nrow(ranks) == 0) return(NULL)
-        
-        ranks_vec <- setNames(ranks$stat, ranks$Geneid)
-        
-        fgseaMultilevel(
-          pathways = pathways_list,
-          stats = ranks_vec,
-          minSize = 15,
-          maxSize = 500
+      ranks <- state$de_df() %>%
+        dplyr::filter(contrast == ct, !is.na(stat))
+      
+      if (nrow(ranks) == 0) return(NULL)
+      
+      ranks_vec <- setNames(ranks$stat, ranks$Geneid)
+      
+      # Optional safety checks
+      if (length(unique(ranks_vec)) < 10) return(NULL)
+      if (all(ranks_vec > 0) || all(ranks_vec < 0)) return(NULL)
+      
+      tryCatch({
+        suppressWarnings(
+          fgseaMultilevel(
+            pathways = pathways_list,
+            stats    = ranks_vec,
+            minSize  = 15,
+            maxSize  = 500
+          )
         )
-      }) %>% set_names(input$compare_contrasts)
-      
-      fgsea_results <- fgsea_results[!sapply(fgsea_results, is.null)]
-      
-      if (length(fgsea_results) == 0) {
-        showNotification("No valid GSEA results for selected contrasts", type = "warning")
-        return(NULL)
-      }
-      
-      nes_df <- map_dfr(names(fgsea_results), ~ {
-        fgsea_results[[.x]] %>%
-          as_tibble() %>%
-          select(pathway, NES, padj) %>%
-          mutate(contrast = .x)
-      })
-      
-      sig_pathways <- nes_df %>%
-        filter(padj < 0.05) %>%
-        pull(pathway) %>%
-        unique()
-      
-      if (length(sig_pathways) == 0) {
-        showNotification("No significant pathways found across contrasts", type = "warning")
-        return(NULL)
-      }
-      
-      nes_matrix <- nes_df %>%
-        filter(pathway %in% sig_pathways) %>%
-        select(pathway, contrast, NES) %>%
-        pivot_wider(names_from = contrast, values_from = NES, values_fill = 0) %>%
-        column_to_rownames("pathway") %>%
-        as.matrix()
-      
-      padj_matrix <- nes_df %>%
-        filter(pathway %in% sig_pathways) %>%
-        select(pathway, contrast, padj) %>%
-        pivot_wider(names_from = contrast, values_from = padj, values_fill = 1) %>%
-        column_to_rownames("pathway") %>%
-        as.matrix()
-      
-      nes_range <- apply(nes_matrix, 1, function(x) max(x) - min(x))
-      sort_order <- order(nes_range, decreasing = TRUE)
-      
-      nes_matrix  <- nes_matrix[sort_order,  , drop = FALSE]
-      padj_matrix <- padj_matrix[sort_order, , drop = FALSE]
-      
-      if (!is.null(input$max_pathways) && nrow(nes_matrix) > input$max_pathways) {
-        nes_matrix  <- nes_matrix[1:input$max_pathways,  , drop = FALSE]
-        padj_matrix <- padj_matrix[1:input$max_pathways, , drop = FALSE]
-      }
-      
-      list(
-        nes_matrix    = nes_matrix,
-        padj_matrix   = padj_matrix,
-        nes_df        = nes_df %>% filter(pathway %in% sig_pathways),
-        fgsea_results = fgsea_results
-      )
-      
-    }, error = handle_compare_gsea_error)
+      }, error = function(e) handle_fgsea_error(e, ct))
+    })
+    
+    names(fgsea_results) <- input$compare_contrasts
+    
+    # Remove failed contrasts cleanly
+    fgsea_results <- purrr::compact(fgsea_results)
+    
+    if (length(fgsea_results) == 0) {
+      showNotification("No valid GSEA results for selected contrasts", type = "warning")
+      return(NULL)
+    }
+    
+    # Combine results
+    nes_df <- purrr::map_dfr(names(fgsea_results), function(ct) {
+      fgsea_results[[ct]] %>%
+        tibble::as_tibble() %>%
+        dplyr::select(pathway, NES, padj) %>%
+        dplyr::mutate(contrast = ct)
+    })
+    
+    # Keep only significant pathways
+    sig_pathways <- nes_df %>%
+      dplyr::filter(padj < 0.05) %>%
+      dplyr::pull(pathway) %>%
+      unique()
+    
+    if (length(sig_pathways) == 0) {
+      showNotification("No significant pathways found across contrasts", type = "warning")
+      return(NULL)
+    }
+    
+    # Build matrices
+    nes_matrix <- nes_df %>%
+      dplyr::filter(pathway %in% sig_pathways) %>%
+      dplyr::select(pathway, contrast, NES) %>%
+      tidyr::pivot_wider(names_from = contrast, values_from = NES, values_fill = 0) %>%
+      tibble::column_to_rownames("pathway") %>%
+      as.matrix()
+    
+    padj_matrix <- nes_df %>%
+      dplyr::filter(pathway %in% sig_pathways) %>%
+      dplyr::select(pathway, contrast, padj) %>%
+      tidyr::pivot_wider(names_from = contrast, values_from = padj, values_fill = 1) %>%
+      tibble::column_to_rownames("pathway") %>%
+      as.matrix()
+    
+    # Order by variability
+    nes_range <- apply(nes_matrix, 1, function(x) max(x) - min(x))
+    sort_order <- order(nes_range, decreasing = TRUE)
+    
+    nes_matrix  <- nes_matrix[sort_order, , drop = FALSE]
+    padj_matrix <- padj_matrix[sort_order, , drop = FALSE]
+    
+    # Limit pathways if requested
+    if (!is.null(input$max_pathways) && nrow(nes_matrix) > input$max_pathways) {
+      nes_matrix  <- nes_matrix[1:input$max_pathways, , drop = FALSE]
+      padj_matrix <- padj_matrix[1:input$max_pathways, , drop = FALSE]
+    }
+    
+    # Final output
+    list(
+      nes_matrix    = nes_matrix,
+      padj_matrix   = padj_matrix,
+      nes_df        = nes_df %>% dplyr::filter(pathway %in% sig_pathways),
+      fgsea_results = fgsea_results
+    )
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1033,10 +1057,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     NULL
   }
   
-  handle_compare_gsea_error <- \(e) {
-    showNotification(paste("Error running multi-contrast GSEA:", e$message), type = "error")
+  handle_fgsea_error <- function(e, ct) {
+    message("fgsea failed for contrast: ", ct, " | ", e$message)
     NULL
   }
+  
   
   handle_leading_edge_error <- \(e) {
     showNotification(paste("Error extracting leading edge:", e$message), type = "error")
