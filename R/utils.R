@@ -164,6 +164,7 @@ add_de_flags <- function(df, lfc_cut, padj_cut) {
     )
 }
 
+
 #' Get all potential gsea columns available in dataframe
 #'
 #' Returns all column names except common metadata columns (Geneid, symbol, locus_tag, etc.)
@@ -196,6 +197,7 @@ get_gsea_columns <- function(annot_df) {
   as.list(gsea_cols) |>
     stats::setNames(gsea_cols)
 }
+
 
 #' Build gene sets from any annotation column
 #'
@@ -307,7 +309,7 @@ get_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
 #'   Must include columns: `Geneid`, `contrast`, `log2FC`, and `DE`.
 #'   Optionally includes `symbol`.
 #' @param contrasts Character vector of selected contrast names to include in the output.
-#' @return A data frame in wide format with columns: `Geneid`, optional `symbol`, and pairs of `log2FC_<contrast>` and `DE_<contrast>` for each contrast.
+#' @return A data frame in wide format with pairs of `log2FC_<contrast>` and `DE_<contrast>` for each contrast.
 build_compare_table <- function(df, contrasts) {
   if (is.null(df)) return(NULL)
   
@@ -342,6 +344,50 @@ build_compare_table <- function(df, contrasts) {
     arrange(Geneid)
 }
 
+
+#' Load gene sets as a named list of gene ID vectors
+#'
+#' Single entry point for geneset loading across the app. Returns a named list
+#' suitable for direct use in fgseaMultilevel() and geseca(). Handles both
+#' Bacteria (annotation column) and Human (MSigDB) organisms.
+#'
+#' For Bacteria, delegates to build_bacterial_genesets().
+#' For Human, fetches from msigdbr and splits into a named list by gs_name,
+#' using ensembl_gene as the gene identifier.
+#'
+#' @param organism       Character; "Bacteria", "Human", or NULL/other
+#' @param annotation_df  Data frame; required when organism == "Bacteria"
+#' @param bacterial_source Character; annotation column name for gene set membership
+#' @param gs_collection  Character; MSigDB collection code (e.g. "H", "C2")
+#' @param gs_subcollection Character; MSigDB subcollection (e.g. "CP:REACTOME"),
+#'   or "" / NULL to omit
+#' @return Named list of character vectors (Geneids per pathway).
+#'   Returns an empty list if inputs are invalid or nothing is found.
+load_genesets <- function(organism,
+                          annotation_df    = NULL,
+                          bacterial_source = NULL,
+                          gs_collection    = NULL,
+                          gs_subcollection = NULL) {
+  if (!is.null(organism) && organism == "Bacteria") {
+    if (is.null(annotation_df) || is.null(bacterial_source)) return(list())
+    build_bacterial_genesets(annotation_df, bacterial_source)
+    
+  } else {
+    if (is.null(gs_collection)) return(list())
+    use_sub <- !is.null(gs_subcollection) && nzchar(gs_subcollection)
+    genesets <- if (use_sub) {
+      msigdbr(species = "Homo sapiens",
+              collection    = gs_collection,
+              subcollection = gs_subcollection)
+    } else {
+      msigdbr(species = "Homo sapiens",
+              collection = gs_collection)
+    }
+    genesets |>
+      split(genesets$gs_name) |>
+      lapply(function(x) x$ensembl_gene)
+  }
+}
 
 
 

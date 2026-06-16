@@ -131,11 +131,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff) |>
         mutate(
           tooltip = paste0(
-            if ("symbol" %in% names(.)) .data$symbol else .data$Geneid, " (", Geneid, ")",
+            dplyr::coalesce(.data$symbol, Geneid),
+            " (", Geneid, ")",
             "\nlog2FC: ", round(log2FC, 2),
             "\nFDR: ", signif(padj, 3)
           )
-        ) 
+        )
     }, error = handle_filter_data_error)
   })
   
@@ -143,25 +144,20 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   ##### Reactive: Load Gene Sets (MSigDB or Bacterial) #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets <- reactive({
-    # For Bacteria: use user-provided annotation columns
     if (!is.null(organism()) && organism() == "Bacteria") {
       req(state$annotation_df(), input$bacterial_geneset_source)
       tryCatch(
-        build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source),
+        load_genesets(organism(), annotation_df = state$annotation_df(),
+                      bacterial_source = input$bacterial_geneset_source),
         error = handle_geneset_error
       )
-      
     } else {
-      # For Human: use MSigDB
       req(input$gs_collection)
-      
-      tryCatch({
-        if (nzchar(input$gs_subcollection)) {
-          msigdbr(species = "Homo sapiens", collection = input$gs_collection, subcollection = input$gs_subcollection)
-        } else {
-          msigdbr(species = "Homo sapiens", collection = input$gs_collection)
-        }
-      }, error = handle_msigdb_error)
+      tryCatch(
+        load_genesets(organism(), gs_collection = input$gs_collection,
+                      gs_subcollection = input$gs_subcollection),
+        error = handle_msigdb_error
+      )
     }
   })
   
@@ -183,17 +179,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       }
       
       ranks_vec <- setNames(ranks$stat, ranks$Geneid)
-      
-      # Convert gene sets to named list of gene vectors
-      # For bacteria: already in correct format
-      # For human: need to convert from msigdbr format
-      if (!is.null(organism()) && organism() == "Bacteria") {
-        pathways_list <- genesets()
-      } else {
-        pathways_list <- genesets() |>
-          split(.$gs_name) |>
-          lapply(function(x) x$ensembl_gene)
-      }
+
+      pathways_list <- genesets()
       
       if (length(pathways_list) == 0) {
         showNotification("No pathways found in selected gene set", type = "warning")

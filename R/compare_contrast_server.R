@@ -307,19 +307,16 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       if (!is.null(organism()) && organism() == "Bacteria") {
         req(input$bacterial_geneset_source_compare, state$annotation_df())
-        pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source_compare)
       } else {
         req(input$compare_gs_collection)
-        genesets <- if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) {
-          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection, subcollection = input$compare_gs_subcollection)
-        } else {
-          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection)
-        }
-        
-        pathways_list <- genesets %>%
-          split(.$gs_name) %>%
-          lapply(function(x) x$ensembl_gene)
       }
+      pathways_list <- load_genesets(
+        organism(),
+        annotation_df    = state$annotation_df(),
+        bacterial_source = input$bacterial_geneset_source_compare,
+        gs_collection    = input$compare_gs_collection,
+        gs_subcollection = input$compare_gs_subcollection
+      )
       
       fgsea_results <- map(input$compare_contrasts, function(ct) {
         ranks <- state$de_df() %>%
@@ -482,19 +479,16 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       if (!is.null(organism()) && organism() == "Bacteria") {
         req(input$bacterial_geneset_source_compare, state$annotation_df())
-        pathways_list <- build_bacterial_genesets(state$annotation_df(), input$bacterial_geneset_source_compare)
       } else {
         req(input$compare_gs_collection)
-        genesets <- if (!is.null(input$compare_gs_subcollection) && nzchar(input$compare_gs_subcollection)) {
-          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection, subcollection = input$compare_gs_subcollection)
-        } else {
-          msigdbr(species = "Homo sapiens", collection = input$compare_gs_collection)
-        }
-        
-        pathways_list <- genesets %>%
-          split(.$gs_name) %>%
-          lapply(function(x) x$ensembl_gene)
       }
+      pathways_list <- load_genesets(
+        organism(),
+        annotation_df    = state$annotation_df(),
+        bacterial_source = input$bacterial_geneset_source_compare,
+        gs_collection    = input$compare_gs_collection,
+        gs_subcollection = input$compare_gs_subcollection
+      )
       
       if (length(pathways_list) == 0) {
         showNotification("No pathways found in selected gene set", type = "warning")
@@ -1030,7 +1024,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   handle_filter_contrasts_error <- \(e) {
-    showNotification(paste("Error filtering contrast data:", e$message), type = "error")
+    showNotification(paste("Error filtering contrasts data:", e$message), type = "error")
     NULL
   }
   
