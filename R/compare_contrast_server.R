@@ -82,6 +82,28 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$compareGseaControlsUI_geseca <- renderUI({ gsea_controls_ui() })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Dynamic Plot Heights Based on Data Size #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$heatmapPlotUI <- renderUI({
+    req(input$top_n)
+    h <- max(400, input$top_n * 14)
+    plotOutput("heatmapPlot", height = paste0(h, "px"))
+  })
+  
+  output$compareGSEAPlotUI <- renderUI({
+    req(gsea_results())
+    h <- max(400, nrow(gsea_results()$nes_matrix) * 18)
+    plotOutput("compareGSEAPlot", height = paste0(h, "px"))
+  })
+  
+  output$gesecaTablePlotUI <- renderUI({
+    req(geseca_result())
+    n <- sum(geseca_result()$gesecaRes$padj < 0.05, na.rm = TRUE)
+    h <- max(400, min(n, 20) * 40)
+    plotOutput("gesecaTablePlot", height = paste0(h, "px"))
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Conditional Sub-tabs #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareSubTabs <- renderUI({
@@ -89,7 +111,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       tabPanel("Expression Heatmap",
                uiOutput("heatmapControlsUI"),
                hr(),
-               withSpinner(plotOutput("heatmapPlot", height = "700px"), type = 5)),
+               withSpinner(uiOutput("heatmapPlotUI"), type = 5)),
       tabPanel("DEG Overlap", 
                withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5),  
                h4("Table of DEGs in All Selected Contrasts"),
@@ -123,7 +145,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                              )
                                            ),
                                            hr(),
-                                           withSpinner(plotOutput("compareGSEAPlot", height = "1000px"), type = 5),
+                                           withSpinner(uiOutput("compareGSEAPlotUI"), type = 5),
                                            hr(),
                                            h4("NES Values for Significant Pathways"),
                                            withSpinner(DTOutput("compareGSEATable"), type = 5)
@@ -154,7 +176,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                   type = "pills",
                                   tabPanel("Overview",
                                            h4("Top 20 GESECA Results"),
-                                           withSpinner(plotOutput("gesecaTablePlot", height = "600px"), type = 5),
+                                           withSpinner(uiOutput("gesecaTablePlotUI"), type = 5),
                                            hr(),
                                            h4("All GESECA Results"),
                                            withSpinner(DTOutput("gesecaResultsTable"), type = 5)
