@@ -23,8 +23,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                withSpinner(DTOutput("DETable"), type = 5),
                tags$div(
                  style = "margin-top: 15px; display: flex; gap: 10px;",
-                 downloadButton("downloadAllContrastData", "Download All Genes for Selected Contrast", class = "btn btn-warning"),
-                 downloadButton("downloadFilteredContrastData", "Download Differentially Expresssed Genes", class = "btn btn-warning")
+                 downloadButton("downloadAllContrastData", "Download All Genes for Selected Contrast", class = "btn btn-info"),
+                 downloadButton("downloadFilteredContrastData", "Download Differentially Expresssed Genes", class = "btn btn-info")
                )
       ),
       tabPanel("Volcano Plot", 
@@ -39,23 +39,30 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                                 fluidRow(
                                   # LEFT: explanation
                                   column(
-                                    width = 8,
+                                    width = 7,
                                     div(
-                                      span("Choose an annotation column to perform  GSEA."),
+                                      span("Run Gene Set Enrichment Analysis (GSEA) using curated gene sets."),
                                       tags$ul(
                                         style = "margin: 5px 0 0 15px; padding:0;",
-                                        tags$li("Table includes Gene Sets ranked by NES (Normalized Enrichment Score)"),
-                                        tags$li("Plot represents Top 20 significant pathways (FDR < 0.05) with leading edge genes highlighted")
+                                        tags$li("For Human data: select gene sets from MSigDB collections"),
+                                        tags$li("For Bacterial data: choose a column from the annotation containing gene set information"),
+                                        tags$li("Results table shows gene sets ranked by NES (Normalized Enrichment Score)"),
+                                        tags$li("Plot displays up to 20 significant gene sets (FDR < 0.05) with leading-edge genes highlighted")
                                       )
                                     )
                                   ),
                                   
                                   # RIGHT: controls
                                   column(
-                                    width = 4,
+                                    width = 5,
                                     div(
                                       style = "padding-left:10px;",
                                       uiOutput("gseaControlsUI")
+                                    ),
+                                    tags$div(
+                                      style = "margin-top: 15px; display: flex; gap: 10px;",
+                                      downloadButton("downloadGseaResults", "Download Table", class = "btn btn-info"),
+                                      downloadButton("downloadGseaPlot",    "Download Plot",    class = "btn btn-info")
                                     )
                                   )
                                 ),
@@ -63,13 +70,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                                 hr(),
                                 withSpinner(DTOutput("gseaResultsTable"), type = 5),
                                 hr(),
-                                h4("Top 20 Enriched Pathways (FDR < 0.05)"),
-                                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
-                                tags$div(
-                                  style = "margin-top: 15px; display: flex; gap: 10px;",
-                                  downloadButton("downloadGseaResults", "Download GSEA Table", class = "btn btn-warning"),
-                                  downloadButton("downloadGseaPlot",    "Download GSEA Plot",    class = "btn btn-warning")
-                                )
+                                h4("Top 20 Enriched Gene Sets (FDR < 0.05)"),
+                                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5)
                        )
                      )
       )
@@ -149,20 +151,29 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   ##### Reactive: Load Gene Sets (MSigDB or Bacterial) #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets <- reactive({
-    if (!is.null(organism()) && organism() == "Bacteria") {
+    if (organism() == "Bacteria") {
       req(state$annotation_df(), input$bacterial_geneset_source)
-      tryCatch(
-        load_genesets(organism(), annotation_df = state$annotation_df(),
-                      bacterial_source = input$bacterial_geneset_source),
-        error = handle_geneset_error
-      )
-    } else {
+      tryCatch({
+        list(
+          data  = load_genesets(organism(), annotation_df = state$annotation_df(),
+                                bacterial_source = input$bacterial_geneset_source),
+          label = input$bacterial_geneset_source
+        )
+      }, error = handle_geneset_error)
+      
+    } else if (organism() == "Human") {
       req(input$gs_collection)
-      tryCatch(
-        load_genesets(organism(), gs_collection = input$gs_collection,
-                      gs_subcollection = input$gs_subcollection),
-        error = handle_msigdb_error
-      )
+      tryCatch({
+        list(
+          data  = load_genesets(organism(), gs_collection = input$gs_collection,
+                                gs_subcollection = input$gs_subcollection),
+          label = paste0(input$gs_collection,
+                         if (nzchar(input$gs_subcollection %||% "")) paste0("_", input$gs_subcollection))
+        )
+      }, error = handle_msigdb_error)
+      
+    } else {
+      NULL
     }
   })
   
@@ -185,10 +196,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       ranks_vec <- setNames(ranks$stat, ranks$Geneid)
       
       # Get gene sets for GSEA
-      pathways_list <- genesets()
+      pathways_list <- genesets()$data
       
       if (length(pathways_list) == 0) {
-        showNotification("No pathways found in selected gene set", type = "warning")
+        showNotification("No gene sets found in selected column", type = "warning")
         return(NULL)
       }
       
@@ -294,7 +305,16 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         labs(x = paste0("log2 Fold Change", if (x_col == "log2FC_shrunk") " (shrunken)" else ""), y = "-log10(FDR)") +
         theme_minimal()
       
-      ggplotly(gg, tooltip = "text")
+      ggplotly(gg, tooltip = "text") |>
+        config(toImageButtonOptions = list(
+          format   = "png",
+          filename = build_download_filename(input, state,
+                                             type = "volcano", contrast = input$contrast,
+                                             filters  = list(FC = input$global_log2FC_cutoff, FDR = input$global_padj_cutoff)),
+          width    = 1800,
+          height   = 900,
+          scale    = 2
+        ))
     }, error = handle_volcano_plot_error)
   })
   
@@ -306,7 +326,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     
     if (is.null(gsea_result()$tableplot)) {
       plot.new()
-      text(0.5, 0.5, "No significant pathways found (FDR < 0.05)", cex = 1.5)
+      text(0.5, 0.5, "No significant gene sets found (FDR < 0.05)", cex = 1.5)
     } else {
       gsea_result()$tableplot
     }
@@ -362,17 +382,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   ##### Download Handler: Download All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadAllContrastData <- downloadHandler(
-    filename = function() {
-      file_base <- get_download_filename(input, state)
-      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      
-      paste(file_base, contrast_str, "all_genes.csv", sep = "__")
-    },
-    
-    content = function(file) {
+    function() build_download_filename(input, state, 
+                                       type = "DE", contrast = input$contrast),
+    function(file) {
       req(selected_data())
-      
       selected_data() |>
         arrange(desc(abs(log2FC))) |>
         select(-any_of(c("tooltip", "DE"))) |>
@@ -384,15 +397,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   ##### Download Handler: Download DE Genes based on Filters #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadFilteredContrastData <- downloadHandler(
-    filename = function() {
-      file_base <- get_download_filename(input, state)
-      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      fc_str  <- paste0("FC",  gsub("\\.", "p", as.character(input$global_log2FC_cutoff)))
-      pvl_str <- paste0("FDR", gsub("\\.", "p", as.character(input$global_padj_cutoff)))
-      paste(file_base, contrast_str, fc_str, pvl_str, "filtered.csv", sep = "__")
-    },
-    content = function(file) {
+    function() build_download_filename(input, state, 
+                                       type = "DEfiltered", contrast = input$contrast,
+                                       filters = list(FC = input$global_log2FC_cutoff, FDR = input$global_padj_cutoff)),
+    function(file) {
       req(selected_data(), nrow(selected_data()) > 0)
       selected_data() |>
         filter(DE) |>
@@ -407,17 +415,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   output$downloadGseaResults <- downloadHandler(
-    filename = function() {
-      file_base    <- get_download_filename(input, state)
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", input$contrast %||% "contrast")
-      gs_str <- if (!is.null(organism()) && organism() == "Bacteria") {
-        gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source %||% "unknown")
-      } else {
-        paste0(input$gs_collection, if (!is.null(input$gs_subcollection) && nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
-      }
-      paste(file_base, contrast_str, "GSEA", gs_str, ".csv", sep = "__")
-    },
-    content = function(file) {
+    function() build_download_filename(input, state,
+                                       type = "GSEA", contrast = input$contrast,
+                                       suffix = genesets()$label),
+    function(file) {
       req(gsea_result())
       gsea_result()$fgseaRes |>
         mutate(leadingEdge = sapply(leadingEdge, paste, collapse = "; ")) |>
@@ -430,17 +431,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   output$downloadGseaPlot <- downloadHandler(
-    filename = function() {
-      file_base    <- get_download_filename(input, state)
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", input$contrast %||% "contrast")
-      gs_str <- if (!is.null(organism()) && organism() == "Bacteria") {
-        gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source %||% "unknown")
-      } else {
-        paste0(input$gs_collection, if (!is.null(input$gs_subcollection) && nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
-      }
-      paste(file_base, contrast_str, "GSEA", gs_str, ".png", sep = "__")
-    },
-    content = function(file) {
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "GSEA", contrast = input$contrast,
+                                       suffix = genesets()$label),
+    function(file) {
       req(gsea_result())
       png(file, width = 1800, height = 900, res = 150)
       print(gsea_result()$tableplot)

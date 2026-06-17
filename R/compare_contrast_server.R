@@ -1046,20 +1046,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download Handler: Download All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadAllContrastsData <- downloadHandler(
-    filename = function() {
-      file_base <- get_download_filename(input, state)
-      contrast_str <- if (!is.null(input$compare_contrasts) && length(input$compare_contrasts) > 0) {
-        paste(input$compare_contrasts, collapse = "-")
-      } else {
-        "contrast"
-      }
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      paste(file_base, contrast_str, "all_genes.csv", sep = "__")
-    },
+    function() build_download_filename(input, state, 
+                                       type = "DE", contrast = input$contrasts),
     
-    content = function(file) {
+    function(file) {
       req(selected_contrast_data())
-      
       selected_contrast_data() |>
         arrange(desc(abs(log2FC))) |>
         select(-any_of(c("tooltip", "DE"))) |>

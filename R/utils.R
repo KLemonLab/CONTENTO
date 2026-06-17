@@ -403,3 +403,52 @@ load_genesets <- function(organism,
   }
 }
 
+#' Build a standardised download filename for Shiny downloadHandler
+#'
+#' Derives the base name from the SE object metadata or uploaded filename,
+#' then appends contrast, type, filters, and suffix segments.
+#'
+#' @param input    Shiny input object
+#' @param state    App state list containing reactive values
+#' @param type     High-level label, e.g. "all_genes", "filtered", "GSEA"; NULL to omit
+#' @param ext      File extension without dot (default "csv")
+#' @param contrast Character scalar or vector of contrast names; NULL to omit
+#' @param filters  Named list of filter values, e.g. list(FC = 1.5, FDR = 0.05)
+#' @param suffix   Extra free-form suffix inserted before the extension; NULL to omit
+#' @return A single filename string
+#' @export
+build_download_filename <- function(input, state,
+                                    type     = NULL,
+                                    ext      = "csv",
+                                    contrast = NULL,
+                                    filters  = NULL,
+                                    suffix   = NULL) {
+  base <- tryCatch(
+    metadata(state$se_obj())$dataset_name,
+    error = function(e) NULL
+  )
+  
+  parts <- list(
+    base = if (!is.null(base) && nzchar(trimws(base))) {
+      base
+    } else if (!is.null(input$seFile$name)) {
+      tools::file_path_sans_ext(basename(input$seFile$name))
+    } else {
+      "RNASeq_results"
+    },
+    
+    contrast = if (!is.null(contrast) && any(nzchar(contrast)))
+      gsub("[^A-Za-z0-9._-]+", "__", paste(contrast, collapse = "-")),
+    
+    type = if (!is.null(type) && nzchar(type)) type,
+    
+    filters = if (!is.null(filters) && length(filters) > 0)
+      paste(mapply(function(k, v) paste0(k, gsub("\\.", "p", as.character(v))),
+                   names(filters), filters), collapse = "__"),
+    
+    suffix = if (!is.null(suffix) && nzchar(suffix))
+      gsub("[^A-Za-z0-9._-]+", "-", as.character(suffix))
+  )
+  
+  paste0(paste(Filter(Negate(is.null), parts), collapse = "__"), ".", ext)
+}
