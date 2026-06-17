@@ -131,21 +131,20 @@ ui <- dashboardPage(
                   fluidRow(
                     # LEFT: description
                     column(
-                      width = 8,
+                      width = 7,
                       div(
                         span("Choose a contrast to explore differential expression results."),
                         tags$ul(
                           style = "margin: 5px 0 0 15px; padding:0;",
-                          tags$li("Adjust log2FC and p-value cutoffs in the sidebar"),
-                          tags$li("Filter, review and download significant genes"),
-                          tags$li("Explore interactive volcano plot and perform functional enrichment (GSEA)")
+                          tags$li("Filter by custom cutoffs and download significantly expressed genes"),
+                          tags$li("Explore the interactive volcano plot and perform functional enrichment (GSEA)")
                         )
                       )
                     ),
                     
                     # RIGHT: selector
                     column(
-                      width = 4,
+                      width = 5,
                       div(
                         style = "padding-left:10px;",
                         uiOutput("contrastSelect")
@@ -157,7 +156,7 @@ ui <- dashboardPage(
               
               fluidRow(
                 box(
-                  width = 12, status = "primary", solidHeader = TRUE,
+                  width = 12, status = "info", solidHeader = TRUE,
                   uiOutput("contrastSubTabs")
                 )
               )
@@ -203,7 +202,7 @@ ui <- dashboardPage(
               
               fluidRow(
                 box(
-                  width = 12, status = "primary", solidHeader = TRUE,
+                  width = 12, status = "info", solidHeader = TRUE,
                   uiOutput("compareSubTabs"),
                   hr()
                 )
@@ -253,7 +252,7 @@ ui <- dashboardPage(
               
               fluidRow(
                 box(
-                  width = 12, status = "primary", solidHeader = TRUE,
+                  width = 12, status = "info", solidHeader = TRUE,
                   uiOutput("geneSubTabs")
                 )
               )

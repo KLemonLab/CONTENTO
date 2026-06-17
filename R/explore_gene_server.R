@@ -255,7 +255,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
         formatStyle(
           'regulated',
           target = 'row',
-          backgroundColor = DT::styleEqual(c("up", "down"), c("lightblue", "pink"))
+          backgroundColor = DT::styleEqual(c("up", "down"), c("#d9f2f9", "#f8d7da"))
         )
     }
     dt

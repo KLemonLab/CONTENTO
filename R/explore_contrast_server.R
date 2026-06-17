@@ -11,73 +11,102 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   output$contrastSelect <- renderUI({
     req(state$de_df())
     contrast_choices <- unique(state$de_df()$contrast)
-    selectInput("contrast", "Select Contrast from Summarized Experiment:", choices = contrast_choices)
+    
+    div(
+      style = "
+      padding: 5px;
+      border-radius: 8px;
+      border: 2px solid #00acd6;
+      background-color: #e6f7fc;
+    ",
+      
+      selectInput(
+        "contrast",
+        "Select Contrast from Summarized Experiment:",
+        choices = contrast_choices
+      )
+    )
   })
   
+  
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Conditional Tab Layout #####
+  ##### UI: Tab Layout #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$contrastSubTabs <- renderUI({
     tabs <- list(
-      tabPanel("Selected Genes", 
+      tabPanel("Differentially Expressed Genes",
+               fluidRow(
+                 column(
+                   width = 7,
+                   div(
+                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                     h4(strong("Explore Differentially Expressed Genes (DEGs)"),
+                        style = "margin-top: 0; margin-bottom: 8px;"),
+                     tags$ul(
+                       style = "margin: 5px 0 0 15px; padding:0;",
+                       tags$li("Select log2FC and FDR thresholds in the sidebar; download the full gene list or just the DEGs"),
+                       tags$li("The volcano plot visualizes all genes, highlighting significant DEGs based on your threshold"),
+                       tags$li("Hover over points to view gene details (based on the selected symbol column), and download the plot in the interactive viewer")
+                     )
+                   )
+                 ),
+                 column(
+                   width = 5,
+                   div(
+                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                     strong("Download Options"),
+                     tags$div(
+                       style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                       downloadButton("downloadAllContrastData", "Download All Genes", class = "btn btn-info"),
+                       downloadButton("downloadFilteredContrastData", "Download DEGs",  class = "btn btn-info")
+                     )
+                   )
+                 )
+               ),
+               hr(),
                withSpinner(DTOutput("DETable"), type = 5),
-               tags$div(
-                 style = "margin-top: 15px; display: flex; gap: 10px;",
-                 downloadButton("downloadAllContrastData", "Download All Genes for Selected Contrast", class = "btn btn-info"),
-                 downloadButton("downloadFilteredContrastData", "Download Differentially Expresssed Genes", class = "btn btn-info")
-               )
+               hr(),
+               h4("Volcano Plot of All Genes in the Selected Contrast"),
+               withSpinner(plotlyOutput("volcanoPlot", height = "500px",  width = "100%"), type = 5),
       ),
-      tabPanel("Volcano Plot", 
-               withSpinner(plotlyOutput("volcanoPlot", height = "500px"), type = 5)
+      tabPanel("Functional Enrichment ",
+               fluidRow(
+                 column(
+                   width = 7,
+                   div(
+                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                     h4(strong("Perform Gene Set Enrichment Analysis (GSEA)"),
+                        style = "margin-top: 0; margin-bottom: 8px;"),
+                     tags$ul(
+                       style = "margin: 5px 0 0 15px; padding:0;",
+                       tags$li(tags$b("Human:"), " select curated biological gene sets from MSigDB collections"),
+                       tags$li(tags$b("Bacteria:"), " use gene sets defined in annotation columns"),
+                       tags$li("Gene sets are ranked by NES (Normalized Enrichment Score)"),
+                       tags$li("Leading-edge genes indicate core contributors to enrichment")
+                       
+                     )
+                   )
+                 ),
+                 column(
+                   width = 5,
+                   div(
+                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                     uiOutput("gseaControlsUI"),
+                     tags$div(
+                       style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                       downloadButton("downloadGseaResults", "Download GSEA Table", class = "btn btn-info"),
+                       downloadButton("downloadGseaPlot",    "Download GSEA Plot",  class = "btn btn-info")
+                     )
+                   )
+                 )
+               ),
+               hr(),
+               withSpinner(DTOutput("gseaResultsTable"), type = 5),
+               hr(),
+               h4("Top 20 Enriched Gene Sets (FDR < 0.05)"),
+               withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5)
       )
     )
-    
-    if (!is.null(organism()) && organism() %in% c("Human", "Bacteria")) {
-      tabs <- append(tabs, 
-                     list(
-                       tabPanel("Functional Enrichment ",
-                                fluidRow(
-                                  # LEFT: explanation
-                                  column(
-                                    width = 7,
-                                    div(
-                                      span("Run Gene Set Enrichment Analysis (GSEA) using curated gene sets."),
-                                      tags$ul(
-                                        style = "margin: 5px 0 0 15px; padding:0;",
-                                        tags$li("For Human data: select gene sets from MSigDB collections"),
-                                        tags$li("For Bacterial data: choose a column from the annotation containing gene set information"),
-                                        tags$li("Results table shows gene sets ranked by NES (Normalized Enrichment Score)"),
-                                        tags$li("Plot displays up to 20 significant gene sets (FDR < 0.05) with leading-edge genes highlighted")
-                                      )
-                                    )
-                                  ),
-                                  
-                                  # RIGHT: controls
-                                  column(
-                                    width = 5,
-                                    div(
-                                      style = "padding-left:10px;",
-                                      uiOutput("gseaControlsUI")
-                                    ),
-                                    tags$div(
-                                      style = "margin-top: 15px; display: flex; gap: 10px;",
-                                      downloadButton("downloadGseaResults", "Download Table", class = "btn btn-info"),
-                                      downloadButton("downloadGseaPlot",    "Download Plot",    class = "btn btn-info")
-                                    )
-                                  )
-                                ),
-                                
-                                hr(),
-                                withSpinner(DTOutput("gseaResultsTable"), type = 5),
-                                hr(),
-                                h4("Top 20 Enriched Gene Sets (FDR < 0.05)"),
-                                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5)
-                       )
-                     )
-      )
-      
-    }
-    
     do.call(tabsetPanel, c(list(type = "pills"), tabs))
   }) 
   
@@ -88,7 +117,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     if (!is.null(organism()) && organism() == "Human") {
       # MSigDB for Human
       return(tagList(
-        selectInput("gs_collection", "MSigDB Collection",
+        selectInput("gs_collection", "Select Gene Sets from MSigDB",
                     choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"),
                     selected = "H"),
         conditionalPanel(
@@ -282,7 +311,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           formatStyle(
             'regulated',
             target = 'row',
-            backgroundColor = DT::styleEqual(c("up", "down"), c("lightblue", "pink"))
+            backgroundColor = DT::styleEqual(c("up", "down"), c("#d9f2f9", "#f8d7da"))
           )
       }
       dt
@@ -298,11 +327,31 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       x_col <- if ("log2FC_shrunk" %in% colnames(selected_data())) "log2FC_shrunk" else "log2FC"
       
       gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
-        geom_point(aes(color = DE), alpha = 0.6) +
-        scale_color_manual(values = c("TRUE" = "red", "FALSE" = "gray"), guide = "none") +
-        geom_vline(xintercept = c(-input$global_log2FC_cutoff, input$global_log2FC_cutoff), linetype = "dashed") +
-        geom_hline(yintercept = -log10(input$global_padj_cutoff), linetype = "dashed") +
-        labs(x = paste0("log2 Fold Change", if (x_col == "log2FC_shrunk") " (shrunken)" else ""), y = "-log10(FDR)") +
+        
+        geom_point(aes(color = regulated), alpha = 0.7) +
+        
+        scale_color_manual(
+          values = c(
+            "up"   = "#00a9cf",  
+            "down" = "#d9534f"  
+          ),
+          na.value = "#b0b0b0", 
+          name = NULL
+        ) +
+        
+        geom_vline(
+          xintercept = c(-input$global_log2FC_cutoff, input$global_log2FC_cutoff), linetype = "dashed", color = "#888888") +
+        geom_hline(
+          yintercept = -log10(input$global_padj_cutoff), linetype = "dashed", color = "#888888") +
+        
+        labs(
+          x = paste0(
+            "log2 Fold Change",
+            if (x_col == "log2FC_shrunk") " (shrunken)" else ""
+          ),
+          y = "-log10(FDR)"
+        ) +
+        
         theme_minimal()
       
       ggplotly(gg, tooltip = "text") |>
