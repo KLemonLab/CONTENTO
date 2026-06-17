@@ -64,7 +64,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                                 withSpinner(DTOutput("gseaResultsTable"), type = 5),
                                 hr(),
                                 h4("Top 20 Enriched Pathways (FDR < 0.05)"),
-                                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5)
+                                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
+                                tags$div(
+                                  style = "margin-top: 15px; display: flex; gap: 10px;",
+                                  downloadButton("downloadGseaResults", "Download GSEA Table", class = "btn btn-warning"),
+                                  downloadButton("downloadGseaPlot",    "Download GSEA Plot",    class = "btn btn-warning")
+                                )
                        )
                      )
       )
@@ -314,23 +319,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     {
       req(gsea_result())
       
-      # Prepare file name
-      file_base <- get_download_filename(input, state)
-      contrast_str <- if (!is.null(input$contrast) && nzchar(input$contrast)) input$contrast else "contrast"
-      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", contrast_str)
-      
-      # Get gene set source name (handles both Human and Bacteria)
-      if (!is.null(organism()) && organism() == "Bacteria") {
-        gs_str <- if (!is.null(input$bacterial_geneset_source)) {
-          gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source)
-        } else {
-          "unknown"
-        }
-      } else {
-        gs_str <- paste0(input$gs_collection, if (nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
-      }
-      file_name <- paste(file_base, contrast_str, "GSEA", gs_str, sep = "__")
-      
       # Format the dataframe
       df <- gsea_result()$fgseaRes |>
         mutate(
@@ -411,6 +399,52 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         arrange(desc(abs(log2FC))) |>
         select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download Handler: Download GSEA Table Results #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  output$downloadGseaResults <- downloadHandler(
+    filename = function() {
+      file_base    <- get_download_filename(input, state)
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", input$contrast %||% "contrast")
+      gs_str <- if (!is.null(organism()) && organism() == "Bacteria") {
+        gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source %||% "unknown")
+      } else {
+        paste0(input$gs_collection, if (!is.null(input$gs_subcollection) && nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
+      }
+      paste(file_base, contrast_str, "GSEA", gs_str, ".csv", sep = "__")
+    },
+    content = function(file) {
+      req(gsea_result())
+      gsea_result()$fgseaRes |>
+        mutate(leadingEdge = sapply(leadingEdge, paste, collapse = "; ")) |>
+        write.csv(file, row.names = FALSE)
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download Handler: Download GSEA Plot Results #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  output$downloadGseaPlot <- downloadHandler(
+    filename = function() {
+      file_base    <- get_download_filename(input, state)
+      contrast_str <- gsub("[^A-Za-z0-9._-]+", "__", input$contrast %||% "contrast")
+      gs_str <- if (!is.null(organism()) && organism() == "Bacteria") {
+        gsub("[^A-Za-z0-9._-]+", "__", input$bacterial_geneset_source %||% "unknown")
+      } else {
+        paste0(input$gs_collection, if (!is.null(input$gs_subcollection) && nzchar(input$gs_subcollection)) paste0("_", input$gs_subcollection) else "")
+      }
+      paste(file_base, contrast_str, "GSEA", gs_str, ".png", sep = "__")
+    },
+    content = function(file) {
+      req(gsea_result())
+      png(file, width = 1800, height = 900, res = 150)
+      print(gsea_result()$tableplot)
+      dev.off()
     }
   )
   
