@@ -37,7 +37,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                         style = "margin-top: 0; margin-bottom: 8px;"),
                      tags$ul(
                        style = "margin: 5px 0 0 15px; padding:0;",
-                       tags$li("Select log2FC and FDR thresholds in the sidebar; download the full gene list or just the DEGs"),
+                       tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar; download the full gene list or just the DEGs"),
                        tags$li("The volcano plot visualizes all genes, highlighting significant DEGs based on your threshold"),
                        tags$li("Hover over points to view gene details (based on the selected symbol column), and download the plot in the interactive viewer")
                      )
@@ -157,12 +157,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       state$de_df() |>
         filter(contrast == input$contrast) |>
-        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff) |>
+        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff, input$global_lfc_col) |>
         mutate(
           tooltip = paste0(
             dplyr::coalesce(.data$symbol, Geneid),
             " (", Geneid, ")",
-            "\nlog2FC: ", round(log2FC, 2),
+            "\n", if (input$global_lfc_col == "log2FC_shrunk") "log2FC (shrunken)" else "log2FC", 
+            ": ", round(.data[[input$global_lfc_col]], 2),
             "\nFDR: ", signif(padj, 3)
           )
         )
@@ -280,7 +281,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           across(any_of(c("log2FC", "log2FC_shrunk", "stat")), ~ round(.x, 2)),
           padj = formatC(padj, format = "e", digits = 2)
         ) |>
-        arrange(desc(abs(log2FC))) |>
+        arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
         select(all_of(display_cols))
       
       if (nrow(df) == 0) {
@@ -317,7 +318,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     req(selected_data())
     
     tryCatch({
-      x_col <- if ("log2FC_shrunk" %in% colnames(selected_data())) "log2FC_shrunk" else "log2FC"
+      x_col <- if (input$global_lfc_col %in% colnames(selected_data())) input$global_lfc_col else "log2FC"
       
       gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
         
@@ -338,9 +339,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           yintercept = -log10(input$global_padj_cutoff), linetype = "dashed", color = "#888888") +
         
         labs(
-          x = paste0(
-            "log2 Fold Change",
-            if (x_col == "log2FC_shrunk") " (shrunken)" else ""
+          x = case_when(
+            x_col == "log2FC_shrunk" ~ "log2 Fold Change (shrunken)",
+            x_col == "log2FC"        ~ "log2 Fold Change",
+            TRUE                     ~ x_col  
           ),
           y = "-log10(FDR)"
         ) +
@@ -429,7 +431,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     function(file) {
       req(selected_data())
       selected_data() |>
-        arrange(desc(abs(log2FC))) |>
+        arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
         select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
     }
@@ -446,7 +448,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       req(selected_data(), nrow(selected_data()) > 0)
       selected_data() |>
         filter(DE) |>
-        arrange(desc(abs(log2FC))) |>
+        arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
         select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
     }

@@ -206,7 +206,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$heatmapControlsUI <- renderUI({
     fluidRow(
       column(6,
-             numericInput("top_n", "Top N genes by |log2FC|", value = 50, min = 10, max = 500, step = 10)
+             numericInput("top_n", "Top N DE genes", value = 50, min = 10, max = 500, step = 10)
       ),
       column(6,
              selectInput("viridis_palette", "Viridis palette",
@@ -305,7 +305,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       state$de_df() |>
         filter(contrast %in% input$compare_contrasts) |>
-        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff)
+        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff, input$global_lfc_col)
     }, error = handle_filter_contrasts_error)
   })
   
@@ -316,7 +316,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     req(selected_contrast_data(), input$compare_contrasts)
     
     tryCatch({
-      build_compare_table(selected_contrast_data(), input$compare_contrasts)
+      build_compare_table(selected_contrast_data(), input$compare_contrasts, input$global_lfc_col)
     }, error = handle_build_compare_table_error)
   })
   
@@ -594,7 +594,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     req(selected_contrast_data(), state$se_obj())
     req(input$top_n, input$viridis_palette)
     
-    geneids <- get_top_de_genes(selected_contrast_data(), input$top_n)
+    geneids <- get_top_de_genes(selected_contrast_data(), input$top_n, input$global_lfc_col)
     
     if (length(geneids) == 0) {
       plot.new()
@@ -1052,7 +1052,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     function(file) {
       req(selected_contrast_data())
       selected_contrast_data() |>
-        arrange(desc(abs(log2FC))) |>
+        arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
         select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
     }

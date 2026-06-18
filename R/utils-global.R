@@ -6,15 +6,21 @@ if (getRversion() >= "2.15.1") {
     c(
       # gene / DE result columns
       "Geneid", "symbol", "gene", "padj", "pval", "log2FC", "log2FC_shrunk",
-      "regulated", "DE",
+      "regulated", "DE", "FC", "stat", "baseMean",
       
       # contrast / pathway / GSEA names
       "contrast", "contrast_str", "file_base", "pathway_str", "pathways_list",
       "pathway",  "vst_matrix", "gesecaRes", "tableplot",
       
+      # GSEA result columns  
+      "NES", "ES", "size",
+      
       # matrices / leading edge / upset
       "leadingEdge", "leading_edge_matrix", "leading_edge_data", "upset_df",
       "padj_mat", "nes_mat", "n_pathways",
+      
+      # genomic / neighbourhood columns
+      "start", "end", "strand", "track",
       
       # formatting / display related
       "pctVar", "log2err",

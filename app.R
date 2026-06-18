@@ -59,7 +59,11 @@ ui <- dashboardPage(
     uiOutput("annotationStatus"),
     hr(),
     h4("DE Cutoffs", style = "padding-left: 20px;"),
-    sliderInput("global_log2FC_cutoff", "log2FC cutoff", min = 0, max = 8, value = 2, step = 0.5),
+    selectInput("global_lfc_col", "fold-change column",
+                choices = c("Shrunken (log2FC_shrunk)" = "log2FC_shrunk",
+                            "Unshrunken (log2FC)" = "log2FC"),
+                selected = "log2FC_shrunk"),
+    sliderInput("global_log2FC_cutoff", "fold-change cutoff", min = 0, max = 8, value = 2, step = 0.5),
     numericInput("global_padj_cutoff", "p-value FDR cutoff", value = 0.05, min = 0, max = 1, step = 0.01)
   ),
   
@@ -167,7 +171,7 @@ ui <- dashboardPage(
                         span("Select multiple contrasts to compare results side by side."),
                         tags$ul(
                           style = "margin: 5px 0 12px 15px; padding:0;",
-                          tags$li("Adjust log2FC and p-value cutoffs in the sidebar"),
+                          tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar"),
                           tags$li("Explore heatmaps, DEG overlap, and cross-contrast enrichment (GSEA / GESECA)")
                         )
                       )

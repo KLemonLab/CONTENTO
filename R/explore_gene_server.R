@@ -136,7 +136,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
     tryCatch({
       state$de_df() %>%
         filter(Geneid == input$gene_select) %>%
-        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff)
+        add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff, input$global_lfc_col)
     }, error = handle_gene_filter_error)
   })
   
@@ -241,7 +241,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
     gene_contrasts <- selected_gene_data() %>%
       mutate(across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2))) %>%
       mutate(padj = formatC(padj, format = "e", digits = 2)) %>%
-      arrange(desc(abs(log2FC))) %>%
+      arrange(desc(abs(.data[[input$global_lfc_col]]))) %>% 
       select(all_of(display_cols))
     
     dt <- datatable(
@@ -312,7 +312,8 @@ explore_gene_server <- function(input, output, session, state, organism) {
           tooltip = paste0(
             "GeneID: ", Geneid, "<br>",
             "Symbol: ", symbol, "<br>",
-            "log2FC: ", round(log2FC, 2)
+            if (input$global_lfc_col == "log2FC_shrunk") "log2FC (shrunken): " else "log2FC: ",
+            round(.data[[input$global_lfc_col]], 2)
           )
         )
       
@@ -356,11 +357,11 @@ explore_gene_server <- function(input, output, session, state, organism) {
           xmin = start, xmax = end,
           ymin = as.numeric(track) - 0.4,
           ymax = as.numeric(track) + 0.4,
-          fill = log2FC,
+          fill = .data[[input$global_lfc_col]],
           tooltip = tooltip
         ), color = "black") +
         scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-        labs(y = NULL, x = "Genomic Position", fill = "log2FC") +
+        labs(y = NULL, x = "Genomic Position", fill = if (input$global_lfc_col == "log2FC_shrunk") "log2FC (shrunken)" else "log2FC") +
         facet_grid(strand ~ ., scales = "free_y", space = "free_y", drop = TRUE) +
         theme_minimal() +
         theme(

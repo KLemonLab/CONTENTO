@@ -149,20 +149,30 @@ merge_annotation <- function(de_df, annot) {
 }
 
 
-#' Add regulated/DE flag columns to a DE data frame
+#' Add DE and regulation flags
 #'
-#' @param df   Data frame with \code{log2FC} and \code{padj} columns
-#' @param lfc_cut  Numeric log2FC threshold
+#' Adds two columns to a data frame of differential expression results:
+#' \itemize{
+#'   \item \code{regulated}: "up", "down", or NA
+#'   \item \code{DE}: TRUE/FALSE
+#' }
+#' A row is considered DE if \code{padj < padj_cut} and
+#' \code{|log2FC| > lfc_cut}.
+#' 
+#' @param df Data frame with \code{padj} and log2 fold-change column
+#' @param lfc_cut Numeric log2FC threshold
 #' @param padj_cut Numeric adjusted p-value threshold
-#' @return \code{df} with two new columns: \code{regulated} ("up"/"down"/NA)
-#'   and \code{DE} (logical)
+#' @param lfc_col Column name for log2FC (default: "log2FC")
+#' @return Data frame with added \code{regulated} and \code{DE} columns
 #' @export
-add_de_flags <- function(df, lfc_cut, padj_cut) {
+add_de_flags <- function(df, lfc_cut, padj_cut, lfc_col = "log2FC") {
+  # Fall back to log2FC if chosen column doesn't exist
+  if (!lfc_col %in% colnames(df)) lfc_col <- "log2FC"
   df |>
     mutate(
       regulated = case_when(
-        !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC >  lfc_cut ~ "up",
-        !is.na(padj) & !is.na(log2FC) & padj < padj_cut & log2FC < -lfc_cut ~ "down",
+        !is.na(padj) & !is.na(.data[[lfc_col]]) & padj < padj_cut & .data[[lfc_col]] >  lfc_cut ~ "up",
+        !is.na(padj) & !is.na(.data[[lfc_col]]) & padj < padj_cut & .data[[lfc_col]] < -lfc_cut ~ "down",
         TRUE ~ NA_character_
       ),
       DE = !is.na(regulated)
@@ -278,12 +288,14 @@ apply_symbol <- function(df, primary_col, secondary_col = "none") {
 #' Get top DE genes as a character vector of Geneids
 #' @param selected_data Data frame from selected_data() reactive with DE flags
 #' @param top_n Integer number of top genes to return
+#' @param lfc_col Character string naming the log2 fold-change column to rank by (default: "log2FC")
 #' @return Character vector of Geneids ordered by abs(log2FC)
 #' @export
-get_top_de_genes <- function(selected_data, top_n) {
+get_top_de_genes <- function(selected_data, top_n, lfc_col = "log2FC") {
+  if (!lfc_col %in% colnames(selected_data)) lfc_col <- "log2FC"
   selected_data |>
     filter(DE) |>
-    arrange(desc(abs(log2FC))) |>
+    arrange(desc(abs(.data[[lfc_col]]))) |>
     distinct(Geneid) |>
     slice_head(n = top_n) |>
     pull(Geneid)
@@ -321,35 +333,36 @@ get_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
 #'   Must include columns: `Geneid`, `contrast`, `log2FC`, and `DE`.
 #'   Optionally includes `symbol`.
 #' @param contrasts Character vector of selected contrast names to include in the output.
+#' @param lfc_col Character string naming the log2 fold-change column in `df` (default: "log2FC").
 #' @return A data frame in wide format with pairs of `log2FC_<contrast>` and `DE_<contrast>` for each contrast.
 #' @export
-build_compare_table <- function(df, contrasts) {
+build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
   if (is.null(df)) return(NULL)
   
   has_symbol <- "symbol" %in% colnames(df)
   id_cols <- if (has_symbol) c("Geneid", "symbol") else "Geneid"
   
+  # Fall back if column doesn't exist
+  if (!lfc_col %in% colnames(df)) lfc_col <- "log2FC"
+  
   wide <- df |>
-    select(all_of(c(id_cols, "contrast", "log2FC", "DE"))) |>
+    select(all_of(c(id_cols, "contrast", lfc_col, "DE"))) |>
+    (\(x) { names(x)[names(x) == lfc_col] <- "FC"; x })() |>
     pivot_wider(
       id_cols = all_of(id_cols),
       names_from = contrast,
-      values_from = c(log2FC, DE),
+      values_from = c("FC", "DE"),
       names_sep = "_"
     ) |>
     mutate(
-      across(starts_with("log2FC_"), ~ round(., 2)),
+      across(starts_with(paste0("FC", "_")), ~ round(., 2)),
       across(starts_with("DE_"), ~ tidyr::replace_na(., FALSE))
-    ) |> 
+    ) |>
     filter(rowSums(across(starts_with("DE_"))) > 0)
   
   ordered_cols <- id_cols
   for (ct in contrasts) {
-    ordered_cols <- c(
-      ordered_cols,
-      paste0("log2FC_", ct),
-      paste0("DE_", ct)
-    )
+    ordered_cols <- c(ordered_cols, paste0("FC_", ct), paste0("DE_", ct))
   }
   
   wide |>
