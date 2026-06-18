@@ -129,20 +129,10 @@ ui <- dashboardPage(
                   title = tagList(icon("chart-line"), "Explore by Contrast"),
                   
                   fluidRow(
-                    # LEFT: description
                     column(
                       width = 7,
-                      div(
-                        span("Choose a contrast to explore differential expression results."),
-                        tags$ul(
-                          style = "margin: 5px 0 0 15px; padding:0;",
-                          tags$li("Filter by custom cutoffs and download significantly expressed genes"),
-                          tags$li("Explore the interactive volcano plot and perform functional enrichment (GSEA)")
-                        )
-                      )
+                        h5(strong("Choose a contrast to explore differential expression results")),
                     ),
-                    
-                    # RIGHT: selector
                     column(
                       width = 5,
                       div(
@@ -170,7 +160,6 @@ ui <- dashboardPage(
                   title = tagList(icon("exchange-alt"), "Compare Contrast"),
                   
                   fluidRow(
-                    # LEFT: description + GSEA controls
                     column(
                       width = 4,
                       div(
@@ -184,7 +173,6 @@ ui <- dashboardPage(
                       )
                     ),
                     
-                    # RIGHT: contrast checkboxes
                     column(
                       width = 8,
                       div(

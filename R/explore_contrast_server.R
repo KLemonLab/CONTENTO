@@ -8,23 +8,16 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Contrast Dropdown #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
   output$contrastSelect <- renderUI({
     req(state$de_df())
     contrast_choices <- unique(state$de_df()$contrast)
     
-    div(
-      style = "
-      padding: 5px;
-      border-radius: 8px;
-      border: 2px solid #00acd6;
-      background-color: #e6f7fc;
-    ",
-      
-      selectInput(
-        "contrast",
-        "Select Contrast from Summarized Experiment:",
-        choices = contrast_choices
-      )
+    selectInput(
+      "contrast",
+      NULL,
+      choices = contrast_choices,
+      width = "90%"
     )
   })
   

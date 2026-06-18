@@ -53,3 +53,19 @@
   margin-top: 0;
   margin-bottom: 4px;
 }
+
+
+/* == == == == == == == == == == == == == == == == == == == ==
+   SECTION 3: MISCELLANEOUS FIXES
+   Adjust spacing for selectize inputs and form groups
+   == == == == == == == == == == == == == == == == == == == == */
+
+.selectize-control {
+  margin-bottom: 0px !important;
+}
+
+.form-group {
+  margin-bottom: 0px !important;
+}
+
+
