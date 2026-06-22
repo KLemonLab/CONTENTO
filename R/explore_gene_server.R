@@ -11,19 +11,19 @@ explore_gene_server <- function(input, output, session, state, organism) {
   observe({
     req(state$de_df())
     
-    gene_df <- state$de_df() %>%
-      select(any_of(c("Geneid", "symbol"))) %>%
+    gene_df <- state$de_df() |>
+      select(any_of(c("Geneid", "symbol"))) |>
       distinct()
     
     if ("symbol" %in% colnames(gene_df)) {
-      choices_df <- gene_df %>%
+      choices_df <- gene_df |>
         mutate(
           display = ifelse(
             is.na(symbol) | symbol == "" | symbol == Geneid,
             Geneid,
             paste0(symbol, " [", Geneid, "]")
           )
-        ) %>%
+        ) |>
         arrange(display)
       
       choice_vec <- setNames(choices_df$Geneid, choices_df$display)
@@ -134,8 +134,8 @@ explore_gene_server <- function(input, output, session, state, organism) {
     req(input$gene_select, state$de_df())
     
     tryCatch({
-      state$de_df() %>%
-        filter(Geneid == input$gene_select) %>%
+      state$de_df() |>
+        filter(Geneid == input$gene_select) |>
         add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff, input$global_lfc_col)
     }, error = handle_gene_filter_error)
   })
@@ -151,9 +151,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
   output$geneSymbol <- renderText({
     req(input$gene_select, state$de_df())
     if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$gene_select))
-    gene_symbol <- state$de_df() %>%
-      filter(Geneid == input$gene_select) %>%
-      pull(symbol) %>%
+    gene_symbol <- state$de_df() |>
+      filter(Geneid == input$gene_select) |>
+      pull(symbol) |>
       unique()
     if (length(gene_symbol) > 0 && !all(is.na(gene_symbol))) {
       paste("Gene:", gene_symbol[!is.na(gene_symbol)][1])
@@ -169,10 +169,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
     req(input$gene_select)
     
     # Start with the gene row from de_df (which has merged annotation + DE stats)
-    gene_row <- state$de_df() %>%
-      filter(Geneid == input$gene_select) %>%
+    gene_row <- state$de_df() |>
+      filter(Geneid == input$gene_select) |>
       select(-any_of(c("contrast", "baseMean", "log2FC", "log2FC_shrunk", 
-                       "lfcSE", "stat", "pvalue", "padj", "regulated", "DE", "tooltip"))) %>%
+                       "lfcSE", "stat", "pvalue", "padj", "regulated", "DE", "tooltip"))) |>
       distinct()
     
     # Fallback: if no data found, show minimal info
@@ -238,10 +238,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
     display_cols <- intersect(c("contrast", "log2FC", "log2FC_shrunk", "padj", "DE", "regulated"),
                               colnames(selected_gene_data()))
     
-    gene_contrasts <- selected_gene_data() %>%
-      mutate(across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2))) %>%
-      mutate(padj = formatC(padj, format = "e", digits = 2)) %>%
-      arrange(desc(abs(.data[[input$global_lfc_col]]))) %>% 
+    gene_contrasts <- selected_gene_data() |>
+      mutate(across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2))) |>
+      mutate(padj = formatC(padj, format = "e", digits = 2)) |>
+      arrange(desc(abs(.data[[input$global_lfc_col]]))) |> 
       select(all_of(display_cols))
     
     dt <- datatable(
@@ -251,7 +251,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
     )
     
     if ("regulated" %in% colnames(gene_contrasts)) {
-      dt <- dt %>%
+      dt <- dt |>
         formatStyle(
           'regulated',
           target = 'row',
@@ -295,7 +295,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
       de <- state$de_df()
       
       # Find central gene
-      central_gene <- de %>% 
+      central_gene <- de |> 
         filter(contrast == input$contrast, Geneid == input$gene_select)
       req(nrow(central_gene) >= 1)
       
@@ -304,9 +304,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
       window_end   <- central_gene$end[1] + input$neigh_window
       
       # Filter genes in window
-      plot_df <- de %>%
-        filter(contrast == input$contrast) %>%
-        filter(start <= window_end & end >= window_start) %>%
+      plot_df <- de |>
+        filter(contrast == input$contrast) |>
+        filter(start <= window_end & end >= window_start) |>
         mutate(
           is_central = Geneid == input$gene_select,
           tooltip = paste0(
@@ -318,9 +318,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
         )
       
       # Assign tracks separately per strand
-      plot_df <- plot_df %>%
-        arrange(strand, start) %>%
-        group_by(strand) %>%
+      plot_df <- plot_df |>
+        arrange(strand, start) |>
+        group_by(strand) |>
         mutate(track = NA_integer_)
       
       for (s in c("+", "-")) {
@@ -343,7 +343,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
         }
       }
       
-      plot_df <- ungroup(plot_df) %>%
+      plot_df <- ungroup(plot_df) |>
         mutate(
           strand = factor(strand, levels = c("+", "-"),
                           labels = c("Forward", "Reverse")),
