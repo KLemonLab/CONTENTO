@@ -155,12 +155,14 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     req(state$de_df(), input$contrast)
     
     tryCatch({
+      has_symbol <- "symbol" %in% colnames(state$de_df())
+      
       state$de_df() |>
         filter(contrast == input$contrast) |>
         add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff, input$global_lfc_col) |>
         mutate(
           tooltip = paste0(
-            dplyr::coalesce(.data$symbol, Geneid),
+            if (has_symbol) dplyr::coalesce(.data$symbol, Geneid) else Geneid,
             " (", Geneid, ")",
             "\n", if (input$global_lfc_col == "log2FC_shrunk") "log2FC (shrunken)" else "log2FC", 
             ": ", round(.data[[input$global_lfc_col]], 2),

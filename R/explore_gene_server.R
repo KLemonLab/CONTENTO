@@ -12,7 +12,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
     req(state$de_df())
     
     gene_df <- state$de_df() %>%
-      select(Geneid, symbol) %>%
+      select(any_of(c("Geneid", "symbol"))) %>%
       distinct()
     
     if ("symbol" %in% colnames(gene_df)) {
@@ -150,7 +150,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneSymbol <- renderText({
     req(input$gene_select, state$de_df())
-    if (!"symbol" %in% colnames(state$de_df())) return(paste("Gene:", input$gene_select))
+    if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$gene_select))
     gene_symbol <- state$de_df() %>%
       filter(Geneid == input$gene_select) %>%
       pull(symbol) %>%

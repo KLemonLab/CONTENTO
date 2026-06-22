@@ -23,9 +23,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     contrast_choices <- unique(state$de_df()$contrast)
     checkboxGroupInput(
       inputId = "compare_contrasts",
-      label   = NULL,
+      label = NULL,
       choices = contrast_choices,
-      selected = NULL
+      selected = isolate(input$compare_contrasts)  
     )
   })
   
@@ -891,15 +891,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       file_name    <- paste(file_base, pathway_str, "LeadingEdge", sep = "__")
       
       gene_symbols <- state$de_df() |>
-        select(Geneid, symbol) |>
+        select(any_of(c("Geneid", "symbol"))) |>
         distinct()
       
       df <- leading_edge_data()$leading_edge_matrix |>
         as.data.frame() |>
         rownames_to_column("gene") |>
         left_join(gene_symbols, by = c("gene" = "Geneid")) |>
-        select(gene, symbol, everything()) |>
-        mutate(across(-c(gene, symbol), ~ ifelse(. == 1, "TRUE", "FALSE")))
+        select(any_of(c("gene", "symbol")), everything()) |>
+        mutate(across(-any_of(c("gene", "symbol")), ~ ifelse(. == 1, "TRUE", "FALSE")))
       
       datatable(
         df,

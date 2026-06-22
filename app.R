@@ -229,7 +229,7 @@ ui <- dashboardPage(
                       div(
                         style = "padding-left:10px;",
                         selectizeInput("gene_select", 
-                                       "Select Gene (Search by GeneID of Symbol selected column):", 
+                                       "Select ID (Search by GeneID or Symbol selected column):", 
                                        choices = NULL,  
                                        options = list(
                                          placeholder = 'Start typing gene name or ID...',

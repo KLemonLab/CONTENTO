@@ -8,10 +8,14 @@ load_files_server <- function(input, output, session, state) {
   ##### UI: Symbol Column Selection #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   build_symbol_select_ui <- function(annot_cols, primary_sel) {
+    exclude <- c("seqname", "source", "feature", "start", "end", "score", "strand", 
+                 "frame", "attributes", "Geneid")
+    filtered_cols <- setdiff(annot_cols, exclude)
+    ordered_cols  <- c(primary_sel, setdiff(filtered_cols, primary_sel))
     tagList(
       selectInput("symbolPrimaryCol",
-                  "Select column used as Symbol (Geneid used as fallback):",
-                  choices  = annot_cols,
+                  "Select Gene symbol/label column:",
+                  choices  = ordered_cols,
                   selected = primary_sel)
     )
   }
