@@ -307,18 +307,25 @@ build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
     arrange(Geneid)
 }
 
-
 #' Get the msigdbr db_species code for a given organism name
 #'
-#' Returns "MM" for Mus musculus, "HS" for all other species supported by
+#' Returns "MM" for Mus musculus and "HS" for all other species supported by
 #' msigdbr (non-human/mouse species use human gene sets with ortholog mapping).
-#' Returns NULL if organism is not in the msigdbr species list.
+#' Returns NULL if the organism is not in the msigdbr species list.
+#'
+#' An optional `override` argument allows you to manually specify the db_species
+#' code. If provided as "HS" or "MM", it takes precedence over automatic detection
+#' based on the organism name.
 #'
 #' @param organism Character; organism name as stored in metadata(se)$organism,
 #'   e.g. "Homo sapiens", "Mus musculus", "Rattus norvegicus"
+#' @param override Optional character; manually force the db_species value.
+#'   Must be either "HS" or "MM". If supplied and valid, this value is returned
+#'   directly, bypassing organism-based logic.
 #' @return Character "HS", "MM", or NULL
 #' @export
-get_msigdbr_db_species <- function(organism) {
+get_msigdbr_db_species <- function(organism, override = NULL) {
+  if (!is.null(override) && override %in% c("HS", "MM")) return(override)
   if (is.null(organism) || !nzchar(trimws(organism))) return(NULL)
   valid <- tryCatch(msigdbr::msigdbr_species()$species_name, error = function(e) character(0))
   if (!organism %in% valid) return(NULL)

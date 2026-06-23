@@ -99,14 +99,22 @@ msigdb_controls_ui <- function(collection_input_id,
     ".indexOf(input.", collection_input_id, ") >= 0"
   )
   
-  # Organism label with ortholog note for non-native species
+  # Show the queried db_species only when it differs from a native match —
+  # i.e. only when ortholog mapping is actually happening.
+  is_native <- (db_species == "HS" && identical(organism_label, "Homo sapiens")) ||
+    (db_species == "MM" && identical(organism_label, "Mus musculus"))
+  
+  db_note <- if (is_native) {
+    NULL
+  } else {
+    db_label <- if (db_species == "MM") "Mus musculus (MM)" else "Homo sapiens (HS)"
+    tags$span(
+      paste0(" \u2014 ortholog-mapped from ", db_label),
+      style = "font-style: italic; color: #555;"
+    )
+  }
+  
   organism_note <- if (!is.null(organism_label)) {
-    note <- if (db_species == "MM") {
-      tags$span(" (mouse gene sets)", style = "font-style: italic;")
-    } else if (db_species == "HS" && organism_label != "Homo sapiens") {
-      tags$span(" (human gene sets, ortholog mapping)", style = "font-style: italic;")
-    }
-    
     tags$p(
       style = "margin-bottom: 6px; color: #555;",
       icon("globe"),
@@ -114,13 +122,13 @@ msigdb_controls_ui <- function(collection_input_id,
         tags$a(
           href   = "https://www.gsea-msigdb.org/gsea/msigdb/",
           target = "_blank",
-          style  = "text-decoration: none; color: inherit;",
+          style  = "color: #337ab7;",
           "MSigDB"
         ),
         " for: "
       ),
       organism_label,
-      note
+      db_note
     )
   }
   

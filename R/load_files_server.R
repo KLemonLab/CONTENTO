@@ -38,8 +38,9 @@ load_files_server <- function(input, output, session, state) {
       state$ensembl_col(NULL)
     }
     
-    # Determine msigdbr db_species from the organism string
-    db_sp <- get_msigdbr_db_species(organism)
+    # Determine msigdbr db_species
+    db_override <- tryCatch(metadata(state$se_obj())$db_species, error = function(e) NULL)
+    db_sp <- get_msigdbr_db_species(organism, db_override)
     state$db_species(db_sp)
   }
   
