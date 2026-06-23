@@ -5,52 +5,7 @@ load_files_server <- function(input, output, session, state) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Symbol Column Selection #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  build_symbol_select_ui <- function(annot_cols, primary_sel) {
-    exclude <- c("seqname", "source", "feature", "start", "end", "score", "strand", 
-                 "frame", "attributes", "Geneid")
-    filtered_cols <- setdiff(annot_cols, exclude)
-    ordered_cols  <- c(primary_sel, setdiff(filtered_cols, primary_sel))
-    tagList(
-      selectInput("symbolPrimaryCol",
-                  "Select Gene symbol/label column:",
-                  choices  = ordered_cols,
-                  selected = primary_sel)
-    )
-  }
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: SE Information Display #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  se_info_ui <- function(se, organism = NULL, annotation = NULL) {
-    meta        <- tryCatch(metadata(se), error = function(e) list())
-    n_contrasts <- length(meta$contrasts)
-    
-    info_rows <- tagList(
-      tags$li(icon("dna"),         strong("Genes: "),     nrow(se)),
-      tags$li(icon("vials"),       strong("Samples: "),   ncol(se)),
-      tags$li(icon("layer-group"), strong("Contrasts: "),  n_contrasts),
-      if (!is.null(organism))
-        tags$li(icon("bug"),  strong("Organism: "),    organism),
-      if (!is.null(annotation))
-        tags$li(icon("book"), strong("Annotation: "),  annotation)
-    )
-    
-    tagList(
-      tags$ul(style = "list-style: none; padding-left: 15px; margin: 5px 0;",
-              info_rows)
-    )
-  }
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Annotation Status Panel #####
-  # output$annotationStatus — It is rendered inside observeEvents
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Output: Organism (conditional UI bridge) #####
-  # Exposes se_organism to conditionalPanel() in the UI layer
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$se_organism <- reactive({ state$se_organism() })
   outputOptions(output, "se_organism", suspendWhenHidden = FALSE)
@@ -59,43 +14,38 @@ load_files_server <- function(input, output, session, state) {
   #### SECTION 2: ERROR HANDLERS ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
-  handle_se_read_error <- \(e) {
-    showModal(modalDialog(
-      title = "SE File error",
-      paste("Error reading SE file:", e$message),
-      easyClose = TRUE,
-      footer = NULL
-    ))
-    NULL
-  }
-  
-  handle_contrast_extraction_error <- \(e) {
-    showModal(modalDialog(
-      title = "Contrast extraction error",
-      paste("Error extracting contrasts:", e$message),
-      easyClose = TRUE,
-      footer = NULL
-    ))
-    NULL
-  }
-  
-  handle_annotation_read_error <- \(e) {
-    showModal(modalDialog(
-      title = "Annotation error",
-      paste("Error reading annotation file:", e$message),
-      easyClose = TRUE,
-      footer = NULL
-    ))
-    NULL
-  }
-  
-  handle_annotation_load_error <- \(e) {
-    showNotification(paste("Annotation load error:", e$message), type = "error")
-    NULL
-  }
+  handle_se_read_error <- \(e) { showModal(modalDialog(title = "SE File error", paste("Error reading SE file:", e$message), 
+                                                       easyClose = TRUE, footer = NULL)); NULL }
+  handle_contrast_extraction_error <- \(e) { showModal(modalDialog(title = "Contrast extraction error", paste("Error extracting contrasts:", e$message), 
+                                                                   easyClose = TRUE, footer = NULL)); NULL }
+  handle_annotation_read_error <- \(e) { showModal(modalDialog(title = "Annotation error", paste("Error reading annotation file:", e$message), 
+                                                               easyClose = TRUE, footer = NULL)); NULL }
+  handle_annotation_load_error <- \(e) { showNotification(paste("Annotation load error:", e$message), type = "error"); NULL }
+
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 3: FILE LOADING & DATA PROCESSING ####
+  #### SECTION 3: INTERNAL HELPERS ####
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+
+  # After annotation is loaded / updated, refresh all derived state:
+  # available_gsea_columns, ensembl_col, db_species (which depends on organism).
+  refresh_annotation_state <- function(annot, organism) {
+    if (!is.null(annot)) {
+      state$available_gsea_columns(get_gsea_columns(annot))
+      state$ensembl_col(detect_ensembl_col(annot))
+    } else {
+      state$available_gsea_columns(list())
+      state$ensembl_col(NULL)
+    }
+    
+    # Determine msigdbr db_species from the organism string
+    db_sp <- get_msigdbr_db_species(organism)
+    state$db_species(db_sp)
+  }
+  
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 4: FILE LOADING & DATA PROCESSING ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,8 +61,7 @@ load_files_server <- function(input, output, session, state) {
       showModal(modalDialog(
         title = "File error",
         "Uploaded file is not a SummarizedExperiment object.",
-        easyClose = TRUE,
-        footer = NULL
+        easyClose = TRUE, footer = NULL
       ))
       return(NULL)
     }
@@ -120,10 +69,9 @@ load_files_server <- function(input, output, session, state) {
     state$se_obj(se)
     
     de_df <- tryCatch(extract_de_results(se), error = handle_contrast_extraction_error)
-    
     req(de_df)
     
-    # Extract variance partition if varpart_* columns are present.
+    # Extract variance partition if varpart_* columns are present
     rd           <- as.data.frame(rowData(se))
     varpart_cols <- grep("^varpart_", colnames(rd), value = TRUE)
     if (length(varpart_cols) > 0) {
@@ -133,12 +81,12 @@ load_files_server <- function(input, output, session, state) {
       state$varpart_obj(list(varPart = vp_mat))
     }
     
-    # Determine organism and annotation from SE metadata.
+    # Organism from SE metadata
     se_organism <- tryCatch(metadata(se)$organism, error = function(e) NULL)
     organism    <- if (!is.null(se_organism) && nzchar(trimws(se_organism))) se_organism else NULL
-    
     state$se_organism(organism)
     
+    # Annotation name from SE metadata
     se_annotation <- tryCatch(metadata(se)$annotation, error = function(e) NULL)
     annotation    <- if (!is.null(se_annotation) && nzchar(trimws(se_annotation))) se_annotation else NULL
     
@@ -158,13 +106,12 @@ load_files_server <- function(input, output, session, state) {
           merged_result <- merge_annotation(de_df, annot)
           
           if (!is.null(merged_result$result)) {
-            merged <- merged_result$result
-            # Determine and auto-apply default symbol column (Geneid always fallback).
+            merged      <- merged_result$result
             annot_cols  <- colnames(annot)
             sym_primary <- default_symbol_col(annot_cols)
             
-            de_df       <- apply_symbol(merged, sym_primary, "Geneid")
-            annot       <- apply_symbol(annot,  sym_primary, "Geneid")
+            de_df <- apply_symbol(merged, sym_primary, "Geneid")
+            annot <- apply_symbol(annot,  sym_primary, "Geneid")
             state$annotation_df(annot)
             
             annot_status  <- "loaded"
@@ -181,14 +128,7 @@ load_files_server <- function(input, output, session, state) {
     }
     
     state$de_df(de_df)
-    
-    # Detect available GSEA columns for gene set selection
-    if (!is.null(annot)) {
-      available_gsea_cols <- get_gsea_columns(annot)
-      state$available_gsea_columns(available_gsea_cols)
-    } else {
-      state$available_gsea_columns(list())
-    }
+    refresh_annotation_state(state$annotation_df(), state$se_organism())
     
     info_panel <- tags$div(
       style = "padding-left: 15px; margin-bottom: 8px;",
@@ -209,8 +149,7 @@ load_files_server <- function(input, output, session, state) {
       } else {
         tagList(
           info_panel,
-          tags$p(icon("exclamation-triangle"),
-                 annot_message,
+          tags$p(icon("exclamation-triangle"), annot_message,
                  style = "color: orange; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
@@ -234,7 +173,7 @@ load_files_server <- function(input, output, session, state) {
     merged_result <- merge_annotation(state$de_df(), annot)
     
     if (!is.null(merged_result$result)) {
-      merged <- merged_result$result
+      merged      <- merged_result$result
       annot_cols  <- colnames(annot)
       sym_primary <- default_symbol_col(annot_cols)
       
@@ -243,9 +182,7 @@ load_files_server <- function(input, output, session, state) {
       state$annotation_df(annot)
       state$de_df(merged)
       
-      # Detect available GSEA columns for gene set selection
-      available_gsea_cols <- get_gsea_columns(annot)
-      state$available_gsea_columns(available_gsea_cols)
+      refresh_annotation_state(state$annotation_df(), state$se_organism())
       
       output$annotationStatus <- renderUI({
         tagList(
@@ -260,19 +197,16 @@ load_files_server <- function(input, output, session, state) {
         )
       })
       showNotification("Custom annotation loaded", type = "message", duration = 3)
+      
     } else {
-      # Join failed - show specific error
       output$annotationStatus <- renderUI({
         tagList(
           tags$div(style = "padding-left: 15px; margin-bottom: 8px;",
                    tags$p(style = "color: steelblue; margin: 0;",
                           icon("info-circle"), strong("SE loaded")),
                    se_info_ui(se_current, organism = organism)),
-          tags$p(
-            icon("exclamation-triangle"),
-            merged_result$message,
-            style = "color: red; padding-left: 15px;"
-          ),
+          tags$p(icon("exclamation-triangle"), merged_result$message,
+                 style = "color: red; padding-left: 15px;"),
           fileInput("annotFile", "Upload Annotation (.rds)", accept = ".rds")
         )
       })
@@ -295,7 +229,6 @@ load_files_server <- function(input, output, session, state) {
     
     state$de_df(apply_symbol(state$de_df(), primary_col, secondary_col))
     
-    # Mirror the symbol column in annotation_df for full-annotation downloads.
     annot <- state$annotation_df()
     if (!is.null(annot) && primary_col %in% colnames(annot)) {
       state$annotation_df(apply_symbol(annot, primary_col, secondary_col))
@@ -303,8 +236,7 @@ load_files_server <- function(input, output, session, state) {
     
     showNotification(
       paste0("Symbol column: '", primary_col, "'"),
-      type = "message",
-      duration = 2
+      type = "message", duration = 2
     )
   })
   

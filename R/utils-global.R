@@ -28,6 +28,11 @@ if (getRversion() >= "2.15.1") {
       # plotting / selection helpers
       "x_col", "color_col", "shape_col",
       
+      # msigdbr / gene set routing
+      "db_species", "ensembl_col", "gs_collection_name",
+      "msigdbr_species", "annotation_source",
+      "source_type", "use_source",
+      
       ".data"
       
     )

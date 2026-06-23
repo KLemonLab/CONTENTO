@@ -12,15 +12,27 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   output$contrastSelect <- renderUI({
     req(state$de_df())
     contrast_choices <- unique(state$de_df()$contrast)
-    
-    selectInput(
-      "contrast",
-      NULL,
-      choices = contrast_choices,
-      width = "90%"
-    )
+    selectInput("contrast", NULL, choices = contrast_choices, width = "90%")
   })
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: GSEA Controls #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  output$gseaControlsUI <- renderUI({
+    req(state$se_obj())
+    gsea_source_ui(
+      db_species        = state$db_species(),
+      ensembl_col       = state$ensembl_col(),
+      avail_cols        = state$available_gsea_columns(),
+      organism_name     = organism(),
+      source_input_id   = "gsea_source",
+      collection_id     = "gs_collection",
+      subcollection_id  = "gs_subcollection",
+      annot_source_id   = "annot_source",
+      current_source    = input$gsea_source
+    )
+  })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Tab Layout #####
@@ -29,68 +41,60 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     tabs <- list(
       tabPanel("Differentially Expressed Genes",
                fluidRow(
-                 column(
-                   width = 7,
-                   div(
-                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
-                     h4(strong("Explore Differentially Expressed Genes (DEGs)"),
-                        style = "margin-top: 0; margin-bottom: 8px;"),
-                     tags$ul(
-                       style = "margin: 5px 0 0 15px; padding:0;",
-                       tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar; download the full gene list or just the DEGs"),
-                       tags$li("The volcano plot visualizes all genes, highlighting significant DEGs based on your threshold"),
-                       tags$li("Hover over points to view gene details (based on the selected symbol column), and download the plot in the interactive viewer")
-                     )
-                   )
+                 column(width = 7,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("Explore Differentially Expressed Genes (DEGs)"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar; download the full gene list or just the DEGs"),
+                              tags$li("The volcano plot visualizes all genes, highlighting significant DEGs based on your threshold"),
+                              tags$li("Hover over points to view gene details, and download the plot in the interactive viewer")
+                            )
+                        )
                  ),
-                 column(
-                   width = 5,
-                   div(
-                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
-                     strong("Download Options"),
-                     tags$div(
-                       style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
-                       downloadButton("downloadAllContrastData", "Download All Genes", class = "btn btn-info"),
-                       downloadButton("downloadFilteredContrastData", "Download DEGs",  class = "btn btn-info")
-                     )
-                   )
+                 column(width = 5,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            strong("Download Options"),
+                            tags$div(
+                              style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                              downloadButton("downloadAllContrastData",      "Download All Genes", class = "btn btn-info"),
+                              downloadButton("downloadFilteredContrastData", "Download DEGs",      class = "btn btn-info")
+                            )
+                        )
                  )
                ),
                hr(),
                withSpinner(DTOutput("DETable"), type = 5),
                hr(),
                h4("Volcano Plot of All Genes in the Selected Contrast"),
-               withSpinner(plotlyOutput("volcanoPlot", height = "500px",  width = "100%"), type = 5),
+               withSpinner(plotlyOutput("volcanoPlot", height = "500px", width = "100%"), type = 5)
       ),
-      tabPanel("Functional Enrichment ",
+      
+      tabPanel("Functional Enrichment",
                fluidRow(
-                 column(
-                   width = 7,
-                   div(
-                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
-                     h4(strong("Perform Gene Set Enrichment Analysis (GSEA)"),
-                        style = "margin-top: 0; margin-bottom: 8px;"),
-                     tags$ul(
-                       style = "margin: 5px 0 0 15px; padding:0;",
-                       tags$li(tags$b("Human:"), " select curated biological gene sets from MSigDB collections"),
-                       tags$li(tags$b("Bacteria:"), " use gene sets defined in annotation columns"),
-                       tags$li("Gene sets are ranked by NES (Normalized Enrichment Score)"),
-                       tags$li("Leading-edge genes indicate core contributors to enrichment")
-                       
-                     )
-                   )
+                 column(width = 7,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("Perform Gene Set Enrichment Analysis (GSEA)"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li(tags$b("MSigDB:"), " curated biological gene sets; requires Ensembl IDs in the annotation file"),
+                              tags$li(tags$b("Annotation:"), " gene sets defined by any functional column in your annotation file"),
+                              tags$li("Gene sets are ranked by NES (Normalized Enrichment Score)"),
+                              tags$li("Leading-edge genes indicate core contributors to enrichment")
+                            )
+                        )
                  ),
-                 column(
-                   width = 5,
-                   div(
-                     style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
-                     uiOutput("gseaControlsUI"),
-                     tags$div(
-                       style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
-                       downloadButton("downloadGseaResults", "Download GSEA Table", class = "btn btn-info"),
-                       downloadButton("downloadGseaPlot",    "Download GSEA Plot",  class = "btn btn-info")
-                     )
-                   )
+                 column(width = 5,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            uiOutput("gseaControlsUI"),
+                            tags$div(
+                              style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                              downloadButton("downloadGseaResults", "Download GSEA Table", class = "btn btn-info"),
+                              downloadButton("downloadGseaPlot",    "Download GSEA Plot",  class = "btn btn-info")
+                            )
+                        )
                  )
                ),
                hr(),
@@ -101,46 +105,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       )
     )
     do.call(tabsetPanel, c(list(type = "pills"), tabs))
-  }) 
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Dynamic GSEA Controls #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$gseaControlsUI <- renderUI({
-    if (!is.null(organism()) && organism() == "Human") {
-      # MSigDB for Human
-      return(tagList(
-        selectInput("gs_collection", "Select Gene Sets from MSigDB",
-                    choices = c("H", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"),
-                    selected = "H"),
-        conditionalPanel(
-          condition = "!(input.gs_collection == 'H' || input.gs_collection == 'C1' || input.gs_collection == 'C6' || input.gs_collection == 'C8')",
-          textInput("gs_subcollection", "Subcollection (optional)", placeholder = "e.g., CP:REACTOME")
-        ),
-        tags$div(style = "margin-top: -10px; margin-bottom: 15px;",
-                 tags$a(href = "https://www.gsea-msigdb.org/gsea/msigdb/human/annotate.jsp",
-                        target = "_blank",
-                        icon("external-link-alt"),
-                        "MSigDB"))
-      ))
-    } else if (!is.null(organism()) && organism() == "Bacteria") {
-      # All annotation columns for Bacteria
-      avail_cols <- state$available_gsea_columns()
-      
-      if (length(avail_cols) == 0) {
-        return(div(class = "alert alert-warning",
-                   icon("exclamation-triangle"),
-                   "No annotation columns available. Upload annotation file with functional information."))
-      }
-      
-      return(selectInput("bacterial_geneset_source", "Select Gene Sets from Annotation",
-                         choices = avail_cols,
-                         selected = avail_cols[[1]]))
-    } else {
-      return(div(class = "alert alert-info",
-                 icon("info-circle"),
-                 "Awaiting SE file upload..."))
-    }
   })
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
@@ -173,33 +137,20 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: Load Gene Sets (MSigDB or Bacterial) #####
+  ##### Reactive: Gene Sets for GSEA #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets <- reactive({
-    if (organism() == "Bacteria") {
-      req(state$annotation_df(), input$bacterial_geneset_source)
-      tryCatch({
-        list(
-          data  = load_genesets(organism(), annotation_df = state$annotation_df(),
-                                bacterial_source = input$bacterial_geneset_source),
-          label = input$bacterial_geneset_source
-        )
-      }, error = handle_geneset_error)
-      
-    } else if (organism() == "Human") {
-      req(input$gs_collection)
-      tryCatch({
-        list(
-          data  = load_genesets(organism(), gs_collection = input$gs_collection,
-                                gs_subcollection = input$gs_subcollection),
-          label = paste0(input$gs_collection,
-                         if (nzchar(input$gs_subcollection %||% "")) paste0("_", input$gs_subcollection))
-        )
-      }, error = handle_msigdb_error)
-      
-    } else {
-      NULL
-    }
+    src <- req(resolve_gsea_source(input, state, organism(),
+                                   "gsea_source", "gs_collection",
+                                   "gs_subcollection", "annot_source"))
+    tryCatch({
+      list(
+        data  = do.call(load_genesets, src[names(src) != "label"]),
+        label = src$label
+      )
+    }, error = function(e) {
+      if (src$source_type == "msigdb") handle_msigdb_error(e) else handle_geneset_error(e)
+    })
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -494,33 +445,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # Helper functions for error management
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
-  handle_filter_data_error <- \(e) {
-    showNotification(paste("Error filtering contrast data:", e$message), type = "error")
-    NULL
-  }
-  
-  handle_volcano_plot_error <- \(e) {
-    showNotification(paste("Error creating volcano plot:", e$message), type = "error")
-    NULL
-  }
-  
-  handle_geneset_error <- \(e) {
-    showNotification(paste("Error loading gene sets:", e$message), type = "error")
-    NULL
-  }
-  
-  handle_msigdb_error <- \(e) {
-    showNotification(paste("Error loading MSigDB:", e$message), type = "error")
-    NULL
-  }
-  
-  handle_gsea_error <- \(e) {
-    showNotification(paste("Error running GSEA:", e$message), type = "error")
-    NULL
-  }
-  
-  handle_enrichment_plot_error <- \(e) {
-    plot.new()
-    text(0.5, 0.5, paste("Error creating plot:", e$message), cex = 1)
-  }
+  handle_filter_data_error   <- \(e) { showNotification(paste("Error filtering contrast data:", e$message), type = "error"); NULL }
+  handle_volcano_plot_error  <- \(e) { showNotification(paste("Error creating volcano plot:", e$message), type = "error"); NULL }
+  handle_geneset_error       <- \(e) { showNotification(paste("Error loading gene sets:", e$message), type = "error"); NULL }
+  handle_msigdb_error        <- \(e) { showNotification(paste("Error loading MSigDB:", e$message), type = "error"); NULL }
+  handle_gsea_error          <- \(e) { showNotification(paste("Error running GSEA:", e$message), type = "error"); NULL }
 }

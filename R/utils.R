@@ -179,69 +179,6 @@ add_de_flags <- function(df, lfc_cut, padj_cut, lfc_col = "log2FC") {
     )
 }
 
-
-#' Get all potential gsea columns available in dataframe
-#'
-#' Returns all column names except common metadata columns (Geneid, symbol, locus_tag, etc.)
-#' These are candidate columns for functional enrichment analysis.
-#'
-#' @param annot_df Data frame containing annotations
-#' @return Named list where names are column names and values are also column names
-#'         (suitable for use in selectInput choices)
-#' @export
-get_gsea_columns <- function(annot_df) {
-  if (!is.data.frame(annot_df) || nrow(annot_df) == 0) {
-    return(list())
-  }
-  
-  # Exclude metadata/ID/structural columns not useful for enrichment
-  exclude_cols <- c(
-    # Structural columns
-    "Geneid", "symbol", "seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes",
-    # GFF3 metadata attributes
-    "ID", "Parent", "Dbxref", "Name", "Ontology_term", "gbkey", "gene", "inference",
-    "locus_tag", "product", "protein_id", "transl_table", "Note", "partial", "pseudo",
-    "start_range", "end_range", "exception",
-    # anvi'o internal columns (not useful for enrichment)
-    "anvio_gene_callers_id", "anvio_acc_prodigal", "anvio_acc_GENBANK_LOCUS_TAG",
-    "anvio_func_prodigal", "anvio_aa_sequence"
-  )
-  
-  gsea_cols <- setdiff(colnames(annot_df), exclude_cols)
-  
-  # Create named list: display name -> column name
-  as.list(gsea_cols) |>
-    stats::setNames(gsea_cols)
-}
-
-
-#' Build gene sets from any annotation column
-#'
-#' Converts ANY functional annotation column into a named list of gene vectors.
-#' Handles multiple values per gene separated by commas (GFF3 format).
-#'
-#' @param annot_df Data frame containing gene annotations with a Geneid column
-#' @param column_name Character string specifying which annotation column to use
-#' @return Named list where each element is a character vector of Geneids
-#' @export
-build_bacterial_genesets <- function(annot_df, column_name) {
-  if (!column_name %in% colnames(annot_df)) {
-    return(list())
-  }
-  
-  annot_df |>
-    dplyr::filter(!is.na(.data[[column_name]]) & .data[[column_name]] != "") |>
-    dplyr::select(Geneid, pathway = dplyr::all_of(column_name)) |>
-    dplyr::mutate(pathway = strsplit(as.character(pathway), "!!!")) |>
-    tidyr::unnest(pathway) |>
-    dplyr::mutate(pathway = trimws(pathway)) |>
-    dplyr::filter(pathway != "") |>
-    dplyr::group_by(pathway) |>
-    dplyr::summarise(genes = list(Geneid), .groups = "drop") |>
-    tibble::deframe()
-}
-
-
 #' Determine the default symbol column from available annotation columns
 #'
 #' Checks a prioritised list of common gene name column names and returns
@@ -371,48 +308,241 @@ build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
 }
 
 
+#' Get the msigdbr db_species code for a given organism name
+#'
+#' Returns "MM" for Mus musculus, "HS" for all other species supported by
+#' msigdbr (non-human/mouse species use human gene sets with ortholog mapping).
+#' Returns NULL if organism is not in the msigdbr species list.
+#'
+#' @param organism Character; organism name as stored in metadata(se)$organism,
+#'   e.g. "Homo sapiens", "Mus musculus", "Rattus norvegicus"
+#' @return Character "HS", "MM", or NULL
+#' @export
+get_msigdbr_db_species <- function(organism) {
+  if (is.null(organism) || !nzchar(trimws(organism))) return(NULL)
+  valid <- tryCatch(msigdbr::msigdbr_species()$species_name, error = function(e) character(0))
+  if (!organism %in% valid) return(NULL)
+  if (organism == "Mus musculus") "MM" else "HS"
+}
+
+
+#' Get available MSigDB collections for a given db_species
+#'
+#' Calls msigdbr_collections() and returns a tidy data frame of available
+#' collections and subcollections for building the UI picker.
+#'
+#' @param db_species Character; "HS" or "MM"
+#' @return Data frame with columns gs_collection, gs_subcollection,
+#'   gs_collection_name, num_genesets; or NULL on error
+#' @export
+get_msigdbr_collections <- function(db_species) {
+  tryCatch(
+    msigdbr::msigdbr_collections(db_species = db_species),
+    error = function(e) NULL
+  )
+}
+
+
+#' Detect the Ensembl gene ID column in an annotation data frame
+#'
+#' Scans column values looking for Ensembl-style IDs (ENSG..., ENSMUSG...,
+#' ENSRNOG..., etc.). Returns the first matching column name, or NULL.
+#'
+#' @param annot_df Data frame of gene annotations
+#' @return Character column name, or NULL if none detected
+#' @export
+detect_ensembl_col <- function(annot_df) {
+  if (!is.data.frame(annot_df) || nrow(annot_df) == 0) return(NULL)
+  for (col in colnames(annot_df)) {
+    vals <- as.character(annot_df[[col]])
+    # Sample up to 20 non-NA values for speed
+    sample_vals <- vals[!is.na(vals) & nzchar(vals)]
+    if (length(sample_vals) == 0) next
+    sample_vals <- head(sample_vals, 20)
+    if (any(grepl("^ENS[A-Z]*G[0-9]{11}", sample_vals))) return(col)
+  }
+  NULL
+}
+
+#' Get all potential gsea columns available in dataframe
+#'
+#' Returns all column names except common metadata columns (Geneid, symbol, locus_tag, etc.)
+#' These are candidate columns for functional enrichment analysis.
+#'
+#' @param annot_df Data frame containing annotations
+#' @return Named list where names are column names and values are also column names
+#'         (suitable for use in selectInput choices)
+#' @export
+get_gsea_columns <- function(annot_df) {
+  if (!is.data.frame(annot_df) || nrow(annot_df) == 0) {
+    return(list())
+  }
+  
+  # Exclude metadata/ID/structural columns not useful for enrichment
+  exclude_cols <- c(
+    # Structural columns
+    "Geneid", "symbol", "seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes", "biotype",
+    # GFF3 metadata attributes
+    "ID", "Parent", "Dbxref", "Name", "Ontology_term", "gbkey", "gene", "inference",
+    "locus_tag", "product", "protein_id", "transl_table", "Note", "partial", "pseudo",
+    "start_range", "end_range", "exception",
+    # anvi'o internal columns (not useful for enrichment)
+    "anvio_gene_callers_id", "anvio_acc_prodigal", "anvio_acc_GENBANK_LOCUS_TAG",
+    "anvio_func_prodigal", "anvio_aa_sequence"
+  )
+  
+  gsea_cols <- setdiff(colnames(annot_df), exclude_cols)
+  
+  # Create named list: display name -> column name
+  as.list(gsea_cols) |>
+    stats::setNames(gsea_cols)
+}
+
+#' Build gene sets from any annotation column
+#'
+#' Converts ANY functional annotation column into a named list of gene vectors.
+#' Handles multiple values per gene separated by \code{!!!}.
+#' This works with any organism's annotation data frame.
+#'
+#' @param annot_df Data frame containing gene annotations with a Geneid column
+#' @param column_name Character string specifying which annotation column to use
+#' @return Named list where each element is a character vector of Geneids
+#' @export
+build_annotation_genesets <- function(annot_df, column_name) {
+  if (!column_name %in% colnames(annot_df)) return(list())
+  annot_df |>
+    dplyr::filter(!is.na(.data[[column_name]]) & .data[[column_name]] != "") |>
+    dplyr::select(Geneid, pathway = dplyr::all_of(column_name)) |>
+    dplyr::mutate(pathway = strsplit(as.character(pathway), "!!!")) |>
+    tidyr::unnest(pathway) |>
+    dplyr::mutate(pathway = trimws(pathway)) |>
+    dplyr::filter(pathway != "") |>
+    dplyr::group_by(pathway) |>
+    dplyr::summarise(genes = list(Geneid), .groups = "drop") |>
+    tibble::deframe()
+}
+
 #' Load gene sets as a named list of gene ID vectors
 #'
 #' Single entry point for geneset loading across the app. Returns a named list
-#' suitable for direct use in fgseaMultilevel() and geseca(). Handles both
-#' Bacteria (annotation column) and Human (MSigDB) organisms.
+#' suitable for direct use in fgseaMultilevel() and geseca().
 #'
-#' For Bacteria, delegates to build_bacterial_genesets().
-#' For Human, fetches from msigdbr and splits into a named list by gs_name,
-#' using ensembl_gene as the gene identifier.
+#' Two source types are supported:
+#' \itemize{
+#'   \item \strong{MSigDB}: pass \code{msigdbr_species}, \code{db_species},
+#'     \code{gs_collection}, and optionally \code{gs_subcollection}.
+#'     Gene sets are keyed by Ensembl gene ID (the \code{ensembl_gene} column
+#'     from msigdbr), so SE rownames must be Ensembl IDs.
+#'   \item \strong{Annotation column}: pass \code{annotation_df} and
+#'     \code{annotation_source}. The column may contain multiple values per gene
+#'     separated by \code{!!!}.
+#' }
 #'
-#' @param organism       Character; "Bacteria", "Human", or NULL/other
-#' @param annotation_df  Data frame; required when organism == "Bacteria"
-#' @param bacterial_source Character; annotation column name for gene set membership
-#' @param gs_collection  Character; MSigDB collection code (e.g. "H", "C2")
+#' @param source_type    Character; "msigdb" or "annotation"
+#' @param msigdbr_species Character; full species name for msigdbr(), e.g.
+#'   "Homo sapiens". Only used when source_type == "msigdb".
+#' @param db_species     Character; "HS" or "MM" for msigdbr db_species.
+#'   Only used when source_type == "msigdb".
+#' @param gs_collection  Character; MSigDB collection code (e.g. "H", "C2").
+#'   Only used when source_type == "msigdb".
 #' @param gs_subcollection Character; MSigDB subcollection (e.g. "CP:REACTOME"),
-#'   or "" / NULL to omit
+#'   or "" / NULL to omit. Only used when source_type == "msigdb".
+#' @param annotation_df  Data frame; annotation with Geneid column.
+#'   Only used when source_type == "annotation".
+#' @param annotation_source Character; column name for gene set membership.
+#'   Only used when source_type == "annotation".
 #' @return Named list of character vectors (Geneids per pathway).
 #'   Returns an empty list if inputs are invalid or nothing is found.
 #' @export
-load_genesets <- function(organism,
-                          annotation_df    = NULL,
-                          bacterial_source = NULL,
+load_genesets <- function(source_type,
+                          msigdbr_species  = NULL,
+                          db_species       = NULL,
                           gs_collection    = NULL,
-                          gs_subcollection = NULL) {
-  if (!is.null(organism) && organism == "Bacteria") {
-    if (is.null(annotation_df) || is.null(bacterial_source)) return(list())
-    build_bacterial_genesets(annotation_df, bacterial_source)
-    
-  } else {
-    if (is.null(gs_collection)) return(list())
+                          gs_subcollection = NULL,
+                          annotation_df    = NULL,
+                          annotation_source = NULL) {
+  
+  if (source_type == "annotation") {
+    if (is.null(annotation_df) || is.null(annotation_source)) return(list())
+    return(build_annotation_genesets(annotation_df, annotation_source))
+  }
+  
+  if (source_type == "msigdb") {
+    if (is.null(msigdbr_species) || is.null(db_species) || is.null(gs_collection)) return(list())
     use_sub <- !is.null(gs_subcollection) && nzchar(gs_subcollection)
     genesets <- if (use_sub) {
-      msigdbr(species = "Homo sapiens",
-              collection    = gs_collection,
-              subcollection = gs_subcollection)
+      msigdbr::msigdbr(db_species = db_species, species = msigdbr_species,
+                       collection = gs_collection, subcollection = gs_subcollection)
     } else {
-      msigdbr(species = "Homo sapiens",
-              collection = gs_collection)
+      msigdbr::msigdbr(db_species = db_species, species = msigdbr_species,
+                       collection = gs_collection)
     }
+    if (is.null(genesets) || nrow(genesets) == 0) return(list())
     genesets |>
       split(genesets$gs_name) |>
       lapply(function(x) x$ensembl_gene)
+  }
+}
+
+#' Resolve the active gene-set source into load_genesets() arguments
+#'
+#' Shared logic for both Explore-by-Contrast (single source set) and
+#' Compare-Contrast (separate GSEA/GESECA source sets). Inspects available
+#' MSigDB/annotation sources from state, determines which one is active
+#' (via the radio input when both are available), and returns a ready-to-use
+#' argument list for load_genesets(), plus a display label.
+#'
+#' @param input            Shiny input object
+#' @param state            App state list (reactiveVals)
+#' @param organism         Character or NULL; full organism name (for msigdbr_species)
+#' @param source_input_id  Shiny input ID for the radio source selector
+#' @param collection_id    Shiny input ID for the MSigDB collection selectInput
+#' @param subcollection_id Shiny input ID for the MSigDB subcollection textInput
+#' @param annot_source_id  Shiny input ID for the annotation column selectInput
+#' @return Named list with all load_genesets() arguments plus `label`,
+#'   or NULL if no source is available / required inputs aren't ready yet.
+#'   Use req() on the result, then strip `label` before do.call(load_genesets, .).
+#' @export
+resolve_gsea_source <- function(input, state, organism,
+                                source_input_id, collection_id,
+                                subcollection_id, annot_source_id) {
+  db_sp      <- state$db_species()
+  ensembl_c  <- state$ensembl_col()
+  avail_cols <- state$available_gsea_columns()
+  
+  has_msigdb <- !is.null(db_sp) && !is.null(ensembl_c)
+  has_annot  <- length(avail_cols) > 0
+  
+  use_source <- if (has_msigdb && has_annot) {
+    input[[source_input_id]] %||% "msigdb"
+  } else if (has_msigdb) {
+    "msigdb"
+  } else if (has_annot) {
+    "annotation"
+  } else {
+    return(NULL)
+  }
+  
+  if (use_source == "msigdb") {
+    if (is.null(input[[collection_id]])) return(NULL)
+    list(
+      source_type      = "msigdb",
+      msigdbr_species  = organism,
+      db_species       = db_sp,
+      gs_collection    = input[[collection_id]],
+      gs_subcollection = input[[subcollection_id]],
+      label = paste0(input[[collection_id]],
+                     if (nzchar(input[[subcollection_id]] %||% ""))
+                       paste0("_", input[[subcollection_id]]))
+    )
+  } else {
+    if (is.null(state$annotation_df()) || is.null(input[[annot_source_id]])) return(NULL)
+    list(
+      source_type       = "annotation",
+      annotation_df     = state$annotation_df(),
+      annotation_source = input[[annot_source_id]],
+      label             = input[[annot_source_id]]
+    )
   }
 }
 
@@ -465,3 +595,4 @@ build_download_filename <- function(input, state,
   
   paste0(paste(Filter(Negate(is.null), parts), collapse = "__"), ".", ext)
 }
+
