@@ -112,29 +112,26 @@ msigdb_controls_ui <- function(collection_input_id,
   
   organism_note <- if (!is.null(organism_label)) {
     tags$p(
-      style = "margin-bottom: 6px; color: #555;",
       icon("globe"),
-      strong(
-        tags$a(
-          href   = "https://www.gsea-msigdb.org/gsea/msigdb/",
-          target = "_blank",
-          style  = "color: #337ab7;",
-          "MSigDB"
-        ),
-        " for: "
-      ),
+      strong("Select Gene Sets from MSigDB for: "),
       organism_label,
-      db_note
+      db_note,
+      style = "margin-bottom:4px; font-size: 0.95em;"
     )
   }
   
   tagList(
     organism_note,
-    selectInput(
-      collection_input_id,
-      "Gene Set:",
-      choices  = grouped_choices,
-      selected = default_val
+    
+    div(
+      style = "margin-bottom:6px;",
+      selectInput(
+        collection_input_id,
+        label = NULL,
+        choices  = grouped_choices,
+        selected = default_val,
+        width = "100%"
+      )
     )
   )
 }
@@ -200,42 +197,63 @@ gsea_source_ui <- function(db_species,
   
   tagList(
     
-    # Radio — only when both sources are available
     if (has_msigdb && has_annot)
-      radioButtons(
-        source_input_id,
-        "Gene set source:",
-        choices  = c("MSigDB" = "msigdb", "Annotation column" = "annotation"),
-        selected = current_source %||% "msigdb",
-        inline   = TRUE
+      div(
+        style = "display:flex; align-items:center; gap:12px; margin-bottom:6px;",
+        
+        tags$label(
+          "Gene sets:",
+          style = "margin:0; font-weight:600;"
+        ),
+        
+        radioButtons(
+          source_input_id,
+          label = NULL,
+          choices = c(
+            "MSigDB" = "msigdb",
+            "Annotation" = "annotation"
+          ),
+          selected = current_source %||% "msigdb",
+          inline = TRUE
+        )
       ),
     
-    # MSigDB sub-controls
+    # MSigDB
     if (has_msigdb)
       conditionalPanel(
         condition = if (has_annot)
           paste0("input.", source_input_id, " == 'msigdb'")
-        else
-          "true",
+        else "true",
+        
         msigdb_controls_ui(
           collection_input_id = collection_id,
-          db_species          = db_species,
-          organism_label       = organism_name
+          db_species = db_species,
+          organism_label = organism_name
         )
       ),
     
-    # Annotation column sub-controls
+    # Annotation (match MSigDB style)
     if (has_annot)
       conditionalPanel(
         condition = if (has_msigdb)
           paste0("input.", source_input_id, " == 'annotation'")
-        else
-          "true",
-        selectInput(
-          annot_source_id,
-          "Select Gene Sets from Annotation:",
-          choices  = avail_cols,
-          selected = avail_cols[[1]]
+        else "true",
+        
+        tags$div(
+          icon("tags"),   
+          strong("Select Gene Sets from Annotation"),
+          style = "margin-bottom:4px; font-size: 0.95em;"
+        ),
+        
+        div(
+          style = "margin-bottom:6px;",
+          selectInput(
+            annot_source_id,
+            label = NULL,
+            choices  = avail_cols,
+            selected = avail_cols[[1]],
+            width = "100%"
+          )
         )
       )
   )

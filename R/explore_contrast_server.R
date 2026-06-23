@@ -78,8 +78,23 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                                style = "margin-top: 0; margin-bottom: 8px;"),
                             tags$ul(
                               style = "margin: 5px 0 0 15px; padding:0;",
-                              tags$li(tags$b("MSigDB:"), " curated biological gene sets; requires Ensembl IDs in the annotation file"),
-                              tags$li(tags$b("Annotation:"), " gene sets defined by any functional column in your annotation file"),
+                              tags$li("Choose gene sets from:"),
+                              tags$li(style = "margin-left:10px;",
+                                      tags$b("MSigDB: "), 
+                                      "Curated pathways (e.g. Hallmark, GO, Reactome). ",
+                                      "Available for human and mouse through ",
+                                      tags$a("MSigDB",
+                                             href = "https://www.gsea-msigdb.org/gsea/msigdb",
+                                             target = "_blank"),
+                                      ", and for additional species via orthology mapping (see ",
+                                      tags$a("supported species",
+                                             href = "https://igordot.github.io/msigdbr/reference/msigdbr_species.html",
+                                             target = "_blank"),
+                                      ")."
+                              ),
+                              tags$li(style = "margin-left:10px;",
+                                      tags$b("Annotation: "), 
+                                      "Gene sets from your annotation columns (e.g. KEGG, COG)."),
                               tags$li("Gene sets are ranked by NES (Normalized Enrichment Score)"),
                               tags$li("Leading-edge genes indicate core contributors to enrichment")
                             )

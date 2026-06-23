@@ -388,7 +388,7 @@ get_gsea_columns <- function(annot_df) {
   # Exclude metadata/ID/structural columns not useful for enrichment
   exclude_cols <- c(
     # Structural columns
-    "Geneid", "symbol", "seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes", "biotype",
+    "Geneid", "symbol", "seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes", 
     # GFF3 metadata attributes
     "ID", "Parent", "Dbxref", "Name", "Ontology_term", "gbkey", "gene", "inference",
     "locus_tag", "product", "protein_id", "transl_table", "Note", "partial", "pseudo",
