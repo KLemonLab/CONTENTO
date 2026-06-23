@@ -71,7 +71,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       organism_name     = organism(),
       source_input_id   = "compare_gsea_source",
       collection_id     = "compare_gs_collection",
-      subcollection_id  = "compare_gs_subcollection",
       annot_source_id   = "compare_annot_source_gsea",
       current_source    = input$compare_gsea_source
     )
@@ -86,7 +85,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       organism_name     = organism(),
       source_input_id   = "geseca_gsea_source",
       collection_id     = "geseca_gs_collection",
-      subcollection_id  = "geseca_gs_subcollection",
       annot_source_id   = "geseca_annot_source",
       current_source    = input$geseca_gsea_source
     )
@@ -269,8 +267,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets_compare <- reactive({
     src <- req(resolve_gsea_source(input, state, organism(),
-                                   "compare_gsea_source", "compare_gs_collection",
-                                   "compare_gs_subcollection", "compare_annot_source_gsea"))
+                                   "compare_gsea_source", "compare_gs_collection", "compare_annot_source_gsea"))
     tryCatch({
       gs <- do.call(load_genesets, src[names(src) != "label"])
       if (length(gs) == 0) {
@@ -286,8 +283,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets_geseca <- reactive({
     src <- req(resolve_gsea_source(input, state, organism(),
-                                   "geseca_gsea_source", "geseca_gs_collection",
-                                   "geseca_gs_subcollection", "geseca_annot_source"))
+                                   "geseca_gsea_source", "geseca_gs_collection", "geseca_annot_source"))
     tryCatch({
       gs <- do.call(load_genesets, src[names(src) != "label"])
       if (length(gs) == 0) {
@@ -517,7 +513,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     
     gsea_label <- resolve_gsea_source(input, state, organism(),
                                       "compare_gsea_source", "compare_gs_collection",
-                                      "compare_gs_subcollection", "compare_annot_source_gsea")$label
+                                      "compare_annot_source_gsea")$label
     
     if (!is.null(input$pathway_name_length) && input$pathway_name_length > 0) {
       orig <- rownames(nes_mat)
@@ -567,7 +563,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     gs_str <- gsub("[^A-Za-z0-9._-]+", "__",
                    resolve_gsea_source(input, state, organism(),
                                        "compare_gsea_source", "compare_gs_collection",
-                                       "compare_gs_subcollection", "compare_annot_source_gsea")$label %||% "unknown")
+                                       "compare_annot_source_gsea")$label %||% "unknown")
     
     df <- gsea_results()$nes_df |>
       mutate(padj_fmt    = formatC(padj, format = "e", digits = 2),
@@ -652,7 +648,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     gs_str <- gsub("[^A-Za-z0-9._-]+", "__",
                    resolve_gsea_source(input, state, organism(),
                                        "geseca_gsea_source", "geseca_gs_collection",
-                                       "geseca_gs_subcollection", "geseca_annot_source_gsea")$label %||% "unknown")
+                                       "geseca_annot_source_gsea")$label %||% "unknown")
     df <- geseca_result()$gesecaRes |>
       mutate(across(c(pval, padj),      ~ formatC(.x, format = "e", digits = 2)),
              across(c(pctVar, log2err), ~ round(.x, 3)))

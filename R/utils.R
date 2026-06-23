@@ -504,7 +504,6 @@ load_genesets <- function(source_type,
 #' @param organism         Character or NULL; full organism name (for msigdbr_species)
 #' @param source_input_id  Shiny input ID for the radio source selector
 #' @param collection_id    Shiny input ID for the MSigDB collection selectInput
-#' @param subcollection_id Shiny input ID for the MSigDB subcollection textInput
 #' @param annot_source_id  Shiny input ID for the annotation column selectInput
 #' @return Named list with all load_genesets() arguments plus `label`,
 #'   or NULL if no source is available / required inputs aren't ready yet.
@@ -512,7 +511,7 @@ load_genesets <- function(source_type,
 #' @export
 resolve_gsea_source <- function(input, state, organism,
                                 source_input_id, collection_id,
-                                subcollection_id, annot_source_id) {
+                                annot_source_id) {
   db_sp      <- state$db_species()
   ensembl_c  <- state$ensembl_col()
   avail_cols <- state$available_gsea_columns()
@@ -531,16 +530,20 @@ resolve_gsea_source <- function(input, state, organism,
   }
   
   if (use_source == "msigdb") {
-    if (is.null(input[[collection_id]])) return(NULL)
+    sel <- input[[collection_id]]
+    if (is.null(sel)) return(NULL)
+    
+    parts            <- strsplit(sel, "\\|", fixed = FALSE)[[1]]
+    gs_collection     <- parts[1]
+    gs_subcollection  <- if (length(parts) > 1) parts[2] else NULL
+    
     list(
       source_type      = "msigdb",
       msigdbr_species  = organism,
       db_species       = db_sp,
-      gs_collection    = input[[collection_id]],
-      gs_subcollection = input[[subcollection_id]],
-      label = paste0(input[[collection_id]],
-                     if (nzchar(input[[subcollection_id]] %||% ""))
-                       paste0("_", input[[subcollection_id]]))
+      gs_collection    = gs_collection,
+      gs_subcollection = gs_subcollection,
+      label = if (!is.null(gs_subcollection)) paste0(gs_collection, "_", gs_subcollection) else gs_collection
     )
   } else {
     if (is.null(state$annotation_df()) || is.null(input[[annot_source_id]])) return(NULL)

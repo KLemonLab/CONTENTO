@@ -28,7 +28,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       organism_name     = organism(),
       source_input_id   = "gsea_source",
       collection_id     = "gs_collection",
-      subcollection_id  = "gs_subcollection",
       annot_source_id   = "annot_source",
       current_source    = input$gsea_source
     )
@@ -141,8 +140,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets <- reactive({
     src <- req(resolve_gsea_source(input, state, organism(),
-                                   "gsea_source", "gs_collection",
-                                   "gs_subcollection", "annot_source"))
+                                   "gsea_source", "gs_collection", "annot_source"))
     tryCatch({
       list(
         data  = do.call(load_genesets, src[names(src) != "label"]),

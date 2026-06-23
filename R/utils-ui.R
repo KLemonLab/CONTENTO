@@ -50,22 +50,21 @@ build_symbol_select_ui <- function(annot_cols, primary_sel) {
   )
 }
 
-#' MSigDB collection and subcollection picker
+#' MSigDB gene set picker
 #'
-#' Generates a selectInput listing the top-level MSigDB collections available
-#' for \code{db_species}, plus a conditionalPanel textInput for subcollections.
-#' The subcollection input is shown only for collections that have them
-#' (e.g. C2, C3, C4, C5, C7).
+#' Generates a single selectInput listing every queryable MSigDB gene set
+#' for \code{db_species}, grouped by top-level collection (optgroups).
+#' Collections without subcollections (e.g. C1, H) appear as a single choice;
+#' collections with subcollections (e.g. C2, C5) list each subcollection by
+#' its descriptive name. Defaults to Hallmark (H) when available.
 #'
-#' @param collection_input_id    Shiny input ID for the collection selectInput
-#' @param subcollection_input_id Shiny input ID for the subcollection textInput
-#' @param db_species             Character; "HS" or "MM"
-#' @param organism_label         Character; display name shown above the picker,
+#' @param collection_input_id Shiny input ID for the gene set selectInput
+#' @param db_species          Character; "HS" or "MM"
+#' @param organism_label      Character; display name shown above the picker,
 #'   e.g. "Homo sapiens" or "Rattus norvegicus". NULL to omit.
 #' @return A tagList of Shiny UI elements, or an error alert div on failure
 #' @export
 msigdb_controls_ui <- function(collection_input_id,
-                               subcollection_input_id,
                                db_species,
                                organism_label = NULL) {
   cols <- get_msigdbr_collections(db_species)
@@ -78,26 +77,23 @@ msigdb_controls_ui <- function(collection_input_id,
     ))
   }
   
-  # Top-level collections: rows where subcollection is blank / NA
-  top_level <- cols |>
-    dplyr::filter(is.na(gs_subcollection) | gs_subcollection == "") |>
-    dplyr::distinct(gs_collection, gs_collection_name)
+  cols <- cols |>
+    dplyr::mutate(
+      has_sub = !is.na(gs_subcollection) & gs_subcollection != "",
+      # value encodes both pieces needed later to query msigdbr()
+      value   = ifelse(has_sub, paste0(gs_collection, "|", gs_subcollection), gs_collection),
+      # label is always the descriptive name (collection name for top-level,
+      # subcollection's own name for nested entries)
+      label   = gs_collection_name
+    )
   
-  collection_choices <- setNames(
-    top_level$gs_collection,
-    paste0(top_level$gs_collection, " \u2014 ", top_level$gs_collection_name)
-  )
+  # Build optgroup-style nested choices: named list of named vectors
+  grouped_choices <- cols |>
+    dplyr::group_by(gs_collection) |>
+    dplyr::group_map(~ setNames(.x$value, .x$label)) |>
+    setNames(unique(cols$gs_collection))
   
-  # Collections that have subcollections — drives the conditional JS
-  has_sub <- cols |>
-    dplyr::filter(!is.na(gs_subcollection) & gs_subcollection != "") |>
-    dplyr::pull(gs_collection) |>
-    unique()
-  
-  has_sub_js <- paste0(
-    "['", paste(has_sub, collapse = "','"), "']",
-    ".indexOf(input.", collection_input_id, ") >= 0"
-  )
+  default_val <- cols$value[cols$gs_collection == "H"][1] %||% cols$value[1]
   
   # Show the queried db_species only when it differs from a native match —
   # i.e. only when ortholog mapping is actually happening.
@@ -136,17 +132,9 @@ msigdb_controls_ui <- function(collection_input_id,
     organism_note,
     selectInput(
       collection_input_id,
-      "MSigDB Collection:",
-      choices  = collection_choices,
-      selected = collection_choices[1]
-    ),
-    conditionalPanel(
-      condition = has_sub_js,
-      textInput(
-        subcollection_input_id,
-        "Subcollection (optional)",
-        placeholder = "e.g., CP:REACTOME, GO:BP"
-      )
+      "Gene Set:",
+      choices  = grouped_choices,
+      selected = default_val
     )
   )
 }
@@ -186,7 +174,6 @@ gsea_source_ui <- function(db_species,
                            organism_name,
                            source_input_id,
                            collection_id,
-                           subcollection_id,
                            annot_source_id,
                            current_source = NULL) {
   
@@ -231,10 +218,9 @@ gsea_source_ui <- function(db_species,
         else
           "true",
         msigdb_controls_ui(
-          collection_input_id    = collection_id,
-          subcollection_input_id = subcollection_id,
-          db_species             = db_species,
-          organism_label         = organism_name
+          collection_input_id = collection_id,
+          db_species          = db_species,
+          organism_label       = organism_name
         )
       ),
     
@@ -254,4 +240,3 @@ gsea_source_ui <- function(db_species,
       )
   )
 }
-
