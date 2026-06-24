@@ -163,7 +163,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$contrastSelectGene <- renderUI({
     req(state$de_df())
-    selectInput("contrast", "Select Contrast", choices = unique(state$de_df()$contrast))
+    selectInput("contrast_gene", "Select Contrast", choices = unique(state$de_df()$contrast))
   })
   
   
@@ -206,7 +206,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Output: Gene Info Table #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneDetails <- renderDT({
-    req(input$geneSelect)
+    req(input$geneSelect, state$de_df()) 
     gene_row <- state$de_df() |>
       filter(Geneid == input$geneSelect) |>
       select(-any_of(c("contrast", "baseMean", "log2FC", "log2FC_shrunk",
@@ -292,23 +292,25 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Output: Neighbourhood Analysis #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$neighbourhoodPlot <- renderGirafe({
-    req(state$de_df(), input$contrast, input$geneSelect, input$neigh_window)
+    req(state$de_df(), input$contrast_gene, input$geneSelect, input$neigh_window)
     tryCatch({
       de           <- state$de_df()
-      central_gene <- de |> filter(contrast == input$contrast, Geneid == input$geneSelect)
+      central_gene <- de |> filter(contrast == input$contrast_gene, Geneid == input$geneSelect)
       req(nrow(central_gene) >= 1)
       
       window_start <- central_gene$start[1] - input$neigh_window
       window_end   <- central_gene$end[1]   + input$neigh_window
       
       plot_df <- de |>
-        filter(contrast == input$contrast,
+        filter(contrast == input$contrast_gene,
                start <= window_end & end >= window_start) |>
         mutate(
           is_central = Geneid == input$geneSelect,
           tooltip    = paste0(
             "GeneID: ", Geneid, "<br>",
-            "Symbol: ", symbol, "<br>",
+            if ("symbol" %in% colnames(de))
+              paste0("Symbol: ", symbol, "<br>")
+            else "",
             if (input$global_lfc_col == "log2FC_shrunk") "log2FC (shrunken): " else "log2FC: ",
             round(.data[[input$global_lfc_col]], 2)
           )

@@ -188,6 +188,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### UI: Heatmap Controls #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$heatmapControlsUI <- renderUI({
+    req(state$de_df())  
     fluidRow(
       column(6, numericInput("top_n", "Top N DE genes", value = 50, min = 10, max = 500, step = 10)),
       column(6, selectInput("viridis_palette", "Viridis palette",
@@ -491,6 +492,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     if (length(set_cols) == 0 || nrow(df) == 0) {
       plot.new()
       text(0.5, 0.5, "No DE genes found\nAdjust cutoffs or selected contrasts", cex = 1.5)
+      return()
+    }
+    if (length(set_cols) < 2) {                              
+      plot.new()
+      text(0.5, 0.5, "Select at least 2 contrasts\nto display an UpSet plot", cex = 1.5)
       return()
     }
     upset(df, set_cols, name = "DEGs", min_size = 1,
