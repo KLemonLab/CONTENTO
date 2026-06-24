@@ -4,40 +4,22 @@
 if (getRversion() >= "2.15.1") {
   utils::globalVariables(
     c(
-      # gene / DE result columns
-      "Geneid", "symbol", "gene", "padj", "pval", "log2FC", "log2FC_shrunk",
+      # gene / DE result columns used bare in dplyr / ggplot2 NSE
+      "Geneid", "symbol", "padj", "pval", "log2FC", "log2FC_shrunk",
       "regulated", "DE", "FC", "stat", "baseMean",
       
-      # contrast / pathway / GSEA names
-      "contrast", "contrast_str", "file_base", "pathway_str", "pathways_list",
-      "pathway",  "vst_matrix", "gesecaRes", "tableplot",
+      # contrast / pathway columns used bare in NSE
+      "contrast", "pathway",
       
-      # GSEA result columns  
-      "NES", "ES", "size",
+      # GSEA result columns used bare in NSE
+      "NES", "ES", "size", "leadingEdge", "pctVar", "log2err",
       
-      # matrices / leading edge / upset
-      "leadingEdge", "leading_edge_matrix", "leading_edge_data", "upset_df",
-      "padj_mat", "nes_mat", "n_pathways",
-      
-      # genomic / neighbourhood columns
+      # genomic / neighbourhood columns used bare in NSE
       "start", "end", "strand", "track",
       
-      # formatting / display related
-      "pctVar", "log2err",
-      
-      # plotting / selection helpers
-      "x_col", "color_col", "shape_col",
-      
-      # msigdbr / gene set routing
-      "db_species", "ensembl_col", "gs_collection_name",
-      "msigdbr_species", "annotation_source",
-      "source_type", "use_source",
-      
+      # ggplot2 tidy-eval helper
       ".data"
-      
     )
   )
 }
 
-# source("R/utils-global.R")
-# lintr:::addin_lint()

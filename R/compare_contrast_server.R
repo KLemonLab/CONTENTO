@@ -263,7 +263,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: Gene Sets for GSEA tab #####
+  ##### Reactive: Gene Sets for GSEA #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets_compare <- reactive({
     src <- req(resolve_gsea_source(input, state, organism(),
@@ -279,7 +279,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Reactive: Gene Sets for GESECA tab #####
+  ##### Reactive: Gene Sets for GESECA #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets_geseca <- reactive({
     src <- req(resolve_gsea_source(input, state, organism(),
@@ -368,6 +368,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   leading_edge_data <- reactive({
     req(gsea_results(), input$selected_pathway_compare)
+    
+    # Guard: silently wait if the selected pathway is stale (e.g. from a previous
+    # gene set collection). input$selected_pathway_compare will update shortly
+    # after pathwaySelectUI_compare re-renders with the new gsea_results().
+    available_pathways <- unique(gsea_results()$nes_df$pathway)
+    req(input$selected_pathway_compare %in% available_pathways)
+    
     tryCatch({
       fgsea_results <- gsea_results()$fgsea_results
       pathway_name  <- input$selected_pathway_compare
@@ -614,7 +621,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Leading Edge Table #####
+  ##### Output: Leading Edge Comparison Table #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$leadingEdgeTable <- renderDT({
     req(leading_edge_data(), state$de_df())
