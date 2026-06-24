@@ -371,11 +371,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       fgsea_results <- gsea_results()$fgsea_results
       pathway_name  <- input$selected_pathway_compare
+      contrasts     <- names(fgsea_results)
       
-      le_list <- map(names(fgsea_results), ~ {
+      le_list <- map(contrasts, ~ {
         res <- fgsea_results[[.x]] |> as_tibble() |> filter(pathway == pathway_name)
-        if (nrow(res) == 0) return(tibble(contrast = .x, gene = character(), in_leading_edge = logical()))
-        tibble(contrast = .x, gene = res$leadingEdge[[1]], in_leading_edge = TRUE)
+        # leadingEdge may be missing entirely OR an empty list — both yield character(0)
+        genes <- if (nrow(res) == 0) character(0) else res$leadingEdge[[1]]
+        tibble(contrast = .x, gene = genes)
       })
       le_df <- bind_rows(le_list)
       
@@ -384,22 +386,27 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         return(NULL)
       }
       
-      le_matrix <- le_df |>
-        mutate(present = 1) |>
-        pivot_wider(names_from = contrast, values_from = present, values_fill = 0) |>
-        column_to_rownames("gene") |>
-        select(-in_leading_edge)
+      # Build one column per contrast explicitly so contrasts with zero
+      # leading-edge genes still get an all-zero column in the matrix
+      all_genes <- unique(le_df$gene)
+      le_matrix <- map_dfc(contrasts, function(ct) {
+        genes_in_ct <- le_df |> filter(contrast == ct) |> pull(gene)
+        tibble(!!ct := as.integer(all_genes %in% genes_in_ct))
+      }) |>
+        as.data.frame() |>
+        `rownames<-`(all_genes)
       
-      contrasts   <- names(fgsea_results)
-      all_genes   <- unique(le_df$gene)
-      genes_all   <- rownames(le_matrix)[rowSums(le_matrix) == length(contrasts)]
+      # ncol(le_matrix) == length(contrasts) by construction, but using ncol
+      # makes the intent explicit and is robust if contrasts ever changes shape
+      genes_all    <- rownames(le_matrix)[rowSums(le_matrix) == ncol(le_matrix)]
       genes_unique <- map(contrasts, ~ {
         setdiff(le_df |> filter(contrast == .x) |> pull(gene),
                 le_df |> filter(contrast != .x) |> pull(gene) |> unique())
       }) |> set_names(contrasts)
       
-      upset_df <- le_matrix |> as.data.frame() |> rownames_to_column("gene") |>
-        mutate(across(-gene, ~ as.logical(.)))
+      upset_df <- le_matrix |>
+        rownames_to_column("gene") |>
+        mutate(across(-gene, as.logical))
       
       list(leading_edge_df = le_df, leading_edge_matrix = le_matrix, upset_df = upset_df,
            overlap_stats = list(total_genes = length(all_genes), genes_in_all = length(genes_all),
@@ -458,7 +465,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       return()
     }
     mat <- get_vst_matrix(state$se_obj(), geneids, selected_contrast_data())
-    Heatmap(scale(mat),
+    Heatmap(mat,
             col = viridis(100, option = input$viridis_palette),
             column_names_gp    = grid::gpar(fontsize = 12),
             row_names_gp       = grid::gpar(fontsize = 10),
@@ -493,7 +500,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     req(compare_data())
     df_display <- compare_data()
     id_cols  <- intersect(c("Geneid", "symbol"), colnames(df_display))
-    lfc_cols <- setdiff(colnames(df_display), id_cols)
+    lfc_cols <- grep("^FC_", colnames(df_display), value = TRUE)
     datatable(df_display, extensions = 'Buttons', filter = 'top',
               options = list(pageLength = 20, scrollX = TRUE, dom = 'Bfrtip',
                              buttons = list(list(extend = 'csv', text = 'Download Filtered (Simple)',
@@ -648,7 +655,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     gs_str <- gsub("[^A-Za-z0-9._-]+", "__",
                    resolve_gsea_source(input, state, organism(),
                                        "geseca_gsea_source", "geseca_gs_collection",
-                                       "geseca_annot_source_gsea")$label %||% "unknown")
+                                       "geseca_annot_source")$label %||% "unknown")
     df <- geseca_result()$gesecaRes |>
       mutate(across(c(pval, padj),      ~ formatC(.x, format = "e", digits = 2)),
              across(c(pctVar, log2err), ~ round(.x, 3)))
