@@ -158,8 +158,10 @@ msigdb_controls_ui <- function(collection_input_id,
 #' @param avail_cols        Named list; from \code{state$available_gsea_columns()}
 #' @param organism_name     Character or NULL; from \code{organism()}
 #' @param source_input_id   Shiny input ID for the radio source selector
-#' @param collection_id     Shiny input ID for the MSigDB collection selectInput
-#' @param subcollection_id  Shiny input ID for the MSigDB subcollection textInput
+#' @param collection_id     Shiny input ID for the MSigDB collection selectInput.
+#'   The selected value encodes both collection and optional subcollection as
+#'   \code{"COLLECTION|SUBCOLLECTION"} (parsed by \code{resolve_gsea_source}).
+#'   No separate subcollection input is used.
 #' @param annot_source_id   Shiny input ID for the annotation column selectInput
 #' @param current_source    Character; current value of \code{input[[source_input_id]]},
 #'   used to preserve selection across re-renders. Pass \code{NULL} to default to "msigdb".
