@@ -6,6 +6,29 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Gene Select #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  output$geneSelect <- renderUI({
+    if (is.null(state$de_df())) return(empty_state_msg())
+    
+    div(
+      style = "margin-top: -10px;",  
+      selectizeInput(
+        "geneSelect",
+        label = NULL,
+        choices = NULL, 
+        options = list(
+          placeholder = 'Start typing gene name or ID...',
+          maxOptions = 20,
+          loadThrottle = 200
+        ),
+        width = "90%"
+      )
+    )
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Update Gene Select Choices #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   observe({
@@ -27,7 +50,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
       choice_vec <- setNames(gene_df$Geneid, gene_df$Geneid)
     }
     
-    updateSelectizeInput(session, "gene_select",
+    updateSelectizeInput(session, "geneSelect",
                          choices  = choice_vec,
                          server   = TRUE,
                          selected = character(0))
@@ -39,6 +62,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # genomic coordinates (start/end/strand) is available.
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneSubTabs <- renderUI({
+    req(state$de_df())
     tabs <- list(
       tabPanel("Gene Info",
                DTOutput("geneDetails")),
@@ -152,10 +176,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Reactive: DE Filtered by User-Defined Cutoffs #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   selected_gene_data <- reactive({
-    req(input$gene_select, state$de_df())
+    req(input$geneSelect, state$de_df())
     tryCatch({
       state$de_df() |>
-        filter(Geneid == input$gene_select) |>
+        filter(Geneid == input$geneSelect) |>
         add_de_flags(input$global_log2FC_cutoff, input$global_padj_cutoff, input$global_lfc_col)
     }, error = handle_gene_filter_error)
   })
@@ -169,10 +193,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Output: Gene Symbol Text #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneSymbol <- renderText({
-    req(input$gene_select, state$de_df())
-    if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$gene_select))
+    req(input$geneSelect, state$de_df())
+    if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$geneSelect))
     sym <- state$de_df() |>
-      filter(Geneid == input$gene_select) |>
+      filter(Geneid == input$geneSelect) |>
       pull(symbol) |> unique()
     if (length(sym) > 0 && !all(is.na(sym))) paste("Gene:", sym[!is.na(sym)][1])
     else "Gene name: not found"
@@ -182,13 +206,13 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Output: Gene Info Table #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneDetails <- renderDT({
-    req(input$gene_select)
+    req(input$geneSelect)
     gene_row <- state$de_df() |>
-      filter(Geneid == input$gene_select) |>
+      filter(Geneid == input$geneSelect) |>
       select(-any_of(c("contrast", "baseMean", "log2FC", "log2FC_shrunk",
                        "lfcSE", "stat", "pvalue", "padj", "regulated", "DE", "tooltip"))) |>
       distinct()
-    if (nrow(gene_row) == 0) gene_row <- data.frame(Geneid = input$gene_select)
+    if (nrow(gene_row) == 0) gene_row <- data.frame(Geneid = input$geneSelect)
     transposed        <- as.data.frame(t(gene_row))
     colnames(transposed) <- "Value"
     transposed$Field  <- rownames(transposed)
@@ -202,12 +226,12 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Output: Gene Expression Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$genePlot <- renderPlot({
-    req(input$gene_select, input$x_col, state$se_obj())
+    req(input$geneSelect, input$x_col, state$se_obj())
     tryCatch({
       vst_mat <- assay(state$se_obj(), "vst")
-      if (!input$gene_select %in% rownames(vst_mat)) stop("Gene not found in dataset")
+      if (!input$geneSelect %in% rownames(vst_mat)) stop("Gene not found in dataset")
       meta             <- as.data.frame(colData(state$se_obj()))
-      meta$expression  <- vst_mat[input$gene_select, ]
+      meta$expression  <- vst_mat[input$geneSelect, ]
       n_colors         <- length(unique(meta[[input$color_col]]))
       palette_colors   <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
       ggplot(meta, aes(.data[[input$x_col]], expression)) +
@@ -251,8 +275,8 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Output: Variance Decomposition Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$varPartPlot <- renderPlot({
-    req(input$gene_select, state$varpart_obj())
-    vp_gene <- state$varpart_obj()$varPart[input$gene_select, ]
+    req(input$geneSelect, state$varpart_obj())
+    vp_gene <- state$varpart_obj()$varPart[input$geneSelect, ]
     vp_df   <- data.frame(Factor = names(vp_gene), Variance = as.numeric(vp_gene))
     ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
       geom_col(fill = "steelblue") +
@@ -268,10 +292,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
   ##### Output: Neighbourhood Analysis #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$neighbourhoodPlot <- renderGirafe({
-    req(state$de_df(), input$contrast, input$gene_select, input$neigh_window)
+    req(state$de_df(), input$contrast, input$geneSelect, input$neigh_window)
     tryCatch({
       de           <- state$de_df()
-      central_gene <- de |> filter(contrast == input$contrast, Geneid == input$gene_select)
+      central_gene <- de |> filter(contrast == input$contrast, Geneid == input$geneSelect)
       req(nrow(central_gene) >= 1)
       
       window_start <- central_gene$start[1] - input$neigh_window
@@ -281,7 +305,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
         filter(contrast == input$contrast,
                start <= window_end & end >= window_start) |>
         mutate(
-          is_central = Geneid == input$gene_select,
+          is_central = Geneid == input$geneSelect,
           tooltip    = paste0(
             "GeneID: ", Geneid, "<br>",
             "Symbol: ", symbol, "<br>",

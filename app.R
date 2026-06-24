@@ -134,10 +134,10 @@ ui <- dashboardPage(
                     collapsible = TRUE, collapsed = FALSE,
                     title = tagList(icon("chart-line"), "Explore by Contrast"),
                     fluidRow(
-                      column(width = 7,
-                             h5(strong("Choose a contrast to explore differential expression results"))),
-                      column(width = 5,
-                             div(style = "padding-left:10px;", uiOutput("contrastSelect")))
+                      column(width = 4,
+                             h5(strong("Choose a contrast to explore results:"))),
+                      column(width = 8,
+                             div(style = "padding-left: 10px; padding-top: 10px;", uiOutput("contrastSelect")))
                     )
                 )
               ),
@@ -155,28 +155,16 @@ ui <- dashboardPage(
                     title = tagList(icon("exchange-alt"), "Compare Contrast"),
                     fluidRow(
                       column(width = 4,
-                             div(style = "padding-right: 20px;",
-                                 span("Select multiple contrasts to compare results side by side."),
-                                 tags$ul(
-                                   style = "margin: 5px 0 12px 15px; padding:0;",
-                                   tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar"),
-                                   tags$li("Explore heatmaps, DEG overlap, and cross-contrast enrichment (GSEA / GESECA)")
-                                 )
-                             )
-                      ),
+                             h5(strong("Select multiple contrasts to compare results:")),
+                             uiOutput("multiContrastSelectHeader")),
                       column(width = 8,
-                             div(style = "padding-left: 10px;",
-                                 uiOutput("multiContrastSelectHeader"),
-                                 div(style = "max-height: 160px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px 12px; margin-top: 4px;",
-                                     uiOutput("multiContrastCheckboxes"))
-                             )
-                      )
+                             div(style = "padding-left: 10px; padding-top: 10px;", uiOutput("multiContrastCheckboxes")))
                     )
                 )
               ),
               fluidRow(
                 box(width = 12, status = "info", solidHeader = TRUE,
-                    uiOutput("compareSubTabs"), hr())
+                    uiOutput("compareSubTabs"))
               )
       ),
       
@@ -187,29 +175,10 @@ ui <- dashboardPage(
                     collapsible = TRUE, collapsed = FALSE,
                     title = tagList(icon("dna"), "Explore by Gene"),
                     fluidRow(
-                      column(width = 8,
-                             div(
-                               span("Choose a gene to explore expression and annotations."),
-                               tags$ul(
-                                 style = "margin: 5px 0 0 15px; padding:0;",
-                                 tags$li("Adjust plotting variables to customize visualization of gene expression across samples"),
-                                 tags$li("Review gene-level statistics across contrasts, including DE results and variance partitioning (if available)"),
-                                 tags$li("Examine genomic neighbourhood and gene context in bacterial datasets")
-                               )
-                             )
-                      ),
                       column(width = 4,
-                             div(style = "padding-left:10px;",
-                                 selectizeInput("gene_select",
-                                                "Select ID (Search by GeneID or Symbol selected column):",
-                                                choices = NULL,
-                                                options = list(
-                                                  placeholder = 'Start typing gene name or ID...',
-                                                  maxOptions = 20,
-                                                  loadThrottle = 200
-                                                ))
-                             )
-                      )
+                             h5(strong("Choose a gene to explore:"))),
+                      column(width = 8,
+                             div(style = "padding-left: 10px; padding-top: 10px;", uiOutput("geneSelect")))
                     )
                 )
               ),
@@ -218,10 +187,10 @@ ui <- dashboardPage(
                     uiOutput("geneSubTabs"))
               )
       )
-    )
-  )
-)
-
+    )  
+  )  
+) 
+  
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 # ============================== Server ====================================
 # == == == == == == == == == == == == == == == == == == == == == == == == ==

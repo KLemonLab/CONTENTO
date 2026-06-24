@@ -8,11 +8,18 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Contrast Dropdown #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
+
   output$contrastSelect <- renderUI({
-    req(state$de_df())
-    contrast_choices <- unique(state$de_df()$contrast)
-    selectInput("contrast", NULL, choices = contrast_choices, width = "90%")
+    if (is.null(state$de_df())) return(empty_state_msg())
+    div(
+      style = "margin-top: -10px;",  
+      selectInput(
+        "contrast",
+        label   = NULL,
+        choices = unique(state$de_df()$contrast),
+        width   = "90%"
+      )
+    )
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,6 +44,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   ##### UI: Tab Layout #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$contrastSubTabs <- renderUI({
+    req(state$de_df())
     tabs <- list(
       tabPanel("Differentially Expressed Genes",
                fluidRow(

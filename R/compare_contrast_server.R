@@ -11,13 +11,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$multiContrastSelectHeader <- renderUI({
     req(state$de_df())
     div(style = "display: flex; align-items: center; gap: 10px;",
-        strong("Select Contrasts:"),
         actionLink("select_all_contrasts", "Select All"),
         actionLink("clear_all_contrasts",  "Clear All"))
   })
   
   output$multiContrastCheckboxes <- renderUI({
-    req(state$de_df())
+    if (is.null(state$de_df())) return(empty_state_msg())
     checkboxGroupInput(
       inputId  = "compare_contrasts",
       label    = NULL,
@@ -94,6 +93,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### UI: Sub-tabs (GSEA/GESECA only if gene sets are available) #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareSubTabs <- renderUI({
+    req(state$de_df())
     db_sp     <- state$db_species()
     ensembl_c <- state$ensembl_col()
     avail_cols <- state$available_gsea_columns()

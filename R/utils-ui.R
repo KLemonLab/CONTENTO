@@ -28,6 +28,13 @@ se_info_ui <- function(se, organism = NULL, annotation = NULL) {
   )
 }
 
+
+empty_state_msg <- function() {
+  div(class = "alert alert-warning",
+      icon("exclamation-triangle"),
+      " Please upload a SE file to begin.")
+}
+
 #' Gene symbol / label column picker
 #'
 #' Builds a selectInput pre-populated with annotation columns, excluding

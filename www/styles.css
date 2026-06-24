@@ -39,19 +39,19 @@
 
 /* == == == == == == == == == == == == == == == == == == == ==
    SECTION 2: COMPARE CONTRAST — CHECKBOX GRID
-   2-column grid layout for contrast selection checkboxes
+   grid layout for contrast selection checkboxes
    == == == == == == == == == == == == == == == == == == == == */
 
 #compare_contrasts .shiny-options-group {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   column-gap: 20px;
-  align-items: start;
+  align-items: flex-start;
 }
 
 #compare_contrasts .shiny-options-group .checkbox {
   margin-top: 0;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 
