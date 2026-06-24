@@ -12,27 +12,6 @@ explore_gene_server <- function(input, output, session, state, organism) {
   output$geneSelect <- renderUI({
     if (is.null(state$de_df())) return(empty_state_msg())
     
-    div(
-      style = "margin-top: -10px;",  
-      selectizeInput(
-        "geneSelect",
-        label = NULL,
-        choices = NULL, 
-        options = list(
-          placeholder = 'Start typing gene name or ID...',
-          maxOptions = 20,
-          loadThrottle = 200
-        ),
-        width = "90%"
-      )
-    )
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Update Gene Select Choices #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  observe({
-    req(state$de_df())
     gene_df <- state$de_df() |>
       select(any_of(c("Geneid", "symbol"))) |>
       distinct()
@@ -50,10 +29,21 @@ explore_gene_server <- function(input, output, session, state, organism) {
       choice_vec <- setNames(gene_df$Geneid, gene_df$Geneid)
     }
     
-    updateSelectizeInput(session, "geneSelect",
-                         choices  = choice_vec,
-                         server   = TRUE,
-                         selected = character(0))
+    div(
+      style = "margin-top: -10px;",
+      selectizeInput(
+        "geneSelect",
+        label   = NULL,
+        choices = c("", choice_vec),
+        selected = character(0),
+        options = list(
+          placeholder  = 'Start typing gene name or ID...',
+          maxOptions   = 20,
+          loadThrottle = 200
+        ),
+        width = "90%"
+      )
+    )
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
