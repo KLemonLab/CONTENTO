@@ -239,19 +239,36 @@ get_top_de_genes <- function(selected_data, top_n, lfc_col = "log2FC") {
 }
 
 
-#' Extract and scale VST matrix for a set of genes
-#' @param se_obj SummarizedExperiment with a vst assay
-#' @param geneids Character vector of Geneids
-#' @param de_df Optional data frame with Geneid and symbol columns for row labelling.
-#'   If NULL or no symbol column, Geneids are used as rownames.
-#' @return Scaled matrix with Geneids as rownames
+#' Subset, optionally relabel, and scale VST assay values for a specified set of genes
+#' @description
+#' Subsets a VST assay from a SummarizedExperiment object to a specified set of
+#' Geneids, optionally replaces rownames with gene symbols, and returns a
+#' column-wise scaled expression matrix.
+#' @param se_obj A \code{SummarizedExperiment} object containing a \code{"vst"} assay.
+#' @param geneids Character vector of Geneids to subset from the VST matrix.
+#' @param de_df Optional data frame containing columns \code{Geneid} and
+#'   \code{symbol} used to relabel rows. If provided, rownames are replaced with
+#'   matching gene symbols.
+#' @details
+#' Geneids not present in \code{se_obj} are silently dropped. When \code{de_df} is
+#' provided, rownames are replaced using a match between \code{Geneid} and
+#' \code{symbol}. Unmatched Geneids may result in \code{NA} rownames, and duplicated
+#' symbols are not resolved.
+#' The resulting matrix is scaled using \code{scale()}, which centers and
+#' standardizes values across columns (i.e., per sample).
+#' @return
+#' A numeric matrix of scaled VST values with rows corresponding to genes
+#' (Geneids or symbols, depending on \code{de_df}) and columns corresponding to samples.
 #' @export
-get_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
+subset_scale_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
   mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], ]
+  
   if (!is.null(de_df) && "symbol" %in% colnames(de_df)) {
-    sym_lookup <- de_df |> distinct(Geneid, symbol)
+    sym_lookup <- de_df |>
+      dplyr::distinct(Geneid, symbol)
     rownames(mat) <- sym_lookup$symbol[match(rownames(mat), sym_lookup$Geneid)]
   }
+  
   scale(mat)
 }
 

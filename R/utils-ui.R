@@ -71,7 +71,7 @@ msigdb_controls_ui <- function(collection_input_id,
   
   if (is.null(cols)) {
     return(div(
-      class = "alert alert-danger",
+      class = "alert alert-warning",
       icon("exclamation-triangle"),
       "Could not load MSigDB collections. Check msigdbr installation."
     ))

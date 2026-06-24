@@ -20,7 +20,6 @@ library(grid)
 library(ggiraph)
 library(fgsea)
 library(msigdbr)
-library(pheatmap)
 library(circlize)
 library(SummarizedExperiment)
 

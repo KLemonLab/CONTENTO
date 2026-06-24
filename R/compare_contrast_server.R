@@ -471,7 +471,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       text(0.5, 0.5, "No DE genes found for heatmap\nAdjust cutoffs or select contrasts", cex = 1.5)
       return()
     }
-    mat <- get_vst_matrix(state$se_obj(), geneids, selected_contrast_data())
+    mat <- subset_scale_vst_matrix(state$se_obj(), geneids, selected_contrast_data())
     Heatmap(mat,
             col = viridis(100, option = input$viridis_palette),
             column_names_gp    = grid::gpar(fontsize = 12),
@@ -487,13 +487,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$compareUpsetPlot <- renderPlot({
     req(compare_data())
     df <- compare_data()
-    df_bool <- df[, sapply(df, is.logical), drop = FALSE]
-    if (nrow(df_bool) == 0) {
+    set_cols <- names(df)[sapply(df, is.logical)]
+    if (length(set_cols) == 0 || nrow(df) == 0) {
       plot.new()
       text(0.5, 0.5, "No DE genes found\nAdjust cutoffs or selected contrasts", cex = 1.5)
       return()
     }
-    upset(df_bool, colnames(df_bool), name = "DEGs", min_size = 1,
+    upset(df, set_cols, name = "DEGs", min_size = 1,
           base_annotations = list('Intersection size' = intersection_size(text = list(size = 5))),
           themes = upset_default_themes(text = element_text(size = 16),
                                         axis.title = element_text(size = 16),
@@ -578,13 +578,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                    resolve_gsea_source(input, state, organism(),
                                        "compare_gsea_source", "compare_gs_collection",
                                        "compare_annot_source_gsea")$label %||% "unknown")
-    
     df <- gsea_results()$nes_df |>
       mutate(padj_fmt    = formatC(padj, format = "e", digits = 2),
              NES_display = paste0(round(NES, 2), " (", padj_fmt, ")")) |>
       select(pathway, contrast, NES_display) |>
       pivot_wider(names_from = contrast, values_from = NES_display, values_fill = "NS")
-    
     datatable(df, extensions = 'Buttons', rownames = FALSE, filter = 'top',
               options = list(pageLength = 20, scrollX = TRUE, dom = 'Bfrtip',
                              buttons = list(list(extend = 'csv', text = 'Download GSEA Comparison',
