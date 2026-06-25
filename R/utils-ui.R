@@ -120,7 +120,7 @@ msigdb_controls_ui <- function(collection_input_id,
   organism_note <- if (!is.null(organism_label)) {
     tags$p(
       icon("globe"),
-      strong("Select Gene Sets from MSigDB for: "),
+      strong("Select from MSigDB for: "),
       organism_label,
       db_note,
       style = "margin-bottom:4px; font-size: 0.95em;"
@@ -250,7 +250,7 @@ gsea_source_ui <- function(db_species,
         
         tags$div(
           icon("tags"),   
-          strong("Select Gene Sets from Annotation"),
+          strong("Select from Annotation"),
           style = "margin-bottom:4px; font-size: 0.95em;"
         ),
         

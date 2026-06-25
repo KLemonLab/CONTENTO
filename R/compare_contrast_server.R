@@ -2,11 +2,263 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 1: UI RENDERING ####
-  # Dynamic UI controls that respond to user inputs and state changes
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Contrast Checkbox Selection #####
+  ##### UI: Tab Layout #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$compareSubTabs <- renderUI({
+    req(state$de_df())
+    db_sp      <- state$db_species()
+    ensembl_c  <- state$ensembl_col()
+    avail_cols <- state$available_gsea_columns()
+    
+    has_msigdb   <- !is.null(db_sp) && !is.null(ensembl_c)
+    has_annot    <- length(avail_cols) > 0
+    has_genesets <- has_msigdb || has_annot
+    
+    tabs <- list(
+      
+      # ── Tab 1: DEGs ──────────────────────────────────────────────
+      tabPanel("Differentially Expressed Genes",
+               fluidRow(
+                 column(width = 7,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("Compare Differentially Expressed Genes Across Contrasts"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar"),
+                              tags$li("UpSet plot shows overlap of significant DEGs between selected contrasts"),
+                              tags$li("Table includes genes DE in at least one contrast; fold-change (FC) columns are color-coded (up/down-regulated)"),
+                              tags$li("Heatmap shows top DE genes across all samples using VST Z-scores")
+                            )
+                        )
+                 ),
+                 column(width = 5,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            strong("Download Options"),
+                            div(style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                                downloadButton("downloadAllContrastsData",
+                                               "Download All Genes for Selected Contrasts", class = "btn btn-info"),
+                                downloadButton("downloadCompareUpsetPlot",
+                                               "Download DEGs UpSet Plot", class = "btn btn-info"),
+                                downloadButton("downloadHeatmapData",
+                                               "Download Expression Heatmap Data", class = "btn btn-info")
+                            )
+                        )
+                 )
+               ),
+               hr(),
+               h4(strong("DEG Overlap")),
+               withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5),
+               hr(),
+               h4(strong("Table of DEGs in All Selected Contrasts")),
+               withSpinner(DTOutput("compareTable"), type = 5),
+               hr(),
+               fluidRow(
+                 column(
+                   width = 6,
+                   h4(strong("Expression Heatmap"), style = "margin-top: 10px;")
+                 ),
+                 column(
+                   width = 6,
+                   div(
+                     style = "display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px;",
+                     numericInput(
+                       "top_n", "Top N DE genes",
+                       value = 50, min = 10, max = 500, step = 10,
+                       width = "180px"
+                     ),
+                     selectInput(
+                       "viridis_palette", "Palette",
+                       choices = c("viridis", "magma", "plasma", "inferno", "cividis", "mako", "rocket", "turbo"),
+                       selected = "viridis",
+                       width = "180px"
+                     )
+                   )
+                 )
+               ),
+               withSpinner(uiOutput("heatmapPlotUI"), type = 5)
+      ),
+      
+      # ── Tab 2: Functional Enrichment ─────────────────────────   
+      tabPanel("Functional Enrichment",
+               fluidRow(
+                 column(width = 7,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("Perform Gene Set Enrichment Analysis (GSEA)"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li("Choose gene set collections from:"),
+                              tags$li(style = "margin-left:10px;",
+                                      tags$b("MSigDB: "), 
+                                      "Curated pathways (e.g. Hallmark, GO, Reactome). ",
+                                      "Available for human and mouse through ",
+                                      tags$a("MSigDB",
+                                             href = "https://www.gsea-msigdb.org/gsea/msigdb",
+                                             target = "_blank"),
+                                      ", and for additional species via orthology mapping (see ",
+                                      tags$a("supported species",
+                                             href = "https://igordot.github.io/msigdbr/reference/msigdbr_species.html",
+                                             target = "_blank"),
+                                      ")."
+                              ),
+                              tags$li(style = "margin-left:10px;",
+                                      tags$b("Annotation: "), 
+                                      "Gene sets from your annotation columns (e.g. KEGG, COG)."),
+                              tags$li("Gene sets are ranked by NES (Normalized Enrichment Score) and Leading-edge genes indicate core contributors to enrichment"),
+                              tags$li("Heatmap shows NES for pathways significant (FDR < 0.05) in at least one contrast"),
+                              tags$li("Select a specific gene set to inspect leading-edge gene overlap across contrasts")
+                            )
+                        )
+                 ),
+                 column(width = 5,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            uiOutput("compareGseaControlsUI_gsea"),
+                            div(style = "margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                                downloadButton("downloadCompareGSEAPlot", "Download GSEA Heatmap", class = "btn btn-info"),
+                                downloadButton("downloadCompareGseaResults", "Download GSEA Table", class = "btn btn-info")
+                            )
+                        )
+                 )
+               ),
+               hr(),
+               fluidRow(
+                 column(
+                   width = 6,
+                   h4(strong("Heatmap for Gene Sets Significant in At Least One Contrast"),
+                      style = "margin-top: 10px;")
+                 ),
+                 column(
+                   width = 6,
+                   div(
+                     style = "display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px;",
+                     numericInput(
+                       "max_pathways", "Max pathways",
+                       value = 100, min = 10, max = 500, step = 10,
+                       width = "180px"
+                     ),
+                     numericInput(
+                       "pathway_name_length", "Name length",
+                       value = 50, min = 25, max = 500, step = 10,
+                       width = "180px"
+                     )
+                   )
+                 )
+               ),
+               withSpinner(uiOutput("compareGSEAPlotUI"), type = 5),
+               hr(),
+               h4(strong("Normalized Enrichment Score (NES) for Gene Sets Significant in At Least One Contrast")),
+               withSpinner(DTOutput("compareGSEATable"), type = 5),
+               hr(),
+               fluidRow(
+                 column(
+                   width = 12,
+                   div(
+                     style = "display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;",
+                     div(
+                       style = "display: flex; align-items: center; gap: 10px;",
+                       h4(strong("Leading Edge Gene Overlap for a Specific Gene Set"),
+                          style = "margin: 0;"),
+                       downloadButton("downloadLeadingEdgeUpsetPlot", "Download Leading Edge Genes UpSet Plot", class = "btn btn-info")
+                     ),
+                     div(
+                       style = "min-width: 250px;", uiOutput("pathwaySelectUI_compare")
+                     )
+                   )
+                 )
+               ),
+               withSpinner(plotOutput("leadingEdgeUpsetPlot", height = "500px"), type = 5),
+               hr(),
+               withSpinner(DTOutput("leadingEdgeTable"), type = 5)
+      ),
+      
+      # ── Tab 3: Co-expression Analysis ─────────────────────────
+      tabPanel("Co-Expression Analysis",
+               fluidRow(
+                 column(width = 7,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("Gene Set Co-expression Analysis (GESECA)"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li("Select a gene set collection to view its co-regulation profile across samples"),
+                              tags$li("GESECA uses the VST expression matrix directly (no contrast statistics required)"),
+                              tags$li("Plot inlcudes top 20 significant gene sets (FDR < 0.05)"),
+                              tags$li("Select a specific gene set to view its co-regulation profile across samples")
+
+                            )
+                        )
+                 ),
+                 column(width = 5,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            uiOutput("compareGseaControlsUI_geseca"),
+                            div(style = "margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                                downloadButton("downloadGesecaTablePlot", "Download GESECA Plot", class = "btn btn-info"),
+                                downloadButton("downloadGesecaResults", "Download GESECA Table", class = "btn btn-info")
+                            )
+                        )
+                 )
+               ),
+               hr(),
+               h4(strong("Top 20 GESECA Results")),
+               withSpinner(uiOutput("gesecaTablePlotUI"), type = 5),
+               hr(),
+               h4(strong("All GESECA Results")),
+               withSpinner(DTOutput("gesecaResultsTable"), type = 5),
+               hr(),
+               fluidRow(
+                 column(
+                   width = 12,
+                   div(
+                     style = "display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;",
+                     div(
+                       style = "display: flex; align-items: center; gap: 10px;",
+                       h4(strong("Co-regulation Profile for a Specific Gene Set"),
+                          style = "margin: 0;"),
+                       downloadButton("downloadCoregulationPlot", "Download Co-regulation Plot", class = "btn btn-info")
+                     ),
+                     div(
+                       style = "display: flex; gap: 10px; flex-wrap: wrap;",
+                       div(style = "min-width: 220px;", uiOutput("pathwaySelectUI_geseca")),
+                       div(style = "min-width: 220px;", uiOutput("conditionSelectUI_geseca"))
+                     )
+                   )
+                 )
+               ),
+               withSpinner(plotOutput("CoregulationPlot", height = "400px"), type = 5)
+      )
+    )
+    
+    do.call(tabsetPanel, c(list(type = "pills"), tabs))
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Dynamic Plot Heights Based on Data Size #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$heatmapPlotUI <- renderUI({
+    req(input$top_n)
+    h <- max(400, input$top_n * 15)
+    plotOutput("heatmapPlot", height = paste0(h, "px"))
+  })
+  
+  output$compareGSEAPlotUI <- renderUI({
+    req(gsea_results())
+    h <- max(400, nrow(gsea_results()$nes_matrix) * 18)
+    plotOutput("compareGSEAPlot", height = paste0(h, "px"))
+  })
+  
+  output$gesecaTablePlotUI <- renderUI({
+    req(geseca_result())
+    n <- sum(geseca_result()$gesecaRes$padj < 0.05, na.rm = TRUE)
+    h <- max(400, min(n, 20) * 40)
+    plotOutput("gesecaTablePlot", height = paste0(h, "px"))
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Contrast Checkbox Selectors #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$multiContrastSelectHeader <- renderUI({
     req(state$de_df())
@@ -36,31 +288,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Dynamic Plot Heights Based on Data Size #####
+  ##### UI: GSEA/GESECA Selectors #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$heatmapPlotUI <- renderUI({
-    req(input$top_n)
-    h <- max(400, input$top_n * 14)
-    plotOutput("heatmapPlot", height = paste0(h, "px"))
-  })
-  
-  output$compareGSEAPlotUI <- renderUI({
-    req(gsea_results())
-    h <- max(400, nrow(gsea_results()$nes_matrix) * 18)
-    plotOutput("compareGSEAPlot", height = paste0(h, "px"))
-  })
-  
-  output$gesecaTablePlotUI <- renderUI({
-    req(geseca_result())
-    n <- sum(geseca_result()$gesecaRes$padj < 0.05, na.rm = TRUE)
-    h <- max(400, min(n, 20) * 40)
-    plotOutput("gesecaTablePlot", height = paste0(h, "px"))
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: GSEA/GESECA Controls #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
   output$compareGseaControlsUI_gsea <- renderUI({
     req(state$se_obj())
     gsea_source_ui(
@@ -90,125 +319,17 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Sub-tabs (GSEA/GESECA only if gene sets are available) #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$compareSubTabs <- renderUI({
-    req(state$de_df())
-    db_sp     <- state$db_species()
-    ensembl_c <- state$ensembl_col()
-    avail_cols <- state$available_gsea_columns()
-    
-    has_msigdb   <- !is.null(db_sp) && !is.null(ensembl_c)
-    has_annot    <- length(avail_cols) > 0
-    has_genesets <- has_msigdb || has_annot
-    
-    tabs <- list(
-      tabPanel("Expression Heatmap",
-               uiOutput("heatmapControlsUI"),
-               hr(),
-               withSpinner(uiOutput("heatmapPlotUI"), type = 5)
-      ),
-      tabPanel("DEG Overlap",
-               withSpinner(plotOutput("compareUpsetPlot", height = "500px"), type = 5),
-               h4("Table of DEGs in All Selected Contrasts"),
-               withSpinner(DTOutput("compareTable"), type = 5),
-               tags$div(style = "margin-top: 15px; display: flex; gap: 10px;",
-                        downloadButton("downloadAllContrastsData",
-                                       "Download All Genes for All Selected Contrasts",
-                                       class = "btn btn-warning"))
-      )
-    )
-    
-    if (has_genesets) {
-      tabs <- append(tabs, list(
-        tabPanel("GSEA Overlap",
-                 hr(style = "margin: 8px 0;"),
-                 h5("Gene Sets (GSEA)", style = "margin-top: 0; margin-bottom: 8px; font-weight: bold;"),
-                 uiOutput("compareGseaControlsUI_gsea"),
-                 tabsetPanel(type = "pills",
-                             tabPanel("Overview",
-                                      h4("GSEA Heatmap: Pathways Significant in At Least One Contrast"),
-                                      fluidRow(
-                                        column(6, numericInput("max_pathways", "Max pathways to show",
-                                                               value = 100, min = 10, max = 500, step = 10)),
-                                        column(6, numericInput("pathway_name_length", "Max pathway name length",
-                                                               value = 50, min = 25, max = 500, step = 10))
-                                      ),
-                                      hr(),
-                                      withSpinner(uiOutput("compareGSEAPlotUI"), type = 5),
-                                      hr(),
-                                      h4("NES Values for Significant Pathways"),
-                                      withSpinner(DTOutput("compareGSEATable"), type = 5)
-                             ),
-                             tabPanel("Pathway Detail",
-                                      fluidRow(column(12,
-                                                      uiOutput("pathwaySelectUI_compare"),
-                                                      hr(),
-                                                      h4("Leading Edge Genes Overlap"),
-                                                      withSpinner(plotOutput("leadingEdgeUpsetPlot", height = "500px"), type = 5),
-                                                      hr(),
-                                                      h4("Leading Edge Summary Statistics"),
-                                                      verbatimTextOutput("leadingEdgeSummary"),
-                                                      hr(),
-                                                      h4("All Leading Edge Genes"),
-                                                      withSpinner(DTOutput("leadingEdgeTable"), type = 5)
-                                      ))
-                             )
-                 )
-        ),
-        tabPanel("GESECA",
-                 hr(style = "margin: 8px 0;"),
-                 h5("Gene Sets (GESECA)", style = "margin-top: 0; margin-bottom: 8px; font-weight: bold;"),
-                 uiOutput("compareGseaControlsUI_geseca"),
-                 tabsetPanel(type = "pills",
-                             tabPanel("Overview",
-                                      h4("Top 20 GESECA Results"),
-                                      withSpinner(uiOutput("gesecaTablePlotUI"), type = 5),
-                                      hr(),
-                                      h4("All GESECA Results"),
-                                      withSpinner(DTOutput("gesecaResultsTable"), type = 5)
-                             ),
-                             tabPanel("Pathway Detail",
-                                      fluidRow(column(12,
-                                                      uiOutput("pathwaySelectUI_geseca"),
-                                                      uiOutput("conditionSelectUI_geseca"),
-                                                      hr(),
-                                                      withSpinner(plotOutput("CoregulationPlot", height = "400px"), type = 5)
-                                      ))
-                             )
-                 )
-        )
-      ))
-    }
-    
-    do.call(tabsetPanel, c(list(type = "pills"), tabs))
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Heatmap Controls #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$heatmapControlsUI <- renderUI({
-    req(state$de_df())  
-    fluidRow(
-      column(6, numericInput("top_n", "Top N DE genes", value = 50, min = 10, max = 500, step = 10)),
-      column(6, selectInput("viridis_palette", "Viridis palette",
-                            choices  = c("viridis", "magma", "plasma", "inferno", "cividis", "mako", "rocket", "turbo"),
-                            selected = "viridis"))
-    )
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Pathway Selectors #####
+  ##### UI: Individual Pathway Selectors #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$pathwaySelectUI_compare <- renderUI({
     req(gsea_results())
     pathways <- rownames(gsea_results()$nes_matrix)
     if (length(pathways) > 0) {
-      selectInput("selected_pathway_compare", "Select Pathway:",
+      selectInput("selected_pathway_compare", "Select Gene Set:",
                   choices = pathways, selected = pathways[1], width = "100%")
     } else {
       div(class = "alert alert-warning", icon("exclamation-triangle"),
-          "No significant pathways found (FDR < 0.05)")
+          "No significant gene sets found (FDR < 0.05)")
     }
   })
   
@@ -216,7 +337,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     req(geseca_result())
     pathways <- geseca_result()$gesecaRes |> arrange(padj) |> pull(pathway)
     if (length(pathways) > 0) {
-      selectInput("selected_pathway_geseca", "Select Pathway:",
+      selectInput("selected_pathway_geseca", "Select Gene Set:",
                   choices = pathways, selected = pathways[1], width = "100%")
     } else {
       div(class = "alert alert-warning", icon("exclamation-triangle"), "No pathways found")
@@ -271,8 +392,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                    "compare_gsea_source", "compare_gs_collection", "compare_annot_source_gsea"))
     tryCatch({
       gs <- do.call(load_genesets, src[names(src) != "label"])
+      label = src$label
       if (length(gs) == 0) {
-        showNotification("No pathways found in selected gene set", type = "warning")
+        showNotification("No gene sets found in selected collection", type = "warning")
         return(NULL)
       }
       gs
@@ -288,7 +410,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       gs <- do.call(load_genesets, src[names(src) != "label"])
       if (length(gs) == 0) {
-        showNotification("No pathways found in selected gene set", type = "warning")
+        showNotification("No gene sets found in selected collection", type = "warning")
         return(NULL)
       }
       gs
@@ -333,7 +455,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     sig_pathways <- nes_df |> dplyr::filter(padj < 0.05) |> dplyr::pull(pathway) |> unique()
     
     if (length(sig_pathways) == 0) {
-      showNotification("No significant pathways found across contrasts", type = "warning")
+      showNotification("No significant gene sets found across contrasts", type = "warning")
       return(NULL)
     }
     
@@ -390,7 +512,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       le_df <- bind_rows(le_list)
       
       if (nrow(le_df) == 0) {
-        showNotification("No leading edge genes found for this pathway", type = "warning")
+        showNotification("No leading edge genes found for this gene set", type = "warning")
         return(NULL)
       }
       
@@ -458,7 +580,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 3: OUTPUT RENDERING ####
-  # Display tables, plots, and interactive visualizations
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -483,7 +604,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: DEG Overlap UpSet Plot #####
+  ##### Output: DEG UpSet Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareUpsetPlot <- renderPlot({
     req(compare_data())
@@ -500,7 +621,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       return()
     }
     upset(df, set_cols, name = "DEGs", min_size = 1,
-          base_annotations = list('Intersection size' = intersection_size(text = list(size = 5))),
+          base_annotations = list("Intersection size" = intersection_size(text = list(size = 5))),
           themes = upset_default_themes(text = element_text(size = 16),
                                         axis.title = element_text(size = 16),
                                         axis.text  = element_text(size = 14)))
@@ -514,9 +635,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     df_display <- compare_data()
     id_cols  <- intersect(c("Geneid", "symbol"), colnames(df_display))
     lfc_cols <- grep("^FC_", colnames(df_display), value = TRUE)
-    datatable(df_display, extensions = 'Buttons', filter = 'top',
-              options = list(pageLength = 20, scrollX = TRUE, dom = 'Bfrtip',
-                             buttons = list(list(extend = 'csv', text = 'Download Filtered (Simple)',
+    datatable(df_display, extensions = "Buttons", filter = "top",
+              options = list(pageLength = 20, scrollX = TRUE, dom = "Bfrtip",
+                             buttons = list(list(extend = "csv", text = "Download DEGs (genes can be filtered based on DE condition (true/false) across different contrasts)",
                                                  exportOptions = list(modifier = list(page = "all"))))),
               rownames = FALSE) |>
       formatStyle(columns = lfc_cols,
@@ -589,11 +710,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
              NES_display = paste0(round(NES, 2), " (", padj_fmt, ")")) |>
       select(pathway, contrast, NES_display) |>
       pivot_wider(names_from = contrast, values_from = NES_display, values_fill = "NS")
-    datatable(df, extensions = 'Buttons', rownames = FALSE, filter = 'top',
-              options = list(pageLength = 20, scrollX = TRUE, dom = 'Bfrtip',
-                             buttons = list(list(extend = 'csv', text = 'Download GSEA Comparison',
-                                                 filename = paste(file_base, contrasts_str, "GSEA", gs_str, sep = "__"),
-                                                 exportOptions = list(modifier = list(page = "all"))))))
+    datatable(df, rownames = FALSE,
+              options = list(pageLength = 20, scrollX = TRUE, dom = "rtip"))
   }, server = FALSE)
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -604,24 +722,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     upset(leading_edge_data()$upset_df,
           colnames(leading_edge_data()$leading_edge_matrix),
           name = "Leading Edge Genes", min_size = 1,
-          base_annotations = list('Intersection size' = intersection_size(text = list(size = 5))),
+          base_annotations = list("Intersection size" = intersection_size(text = list(size = 5))),
           themes = upset_default_themes(text = element_text(size = 16),
                                         axis.title = element_text(size = 16),
                                         axis.text  = element_text(size = 14)))
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Leading Edge Summary #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$leadingEdgeSummary <- renderText({
-    req(leading_edge_data())
-    stats <- leading_edge_data()$overlap_stats
-    unique_counts <- map_chr(names(stats$genes_unique),
-                             ~ paste0("  ", .x, ": ", length(stats$genes_unique[[.x]])))
-    paste0("Total Leading Edge Genes: ", stats$total_genes, "\n",
-           "Genes in ALL Contrasts: ", stats$genes_in_all, "\n\n",
-           "Genes Unique to Each Contrast:\n",
-           paste(unique_counts, collapse = "\n"))
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -637,9 +741,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       left_join(gene_symbols, by = c("gene" = "Geneid")) |>
       select(any_of(c("gene", "symbol")), everything()) |>
       mutate(across(-any_of(c("gene", "symbol")), ~ ifelse(. == 1, "TRUE", "FALSE")))
-    datatable(df, extensions = 'Buttons', rownames = FALSE, filter = 'top',
-              options = list(pageLength = 20, scrollX = TRUE, dom = 'Bfrtip',
-                             buttons = list(list(extend = 'csv', text = 'Download Leading Edge Genes',
+    datatable(df, extensions = "Buttons", rownames = FALSE, filter = "top",
+              options = list(pageLength = 20, scrollX = TRUE, dom = "Bfrtip",
+                             buttons = list(list(extend = "csv", text = "Download Leading Edge Genes (genes can be filtered based on presence (true/false) across different contrasts)",
                                                  filename = paste(file_base, pathway_str, "LeadingEdge", sep = "__"),
                                                  exportOptions = list(modifier = list(page = "all"))))))
   }, server = FALSE)
@@ -651,7 +755,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     req(geseca_result())
     if (is.null(geseca_result()$tableplot)) {
       plot.new()
-      text(0.5, 0.5, "No significant pathways found (FDR < 0.05)", cex = 1.5)
+      text(0.5, 0.5, "No significant gene sets found (FDR < 0.05)", cex = 1.5)
     } else {
       geseca_result()$tableplot
     }
@@ -670,11 +774,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     df <- geseca_result()$gesecaRes |>
       mutate(across(c(pval, padj),      ~ formatC(.x, format = "e", digits = 2)),
              across(c(pctVar, log2err), ~ round(.x, 3)))
-    datatable(df, extensions = 'Buttons', rownames = FALSE, filter = 'top',
-              options = list(pageLength = 15, scrollX = TRUE, dom = 'Bfrtip',
-                             buttons = list(list(extend = 'csv', text = 'Download Full GESECA Results',
-                                                 filename = paste(file_base, "GESECA", gs_str, sep = "__"),
-                                                 exportOptions = list(modifier = list(page = "all"))))))
+    datatable(df, rownames = FALSE,
+              options = list(pageLength = 20, scrollX = TRUE, dom = "rtip"))
   }, server = FALSE)
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -685,7 +786,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       pathway_genes <- geseca_result()$pathways_list[[input$selected_pathway_geseca]]
       if (is.null(pathway_genes) || length(pathway_genes) == 0) {
-        plot.new(); text(0.5, 0.5, "Pathway not found", cex = 1.2); return()
+        plot.new(); text(0.5, 0.5, "Gene Set not found", cex = 1.2); return()
       }
       color_var <- input$geseca_color_var %||% colnames(colData(state$se_obj()))[1]
       sort_var  <- input$geseca_sort_var  %||% colnames(colData(state$se_obj()))[1]
@@ -705,14 +806,14 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 4: DOWNLOAD HANDLERS ####
-  # Manage file downloads with proper naming and filtering
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: Download All Genes for Selected Contrast #####
+  ##### Download: All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadAllContrastsData <- downloadHandler(
-    function() build_download_filename(input, state, type = "DE", contrast = input$compare_contrasts),
+    function() build_download_filename(input, state, 
+                                       type = "DE", contrast = input$compare_contrasts),
     function(file) {
       req(selected_contrast_data())
       selected_contrast_data() |>
@@ -722,10 +823,100 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     }
   )
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: DEG UpSet Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadCompareUpsetPlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "UpSet", contrast = input$compare_contrasts,
+                                       filters = list(FC = input$global_log2FC_cutoff, FDR = input$global_padj_cutoff)),
+    function(file) {
+    }
+  )
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: Expression Heatmap #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadHeatmapData <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "Heatmap", contrast = input$compare_contrasts,
+                                       filters = list(FC = input$global_log2FC_cutoff, FDR = input$global_padj_cutoff)),
+    function(file) {
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: GSEA Comparison Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadCompareGseaResults <- downloadHandler(
+    function() build_download_filename(input, state,
+                                       type = "GSEA", contrast = input$compare_contrasts,
+                                       suffix = genesets()$label),
+    function(file) {
+      req(gsea_results())
+      gsea_results()$nes_df |>
+        mutate(padj = formatC(padj, format = "e", digits = 2)) |>
+        write.csv(file, row.names = FALSE)
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: GSEA Heatmap #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadCompareGSEAPlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "GSEA", contrast = input$compare_contrasts,
+                                       suffix = genesets()$label),
+    function(file) {
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: Leading Edge UpSet Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadLeadingEdgeUpsetPlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "LeadingEdge", contrast = input$compare_contrasts,
+                                       suffix = genesets()$label),
+    function(file) {
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: GESECA Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadGesecaResults <- downloadHandler(
+    function() build_download_filename(input, state,
+                                       type = "GESECA", contrast = input$compare_contrasts,
+                                       suffix = genesets()$label),
+    function(file) {
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: GESECA Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadGesecaTablePlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "GESECA", contrast = input$compare_contrasts,
+                                       suffix = genesets()$label),
+    function(file) {
+    }
+  )
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: GESECA Co-regulation Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadCoregulationPlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "GESECA", contrast = input$compare_contrasts,
+                                       suffix = genesets()$label),
+    function(file) {
+    }
+  )
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 5: ERROR HANDLERS ####
-  # Helper functions for error management
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   handle_filter_contrasts_error    <- \(e) { showNotification(paste("Error filtering contrast data:", e$message), type = "error"); NULL }

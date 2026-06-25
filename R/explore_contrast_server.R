@@ -2,43 +2,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 1: UI RENDERING ####
-  # Dynamic UI controls that respond to user inputs and state changes
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Contrast Dropdown #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  output$contrastSelect <- renderUI({
-    if (is.null(state$de_df())) return(empty_state_msg())
-    div(
-      style = "margin-top: -10px;",  
-      selectInput(
-        "contrast",
-        label   = NULL,
-        choices = unique(state$de_df()$contrast),
-        width   = "90%"
-      )
-    )
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: GSEA Controls #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
-  output$gseaControlsUI <- renderUI({
-    req(state$se_obj())
-    gsea_source_ui(
-      db_species        = state$db_species(),
-      ensembl_col       = state$ensembl_col(),
-      avail_cols        = state$available_gsea_columns(),
-      organism_name     = organism(),
-      source_input_id   = "gsea_source",
-      collection_id     = "gs_collection",
-      annot_source_id   = "annot_source",
-      current_source    = input$gsea_source
-    )
-  })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Tab Layout #####
@@ -46,6 +10,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   output$contrastSubTabs <- renderUI({
     req(state$de_df())
     tabs <- list(
+      
+      # ── Tab 1: DEGs ────────────────────────────────
       tabPanel("Differentially Expressed Genes",
                fluidRow(
                  column(width = 7,
@@ -55,8 +21,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                             tags$ul(
                               style = "margin: 5px 0 0 15px; padding:0;",
                               tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar; download the full gene list or just the DEGs"),
-                              tags$li("The volcano plot visualizes all genes, highlighting significant DEGs based on your threshold"),
-                              tags$li("Hover over points to view gene details, and download the plot in the interactive viewer")
+                              tags$li("Volcano plot highlights DEGs based on your cutoffs; hover over points to view gene details, and download the plot in the interactive viewer")
                             )
                         )
                  ),
@@ -74,10 +39,11 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                hr(),
                withSpinner(DTOutput("DETable"), type = 5),
                hr(),
-               h4("Volcano Plot of All Genes in the Selected Contrast"),
+               h4(strong("Volcano Plot of All Genes in the Selected Contrast")),
                withSpinner(plotlyOutput("volcanoPlot", height = "500px", width = "100%"), type = 5)
       ),
       
+      # ── Tab 2: Functional Enrichment ────────────────────────────────
       tabPanel("Functional Enrichment",
                fluidRow(
                  column(width = 7,
@@ -86,7 +52,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                                style = "margin-top: 0; margin-bottom: 8px;"),
                             tags$ul(
                               style = "margin: 5px 0 0 15px; padding:0;",
-                              tags$li("Choose gene sets from:"),
+                              tags$li("Choose gene set collections from:"),
                               tags$li(style = "margin-left:10px;",
                                       tags$b("MSigDB: "), 
                                       "Curated pathways (e.g. Hallmark, GO, Reactome). ",
@@ -103,8 +69,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                               tags$li(style = "margin-left:10px;",
                                       tags$b("Annotation: "), 
                                       "Gene sets from your annotation columns (e.g. KEGG, COG)."),
-                              tags$li("Gene sets are ranked by NES (Normalized Enrichment Score)"),
-                              tags$li("Leading-edge genes indicate core contributors to enrichment")
+                              tags$li("Gene sets are ranked by NES (Normalized Enrichment Score) and Leading-edge genes indicate core contributors to enrichment"),
+                              tags$li("Plot shows top 20 enriched gene sets (FDR < 0.05) based on selected gene set source and collection")
                             )
                         )
                  ),
@@ -122,16 +88,48 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                hr(),
                withSpinner(DTOutput("gseaResultsTable"), type = 5),
                hr(),
-               h4("Top 20 Enriched Gene Sets (FDR < 0.05)"),
+               h4(strong("Top 20 Enriched Gene Sets (FDR < 0.05)")),
                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5)
       )
     )
     do.call(tabsetPanel, c(list(type = "pills"), tabs))
   })
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Contrast Selector #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$contrastSelect <- renderUI({
+    if (is.null(state$de_df())) return(empty_state_msg())
+    div(
+      style = "margin-top: -10px;",  
+      selectInput(
+        "contrast",
+        label   = NULL,
+        choices = unique(state$de_df()$contrast),
+        width   = "90%"
+      )
+    )
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: GSEA Selectors #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$gseaControlsUI <- renderUI({
+    req(state$se_obj())
+    gsea_source_ui(
+      db_species        = state$db_species(),
+      ensembl_col       = state$ensembl_col(),
+      avail_cols        = state$available_gsea_columns(),
+      organism_name     = organism(),
+      source_input_id   = "gsea_source",
+      collection_id     = "gs_collection",
+      annot_source_id   = "annot_source",
+      current_source    = input$gsea_source
+    )
+  })
+  
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 2: DATA PROCESSING & ANALYSIS ####
-  # Reactive expressions that transform and analyze data based on user selections and inputs
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -169,9 +167,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         data  = do.call(load_genesets, src[names(src) != "label"]),
         label = src$label
       )
-    }, error = function(e) {
-      if (src$source_type == "msigdb") handle_msigdb_error(e) else handle_geneset_error(e)
-    })
+    }, error = handle_geneset_error)
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -236,7 +232,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 3: OUTPUT RENDERING ####
-  # Display tables, plots, and interactive visualizations
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -264,21 +259,21 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       
       dt <- datatable(
         df,
-        extensions = 'Buttons',
+        extensions = "Buttons",
         rownames = FALSE,
-        filter = 'top',
+        filter = "top",
         options = list(
           pageLength = 15,
           scrollX = TRUE,
-          dom = 'rtip'  
+          dom = "rtip"  
         )
       )
       
       if ("regulated" %in% colnames(df)) {
         dt <- dt |>
           formatStyle(
-            'regulated',
-            target = 'row',
+            "regulated",
+            target = "row",
             backgroundColor = DT::styleEqual(c("up", "down"), c("#d9f2f9", "#f8d7da"))
           )
       }
@@ -293,25 +288,14 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     
     tryCatch({
       x_col <- if (input$global_lfc_col %in% colnames(selected_data())) input$global_lfc_col else "log2FC"
-      
       gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
-        
         geom_point(aes(color = regulated), alpha = 0.7) +
-        
-        scale_color_manual(
-          values = c(
-            "up"   = "#00a9cf",  
-            "down" = "#d9534f"  
-          ),
-          na.value = "#b0b0b0", 
-          name = NULL
-        ) +
-        
+        scale_color_manual(values = c("up" = "#00a9cf", "down" = "#d9534f"),
+                           na.value = "#b0b0b0", name = NULL) +
         geom_vline(
           xintercept = c(-input$global_log2FC_cutoff, input$global_log2FC_cutoff), linetype = "dashed", color = "#888888") +
         geom_hline(
           yintercept = -log10(input$global_padj_cutoff), linetype = "dashed", color = "#888888") +
-        
         labs(
           x = case_when(
             x_col == "log2FC_shrunk" ~ "log2 Fold Change (shrunken)",
@@ -320,7 +304,6 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           ),
           y = "-log10(FDR)"
         ) +
-        
         theme_minimal()
       
       ggplotly(gg, tooltip = "text") |>
@@ -368,17 +351,17 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       
       datatable(
         df,
-        extensions = 'Buttons',
+        extensions = "Buttons",
         rownames = FALSE,
-        filter = 'top',
+        filter = "top",
         options = list(
           pageLength = 15,
           scrollX = TRUE,
-          dom = 'rtip',
+          dom = "rtip",
           columnDefs = list(
             list(
               targets = 6,  
-              width = '300px',
+              width = "300px",
               render = JS(
                 "function(data, type, row, meta) {",
                 "  return '<div style=\"max-width:300px; overflow-x:auto; white-space:nowrap;\">' + data + '</div>';",
@@ -393,11 +376,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 4: DOWNLOAD HANDLERS ####
-  # Manage file downloads with proper naming and filtering
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: Download All Genes for Selected Contrast #####
+  ##### Download: All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadAllContrastData <- downloadHandler(
     function() build_download_filename(input, state, 
@@ -412,7 +394,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   )
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: Download DE Genes based on Filters #####
+  ##### Download: DE Genes based on Filters #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadFilteredContrastData <- downloadHandler(
     function() build_download_filename(input, state, 
@@ -429,9 +411,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   )
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: Download GSEA Table Results #####
+  ##### Download: GSEA Table Results #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
   output$downloadGseaResults <- downloadHandler(
     function() build_download_filename(input, state,
                                        type = "GSEA", contrast = input$contrast,
@@ -445,9 +426,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   )
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download Handler: Download GSEA Plot Results #####
+  ##### Download: GSEA Plot Results #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
   output$downloadGseaPlot <- downloadHandler(
     function() build_download_filename(input, state, ext = "png",
                                        type = "GSEA", contrast = input$contrast,
@@ -463,12 +443,10 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 5: ERROR HANDLERS ####
-  # Helper functions for error management
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   handle_filter_data_error   <- \(e) { showNotification(paste("Error filtering contrast data:", e$message), type = "error"); NULL }
   handle_volcano_plot_error  <- \(e) { showNotification(paste("Error creating volcano plot:", e$message), type = "error"); NULL }
   handle_geneset_error       <- \(e) { showNotification(paste("Error loading gene sets:", e$message), type = "error"); NULL }
-  handle_msigdb_error        <- \(e) { showNotification(paste("Error loading MSigDB:", e$message), type = "error"); NULL }
   handle_gsea_error          <- \(e) { showNotification(paste("Error running GSEA:", e$message), type = "error"); NULL }
 }

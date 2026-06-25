@@ -132,7 +132,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(width = 12, status = "info", solidHeader = TRUE,
                     collapsible = TRUE, collapsed = FALSE,
-                    title = tagList(icon("chart-line"), "Explore by Contrast"),
+                    title = tagList(icon("chart-line"), strong(" Explore by Contrast")),
                     fluidRow(
                       column(width = 4,
                              h5(strong("Choose a contrast to explore results:"))),
@@ -152,7 +152,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(width = 12, status = "info", solidHeader = TRUE,
                     collapsible = TRUE, collapsed = FALSE,
-                    title = tagList(icon("exchange-alt"), "Compare Contrast"),
+                    title = tagList(icon("exchange-alt"), strong(" Compare Contrast")),
                     fluidRow(
                       column(width = 4,
                              h5(strong("Select multiple contrasts to compare results:")),
@@ -173,7 +173,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(width = 12, status = "info", solidHeader = TRUE,
                     collapsible = TRUE, collapsed = FALSE,
-                    title = tagList(icon("dna"), "Explore by Gene"),
+                    title = tagList(icon("dna"), strong(" Explore by Gene")),
                     fluidRow(
                       column(width = 4,
                              h5(strong("Choose a gene to explore:"))),
@@ -197,10 +197,8 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 200 * 1024^2)
-  
-  # ------------------------------------------------------------------
+
   # Shared state across all server modules
-  # ------------------------------------------------------------------
   state <- list(
     # Core data objects
     se_obj        = reactiveVal(NULL),

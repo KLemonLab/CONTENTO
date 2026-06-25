@@ -2,54 +2,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 1: UI RENDERING ####
-  # Dynamic UI controls that respond to user inputs and state changes
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Gene Select #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
-  output$geneSelect <- renderUI({
-    if (is.null(state$de_df())) return(empty_state_msg())
-    
-    gene_df <- state$de_df() |>
-      select(any_of(c("Geneid", "symbol"))) |>
-      distinct()
-    
-    if ("symbol" %in% colnames(gene_df)) {
-      choices_df <- gene_df |>
-        mutate(display = ifelse(
-          is.na(symbol) | symbol == "" | symbol == Geneid,
-          Geneid,
-          paste0(symbol, " [", Geneid, "]")
-        )) |>
-        arrange(display)
-      choice_vec <- setNames(choices_df$Geneid, choices_df$display)
-    } else {
-      choice_vec <- setNames(gene_df$Geneid, gene_df$Geneid)
-    }
-    
-    div(
-      style = "margin-top: -10px;",
-      selectizeInput(
-        "geneSelect",
-        label   = NULL,
-        choices = c("", choice_vec),
-        selected = character(0),
-        options = list(
-          placeholder  = 'Start typing gene name or ID...',
-          maxOptions   = 20,
-          loadThrottle = 200
-        ),
-        width = "90%"
-      )
-    )
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Conditional Tab Layout #####
-  # Neighbourhood tab: shown for Bacteria only when annotation with
-  # genomic coordinates (start/end/strand) is available.
+  ##### UI: Tab Layout #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneSubTabs <- renderUI({
     req(state$de_df())
@@ -102,6 +58,46 @@ explore_gene_server <- function(input, output, session, state, organism) {
     }
     
     do.call(tabsetPanel, c(list(type = "pills"), tabs))
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Gene Select #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$geneSelect <- renderUI({
+    if (is.null(state$de_df())) return(empty_state_msg())
+    
+    gene_df <- state$de_df() |>
+      select(any_of(c("Geneid", "symbol"))) |>
+      distinct()
+    
+    if ("symbol" %in% colnames(gene_df)) {
+      choices_df <- gene_df |>
+        mutate(display = ifelse(
+          is.na(symbol) | symbol == "" | symbol == Geneid,
+          Geneid,
+          paste0(symbol, " [", Geneid, "]")
+        )) |>
+        arrange(display)
+      choice_vec <- setNames(choices_df$Geneid, choices_df$display)
+    } else {
+      choice_vec <- setNames(gene_df$Geneid, gene_df$Geneid)
+    }
+    
+    div(
+      style = "margin-top: -10px;",
+      selectizeInput(
+        "geneSelect",
+        label   = NULL,
+        choices = c("", choice_vec),
+        selected = character(0),
+        options = list(
+          placeholder  = "Start typing gene name or ID...",
+          maxOptions   = 20,
+          loadThrottle = 200
+        ),
+        width = "90%"
+      )
+    )
   })
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -159,7 +155,6 @@ explore_gene_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 2: DATA PROCESSING & ANALYSIS ####
-  # Reactive expressions that transform and analyze data based on user selections and inputs
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,7 +171,6 @@ explore_gene_server <- function(input, output, session, state, organism) {
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 3: OUTPUT RENDERING ####
-  # Display tables, plots, and interactive visualizations
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -208,7 +202,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
     transposed$Field  <- rownames(transposed)
     transposed        <- transposed[, c("Field", "Value")]
     datatable(transposed,
-              options = list(dom = 't', ordering = FALSE, pageLength = nrow(transposed)),
+              options = list(dom = "t", ordering = FALSE, pageLength = nrow(transposed)),
               rownames = FALSE)
   })
   
@@ -251,11 +245,11 @@ explore_gene_server <- function(input, output, session, state, organism) {
       arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
       select(all_of(display_cols))
     dt <- datatable(gene_contrasts,
-                    options = list(dom = 't', ordering = TRUE, pageLength = nrow(gene_contrasts)),
+                    options = list(dom = "t", ordering = TRUE, pageLength = nrow(gene_contrasts)),
                     rownames = FALSE)
     if ("regulated" %in% colnames(gene_contrasts)) {
       dt <- dt |>
-        formatStyle('regulated', target = 'row',
+        formatStyle("regulated", target = "row",
                     backgroundColor = DT::styleEqual(c("up", "down"), c("#d9f2f9", "#f8d7da")))
     }
     dt
@@ -362,8 +356,21 @@ explore_gene_server <- function(input, output, session, state, organism) {
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 4: ERROR HANDLERS ####
-  # Helper functions for error management
+  #### SECTION 4: DOWNLOAD HANDLERS ####
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: Expression Plot for Gene #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadGenePlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "GenePlot", gene = input$geneSelect),
+    function(file) {
+    }
+  )
+  
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 5: ERROR HANDLERS ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   handle_gene_filter_error        <- \(e) { showNotification(paste("Error filtering gene data:", e$message), type = "error"); NULL }
