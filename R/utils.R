@@ -1,32 +1,3 @@
-#' Get base filename for downloads
-#' 
-#' Extracts a meaningful base name for downloaded files from the SE object
-#' or uploaded filename.
-#' 
-#' @param input Shiny input object
-#' @param state App state list containing reactive values
-#' @return Character string to use as base filename
-#' @export
-get_download_filename <- function(input, state) {
-  # Try SE metadata first
-  se_name <- tryCatch(
-    metadata(state$se_obj())$dataset_name,
-    error = function(e) NULL
-  )
-  if (!is.null(se_name) && nzchar(trimws(se_name))) {
-    return(se_name)
-  }
-  
-  # Fall back to uploaded filename
-  if (!is.null(input$seFile$name)) {
-    return(tools::file_path_sans_ext(basename(input$seFile$name)))
-  }
-  
-  # Last resort
-  "RNASeq_results"
-}
-
-
 #' Find built-in annotation file path for a given annotation name
 #'
 #' Searches first in the installed package, then falls back to the local
@@ -581,7 +552,7 @@ resolve_gsea_source <- function(input, state, organism,
 #' @param input    Shiny input object
 #' @param state    App state list containing reactive values
 #' @param type     High-level label, e.g. "all_genes", "filtered", "GSEA"; NULL to omit
-#' @param ext      File extension without dot (default "csv")
+#' @param ext      File extension without dot (default "csv"); set NULL to omit
 #' @param contrast Character scalar or vector of contrast names; NULL to omit
 #' @param filters  Named list of filter values, e.g. list(FC = 1.5, FDR = 0.05)
 #' @param suffix   Extra free-form suffix inserted before the extension; NULL to omit
@@ -593,6 +564,7 @@ build_download_filename <- function(input, state,
                                     contrast = NULL,
                                     filters  = NULL,
                                     suffix   = NULL) {
+  
   base <- tryCatch(
     metadata(state$se_obj())$dataset_name,
     error = function(e) NULL
@@ -604,22 +576,39 @@ build_download_filename <- function(input, state,
     } else if (!is.null(input$seFile$name)) {
       tools::file_path_sans_ext(basename(input$seFile$name))
     } else {
-      "RNASeq_results"
+      "CONTENTO"
     },
     
-    contrast = if (!is.null(contrast) && any(nzchar(contrast)))
-      gsub("[^A-Za-z0-9._-]+", "__", paste(contrast, collapse = "-")),
+    contrast = if (!is.null(contrast) && any(nzchar(contrast))) {
+      gsub("[^A-Za-z0-9._-]+", "__", paste(contrast, collapse = "-"))
+    },
     
-    type = if (!is.null(type) && nzchar(type)) type,
+    type = if (!is.null(type) && nzchar(type)) {
+      type
+    },
     
-    filters = if (!is.null(filters) && length(filters) > 0)
-      paste(mapply(function(k, v) paste0(k, gsub("\\.", "p", as.character(v))),
-                   names(filters), filters), collapse = "__"),
+    filters = if (!is.null(filters) && length(filters) > 0) {
+      paste(
+        mapply(
+          function(k, v) paste0(k, gsub("\\.", "p", as.character(v))),
+          names(filters), filters
+        ),
+        collapse = "__"
+      )
+    },
     
-    suffix = if (!is.null(suffix) && nzchar(suffix))
+    suffix = if (!is.null(suffix) && nzchar(suffix)) {
       gsub("[^A-Za-z0-9._-]+", "-", as.character(suffix))
+    }
   )
   
-  paste0(paste(Filter(Negate(is.null), parts), collapse = "__"), ".", ext)
+  # Build base filename
+  fname <- paste(Filter(Negate(is.null), parts), collapse = "__")
+  
+  # Append extension ONLY if ext is provided and non-empty
+  if (!is.null(ext) && nzchar(ext)) {
+    fname <- paste0(fname, ".", ext)
+  }
+  
+  return(fname)
 }
-
