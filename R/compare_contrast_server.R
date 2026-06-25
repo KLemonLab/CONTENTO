@@ -43,7 +43,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                                "Download All Genes for Selected Contrasts", class = "btn btn-info"),
                                 downloadButton("downloadCompareUpsetPlot",
                                                "Download DEGs UpSet Plot", class = "btn btn-info"),
-                                downloadButton("downloadHeatmapData",
+                                downloadButton("downloadHeatmap",
                                                "Download Expression Heatmap Data", class = "btn btn-info")
                             )
                         )
@@ -385,6 +385,23 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Expression Heatmap #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  heatmap_plot <- reactive({
+    req(selected_contrast_data(), state$se_obj(), input$top_n, input$viridis_palette)
+    geneids <- get_top_de_genes(selected_contrast_data(), input$top_n, input$global_lfc_col)
+    req(length(geneids) > 0)
+    mat <- subset_scale_vst_matrix(state$se_obj(), geneids, selected_contrast_data())
+    Heatmap(mat,
+            col = viridis(100, option = input$viridis_palette),
+            column_names_gp      = grid::gpar(fontsize = 12),
+            row_names_gp         = grid::gpar(fontsize = 10),
+            heatmap_legend_param = list(title = "Z-scores"),
+            cluster_rows = TRUE, cluster_columns = TRUE,
+            show_row_dend = TRUE, show_column_dend = TRUE)
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: Gene Sets for GSEA #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   genesets_compare <- reactive({
@@ -392,12 +409,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                    "compare_gsea_source", "compare_gs_collection", "compare_annot_source_gsea"))
     tryCatch({
       gs <- do.call(load_genesets, src[names(src) != "label"])
-      label = src$label
       if (length(gs) == 0) {
         showNotification("No gene sets found in selected collection", type = "warning")
         return(NULL)
       }
-      gs
+      list(data = gs, label = src$label)
     }, error = handle_compare_geneset_error)
   })
   
@@ -413,7 +429,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         showNotification("No gene sets found in selected collection", type = "warning")
         return(NULL)
       }
-      gs
+      list(data = gs, label = src$label)
     }, error = handle_compare_geneset_error)
   })
   
@@ -422,7 +438,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   gsea_results <- reactive({
     req(state$de_df(), input$compare_contrasts, genesets_compare())
-    pathways_list <- genesets_compare()
+    pathways_list <- genesets_compare()$data
     
     fgsea_results <- purrr::map(input$compare_contrasts, function(ct) {
       ranks <- state$de_df() |>
@@ -550,7 +566,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   geseca_result <- reactive({
     req(state$se_obj(), genesets_geseca())
-    pathways_list <- genesets_geseca()
+    pathways_list <- genesets_geseca()$data 
     
     tryCatch({
       vst_matrix <- assays(state$se_obj())[["vst"]]
@@ -586,21 +602,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Output: Expression Heatmap #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$heatmapPlot <- renderPlot({
-    req(selected_contrast_data(), state$se_obj(), input$top_n, input$viridis_palette)
-    geneids <- get_top_de_genes(selected_contrast_data(), input$top_n, input$global_lfc_col)
-    if (length(geneids) == 0) {
+    if (is.null(heatmap_plot())) {
       plot.new()
       text(0.5, 0.5, "No DE genes found for heatmap\nAdjust cutoffs or select contrasts", cex = 1.5)
       return()
     }
-    mat <- subset_scale_vst_matrix(state$se_obj(), geneids, selected_contrast_data())
-    Heatmap(mat,
-            col = viridis(100, option = input$viridis_palette),
-            column_names_gp    = grid::gpar(fontsize = 12),
-            row_names_gp       = grid::gpar(fontsize = 10),
-            heatmap_legend_param = list(title = "Z-scores"),
-            cluster_rows = TRUE, cluster_columns = TRUE,
-            show_row_dend = TRUE, show_column_dend = TRUE)
+    draw(heatmap_plot())
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -652,10 +659,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     nes_mat  <- gsea_results()$nes_matrix
     padj_mat <- gsea_results()$padj_matrix
     
-    gsea_label <- resolve_gsea_source(input, state, organism(),
-                                      "compare_gsea_source", "compare_gs_collection",
-                                      "compare_annot_source_gsea")$label
-    
     if (!is.null(input$pathway_name_length) && input$pathway_name_length > 0) {
       orig <- rownames(nes_mat)
       disp <- ifelse(nchar(orig) > input$pathway_name_length,
@@ -687,7 +690,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       heatmap_legend_param = list(title = "NES", direction = "vertical",
                                   title_position = "topcenter", legend_height = unit(4, "cm")),
       border = TRUE, rect_gp = grid::gpar(col = "grey60", lwd = 0.5),
-      column_title    = paste0("GSEA: ", gsea_label %||% "unknown", " (FDR < 0.05)"),
+      column_title    = paste0("GSEA: ", genesets_compare()$label %||% "unknown", " (FDR < 0.05)"),
       column_title_gp = grid::gpar(fontsize = 14, fontface = "bold")
     )
     draw(ht, heatmap_legend_side = "right")
@@ -698,13 +701,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareGSEATable <- renderDT({
     req(gsea_results())
-    file_base     <- get_download_filename(input, state)
-    contrasts_str <- gsub("[^A-Za-z0-9._-]+", "__",
-                          paste(input$compare_contrasts %||% "contrasts", collapse = "-"))
-    gs_str <- gsub("[^A-Za-z0-9._-]+", "__",
-                   resolve_gsea_source(input, state, organism(),
-                                       "compare_gsea_source", "compare_gs_collection",
-                                       "compare_annot_source_gsea")$label %||% "unknown")
     df <- gsea_results()$nes_df |>
       mutate(padj_fmt    = formatC(padj, format = "e", digits = 2),
              NES_display = paste0(round(NES, 2), " (", padj_fmt, ")")) |>
@@ -766,11 +762,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$gesecaResultsTable <- renderDT({
     req(geseca_result())
-    file_base <- get_download_filename(input, state)
-    gs_str <- gsub("[^A-Za-z0-9._-]+", "__",
-                   resolve_gsea_source(input, state, organism(),
-                                       "geseca_gsea_source", "geseca_gs_collection",
-                                       "geseca_annot_source")$label %||% "unknown")
     df <- geseca_result()$gesecaRes |>
       mutate(across(c(pval, padj),      ~ formatC(.x, format = "e", digits = 2)),
              across(c(pctVar, log2err), ~ round(.x, 3)))
@@ -812,7 +803,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download: All Genes for Selected Contrast #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadAllContrastsData <- downloadHandler(
-    function() build_download_filename(input, state, 
+    function() build_download_filename(input, state,
                                        type = "DE", contrast = input$compare_contrasts),
     function(file) {
       req(selected_contrast_data())
@@ -831,17 +822,37 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                        type = "UpSet", contrast = input$compare_contrasts,
                                        filters = list(FC = input$global_log2FC_cutoff, FDR = input$global_padj_cutoff)),
     function(file) {
+      req(compare_data())
+      df       <- compare_data()
+      set_cols <- names(df)[sapply(df, is.logical)]
+      p <- upset(df, set_cols, name = "DEGs", min_size = 1,
+                 base_annotations = list(
+                   "Intersection size" = intersection_size(text = list(size = 5))
+                 ),
+                 themes = upset_default_themes(
+                   text       = element_text(size = 16),
+                   axis.title = element_text(size = 16),
+                   axis.text  = element_text(size = 14)
+                 ))
+      png(file, width = 1800, height = 900, res = 150)
+      print(p)
+      dev.off()
     }
   )
-
+  
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Download: Expression Heatmap #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$downloadHeatmapData <- downloadHandler(
+  output$downloadHeatmap <- downloadHandler(
     function() build_download_filename(input, state, ext = "png",
                                        type = "Heatmap", contrast = input$compare_contrasts,
                                        filters = list(FC = input$global_log2FC_cutoff, FDR = input$global_padj_cutoff)),
     function(file) {
+      req(heatmap_plot(), input$top_n)
+      h_px <- max(600, input$top_n * 15 + 200)
+      png(file, width = 1800, height = h_px, res = 150)
+      draw(heatmap_plot())
+      dev.off()
     }
   )
   
@@ -849,9 +860,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download: GSEA Comparison Table #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadCompareGseaResults <- downloadHandler(
-    function() build_download_filename(input, state,
-                                       type = "GSEA", contrast = input$compare_contrasts,
-                                       suffix = genesets()$label),
+    function() {
+      build_download_filename(input, state,
+                              type = "GSEA", contrast = input$compare_contrasts,
+                              suffix = genesets_compare()$label)
+    },
     function(file) {
       req(gsea_results())
       gsea_results()$nes_df |>
@@ -864,10 +877,56 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download: GSEA Heatmap #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadCompareGSEAPlot <- downloadHandler(
-    function() build_download_filename(input, state, ext = "png",
-                                       type = "GSEA", contrast = input$compare_contrasts,
-                                       suffix = genesets()$label),
+    function() {
+      build_download_filename(input, state, ext = "png",
+                              type = "GSEA", contrast = input$compare_contrasts,
+                              suffix = genesets_compare()$label)
+    },
     function(file) {
+      req(gsea_results())
+      nes_mat  <- gsea_results()$nes_matrix
+      padj_mat <- gsea_results()$padj_matrix
+      
+      if (!is.null(input$pathway_name_length) && input$pathway_name_length > 0) {
+        orig <- rownames(nes_mat)
+        disp <- ifelse(nchar(orig) > input$pathway_name_length,
+                       paste0(substr(orig, 1, input$pathway_name_length), "..."), orig)
+        rownames(nes_mat)  <- disp
+        rownames(padj_mat) <- disp
+      }
+      
+      sig_text <- matrix("", nrow = nrow(padj_mat), ncol = ncol(padj_mat))
+      sig_text[padj_mat < 0.05] <- "*"
+      
+      col_fun      <- circlize::colorRamp2(c(-3, 0, 3), c("#009ad1", "#fefbea", "#AD1457"))
+      n_pathways   <- nrow(nes_mat)
+      row_fontsize <- max(8, min(12, 400 / n_pathways))
+      
+      ht <- Heatmap(
+        nes_mat, name = "NES", col = col_fun,
+        width = unit(15, "cm"),
+        cluster_rows = FALSE, cluster_columns = FALSE,
+        show_row_dend = FALSE, show_column_dend = FALSE,
+        row_names_side = "left", row_names_gp = grid::gpar(fontsize = row_fontsize),
+        row_names_max_width = unit(12, "cm"),
+        column_names_gp = grid::gpar(fontsize = 11),
+        column_names_rot = 45,
+        cell_fun = function(j, i, x, y, width, height, fill) {
+          if (sig_text[i, j] == "*")
+            grid::grid.text("*", x, y, gp = grid::gpar(fontsize = 14, col = "black"))
+        },
+        heatmap_legend_param = list(title = "NES", direction = "vertical",
+                                    title_position = "topcenter",
+                                    legend_height = unit(4, "cm")),
+        border = TRUE, rect_gp = grid::gpar(col = "grey60", lwd = 0.5),
+        column_title    = paste0("GSEA: ", genesets_compare()$label %||% "unknown", " (FDR < 0.05)"),
+        column_title_gp = grid::gpar(fontsize = 14, fontface = "bold")
+      )
+      
+      h_px <- max(900, nrow(nes_mat) * 18 + 200)
+      png(file, width = 1800, height = h_px, res = 150)
+      draw(ht, heatmap_legend_side = "right")
+      dev.off()
     }
   )
   
@@ -875,10 +934,27 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download: Leading Edge UpSet Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadLeadingEdgeUpsetPlot <- downloadHandler(
-    function() build_download_filename(input, state, ext = "png",
-                                       type = "LeadingEdge", contrast = input$compare_contrasts,
-                                       suffix = genesets()$label),
+    function() {
+      build_download_filename(input, state, ext = "png",
+                              type = "LeadingEdge", contrast = input$compare_contrasts,
+                              suffix = genesets_compare()$label)
+    },
     function(file) {
+      req(leading_edge_data())
+      p <- upset(leading_edge_data()$upset_df,
+                 colnames(leading_edge_data()$leading_edge_matrix),
+                 name = "Leading Edge Genes", min_size = 1,
+                 base_annotations = list(
+                   "Intersection size" = intersection_size(text = list(size = 5))
+                 ),
+                 themes = upset_default_themes(
+                   text       = element_text(size = 16),
+                   axis.title = element_text(size = 16),
+                   axis.text  = element_text(size = 14)
+                 ))
+      png(file, width = 1800, height = 900, res = 150)
+      print(p)
+      dev.off()
     }
   )
   
@@ -886,10 +962,17 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download: GESECA Table #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadGesecaResults <- downloadHandler(
-    function() build_download_filename(input, state,
-                                       type = "GESECA", contrast = input$compare_contrasts,
-                                       suffix = genesets()$label),
+    function() {
+      build_download_filename(input, state,
+                              type = "GESECA", contrast = input$compare_contrasts,
+                              suffix = genesets_geseca()$label)
+    },
     function(file) {
+      req(geseca_result())
+      geseca_result()$gesecaRes |>
+        mutate(across(c(pval, padj),      ~ formatC(.x, format = "e", digits = 2)),
+               across(c(pctVar, log2err), ~ round(.x, 3))) |>
+        write.csv(file, row.names = FALSE)
     }
   )
   
@@ -897,10 +980,19 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download: GESECA Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadGesecaTablePlot <- downloadHandler(
-    function() build_download_filename(input, state, ext = "png",
-                                       type = "GESECA", contrast = input$compare_contrasts,
-                                       suffix = genesets()$label),
+    function() {
+      build_download_filename(input, state, ext = "png",
+                              type = "GESECA_table", contrast = input$compare_contrasts,
+                              suffix = genesets_geseca()$label)
+    },
     function(file) {
+      req(geseca_result())
+      if (is.null(geseca_result()$tableplot)) return()
+      n   <- sum(geseca_result()$gesecaRes$padj < 0.05, na.rm = TRUE)
+      h_px <- max(600, min(n, 20) * 40 + 200)
+      png(file, width = 1800, height = h_px, res = 150)
+      print(geseca_result()$tableplot)
+      dev.off()
     }
   )
   
@@ -908,12 +1000,37 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   ##### Download: GESECA Co-regulation Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadCoregulationPlot <- downloadHandler(
-    function() build_download_filename(input, state, ext = "png",
-                                       type = "GESECA", contrast = input$compare_contrasts,
-                                       suffix = genesets()$label),
+    function() {
+      build_download_filename(input, state, ext = "png",
+                              type = "GESECA_coregulation",
+                              suffix = genesets_geseca()$label)
+    },
     function(file) {
+      req(geseca_result(), input$selected_pathway_geseca)
+      pathway_genes <- geseca_result()$pathways_list[[input$selected_pathway_geseca]]
+      req(!is.null(pathway_genes), length(pathway_genes) > 0)
+      
+      color_var  <- input$geseca_color_var %||% colnames(colData(state$se_obj()))[1]
+      sort_var   <- input$geseca_sort_var  %||% colnames(colData(state$se_obj()))[1]
+      color_cond <- colData(state$se_obj())[[color_var]]
+      sort_cond  <- colData(state$se_obj())[[sort_var]]
+      sample_order <- order(sort_cond)
+      vst_sorted   <- geseca_result()$vst_matrix[, sample_order]
+      
+      p <- plotCoregulationProfile(pathway_genes, vst_sorted,
+                                   conditions = color_cond[sample_order],
+                                   scale = TRUE) +
+        labs(title = input$selected_pathway_geseca) +
+        theme_minimal() +
+        theme(plot.title  = element_text(size = 10),
+              axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+      
+      png(file, width = 1800, height = 600, res = 150)
+      print(p)
+      dev.off()
     }
   )
+  
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 5: ERROR HANDLERS ####
