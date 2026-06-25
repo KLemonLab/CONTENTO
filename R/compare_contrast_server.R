@@ -240,13 +240,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$heatmapPlotUI <- renderUI({
     req(input$top_n)
-    h <- max(400, input$top_n * 15)
+    h <- max(400, input$top_n * 16)
     plotOutput("heatmapPlot", height = paste0(h, "px"))
   })
   
   output$compareGSEAPlotUI <- renderUI({
     req(gsea_results())
-    h <- max(400, nrow(gsea_results()$nes_matrix) * 18)
+    h <- max(400, nrow(gsea_results()$nes_matrix) * 19)
     plotOutput("compareGSEAPlot", height = paste0(h, "px"))
   })
   
@@ -564,24 +564,25 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                                     c("#009ad1", "#fefbea", "#AD1457"))
     
     n_pathways   <- nrow(nes_mat)
-    row_fontsize <- max(8, min(12, 400 / n_pathways))
+    row_fontsize <- max(9, min(12, 400 / n_pathways))
     
     hm <- Heatmap(
       nes_mat, name = "NES", col = col_fun,
       cluster_rows = FALSE, cluster_columns = FALSE,
       show_row_dend = FALSE, show_column_dend = FALSE,
       row_names_gp = grid::gpar(fontsize = row_fontsize),
-      column_names_gp = grid::gpar(fontsize = 11),
+      column_names_gp = grid::gpar(fontsize = 12),
       column_names_rot = 45,
+      width = unit(ncol(nes_mat) * 1.3, "cm"),   
       cell_fun = function(j, i, x, y, width, height, fill) {
         if (sig_text[i, j] == "*") {
-          grid::grid.text("*", x, y,
-                          gp = grid::gpar(fontsize = 14, col = "black"))
+          grid::grid.text("*", x, y, gp = grid::gpar(fontsize = 14, fontface = "bold", col = "black"))
         }
       },
       heatmap_legend_param = list(title = "NES")
     )
-    function() draw(hm, heatmap_legend_side = "right")
+    function() draw(hm, heatmap_legend_side = "left",     
+                    padding = unit(c(2, 2, 2, 8), "mm"))  
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -903,7 +904,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                               suffix = genesets_compare()$label)
     },
     function(file) {
-      png(file, width = 1800, height = 900, res = 150)
+      req(gsea_results())
+      nes_mat <- gsea_results()$nes_matrix
+      n_row <- nrow(nes_mat)
+      n_col <- ncol(nes_mat)
+      w_px <- max(1400, n_col * 130 + 1100)
+      h_px <- max(700,  n_row * 24  + 350)
+      png(file, width = w_px, height = h_px, res = 150)
       gsea_heatmap()()
       dev.off()
     }
