@@ -757,12 +757,14 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareTable <- renderDT({
     req(compare_data())
-    df_display <- compare_data()
+    df_display <- compare_data() |>
+      mutate(across(starts_with("DE_"), ~ factor(., levels = c(TRUE, FALSE), labels = c("TRUE", "FALSE"))))
     id_cols  <- intersect(c("Geneid", "symbol"), colnames(df_display))
     lfc_cols <- grep("^FC_", colnames(df_display), value = TRUE)
     datatable(df_display, extensions = "Buttons", filter = "top",
               options = list(pageLength = 20, scrollX = TRUE, dom = "Bfrtip",
                              buttons = list(list(extend = "csv", text = "Download DEGs (genes can be filtered based on DE condition (true/false) across different contrasts)",
+                                                 filename = build_download_filename(input, state, type = "DEfiltered", ext = NULL, contrast = input$compare_contrasts),
                                                  exportOptions = list(modifier = list(page = "all"))))),
               rownames = FALSE) |>
       formatStyle(columns = lfc_cols,
@@ -788,20 +790,18 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$leadingEdgeTable <- renderDT({
     req(leading_edge_data(), state$de_df())
-    pathway_str <- gsub("[^A-Za-z0-9._-]+", "_", input$selected_pathway_compare)
-    filename <- build_download_filename(input, state, type = "LeadingEdge", ext = NULL,
-                            contrast = input$compare_contrasts,
-                            suffix   = paste(genesets_compare()$label, pathway_str, sep = "__"))
     gene_symbols <- state$de_df() |> select(any_of(c("Geneid", "symbol"))) |> distinct()
     df <- leading_edge_data()$leading_edge_matrix |>
       as.data.frame() |> rownames_to_column("gene") |>
       left_join(gene_symbols, by = c("gene" = "Geneid")) |>
       select(any_of(c("gene", "symbol")), everything()) |>
-      mutate(across(-any_of(c("gene", "symbol")), ~ ifelse(. == 1, "TRUE", "FALSE")))
+      mutate(across(-any_of(c("gene", "symbol")), ~ factor(ifelse(. == 1, "TRUE", "FALSE"), levels = c("TRUE", "FALSE"))))
     datatable(df, extensions = "Buttons", rownames = FALSE, filter = "top",
               options = list(pageLength = 20, scrollX = TRUE, dom = "Bfrtip",
                              buttons = list(list(extend = "csv", text = "Download Leading Edge Genes (genes can be filtered based on presence (true/false) across different contrasts)",
-                                                 filename = filename,
+                                                 filename = build_download_filename(input, state, type = "LeadingEdge", ext = NULL,
+                                                                                    contrast = input$compare_contrasts,
+                                                                                    suffix   = paste(genesets_compare()$label, gsub("[^A-Za-z0-9._-]+", "_", input$selected_pathway_compare), sep = "__")),
                                                  exportOptions = list(modifier = list(page = "all"))))))
   }, server = FALSE)
   
