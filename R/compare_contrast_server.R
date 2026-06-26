@@ -9,14 +9,6 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$compareSubTabs <- renderUI({
     req(state$de_df())
-    db_sp      <- state$db_species()
-    ensembl_c  <- state$ensembl_col()
-    avail_cols <- state$available_gsea_columns()
-    
-    has_msigdb   <- !is.null(db_sp) && !is.null(ensembl_c)
-    has_annot    <- length(avail_cols) > 0
-    has_genesets <- has_msigdb || has_annot
-    
     tabs <- list(
       
       # ── Tab 1: DEGs ──────────────────────────────────────────────
