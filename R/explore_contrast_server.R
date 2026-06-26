@@ -390,8 +390,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
         select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
-    }
-  )
+    })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Download: DE Genes based on Filters #####
@@ -407,8 +406,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
         select(-any_of(c("tooltip", "DE"))) |>
         write.csv(file, row.names = FALSE)
-    }
-  )
+    })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Download: GSEA Table Results #####
@@ -422,8 +420,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       gsea_result()$fgseaRes |>
         mutate(leadingEdge = sapply(leadingEdge, paste, collapse = "; ")) |>
         write.csv(file, row.names = FALSE)
-    }
-  )
+    })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Download: GSEA Plot Results #####
@@ -437,8 +434,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       png(file, width = 1800, height = 900, res = 150)
       print(gsea_result()$tableplot)
       dev.off()
-    }
-  )
+    })
   
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==

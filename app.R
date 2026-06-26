@@ -38,7 +38,7 @@ source("R/dev_preload_server.R")
 # DEV CONFIG — set enabled = TRUE while testing, FALSE for production
 # ==============================================================================
 DEV_CONFIG <- list(
-  enabled             = TRUE,                   
+  enabled             = FALSE,                   
   se_path             = "inst/test/RSVBac_human_SE.rds",             
   annotation_path     = NULL,                        
   default_contrasts   = c("DpivsNB_VF", "DpivsNB_VT", "HinvsNB_VF", "HinvsNB_VT", "Line_9009_vs_9007", "SpnvsNB_VF", "SpnvsNB_VT", "VirusEffectDiff_Dpi", "VirusEffectDiff_Hin", "VirusEffectDiff_Spn", "VirusTvsF_Dpi", "VirusTvsF_Hin", "VirusTvsF_NB", "VirusTvsF_Spn"), 
