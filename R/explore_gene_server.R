@@ -10,46 +10,176 @@ explore_gene_server <- function(input, output, session, state, organism) {
   output$geneSubTabs <- renderUI({
     req(state$de_df())
     tabs <- list(
+      
+      # ── Tab 1: Gene Info ───────────────────────────────────────────
       tabPanel("Gene Info",
-               DTOutput("geneDetails")),
+               fluidRow(
+                 column(width = 12,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("Gene Annotation Information"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li("Displays all annotation fields available for the selected gene from the loaded annotation file"),
+                              tags$li("Fields include genomic coordinates, functional annotations, and any custom columns from your annotation")
+                            )
+                        )
+                 )
+               ),
+               hr(),
+               DTOutput("geneDetails")
+      ),
+      
+      # ── Tab 2: Expression Plot (merged with Gene Table) ─────────────
       tabPanel("Expression Plot",
-               selectInput("x_col",     "X-axis", choices = NULL),
-               selectInput("color_col", "Color",  choices = NULL),
-               selectInput("shape_col", "Shape",  choices = NULL),
-               tags$h4(textOutput("geneSymbol"), style = "margin-top: 10px; margin-bottom: 20px;"),
-               plotOutput("genePlot", height = "600px")),
-      tabPanel("Gene Table",
-               DTOutput("geneContrasts"))
+               fluidRow(
+                 column(width = 7,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("VST-Normalized Expression Across Conditions"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li("Table shows DE results for the selected gene across all contrasts, colored by regulation direction (up/down)"),
+                              tags$li("Adjust fold-change and p-value cutoffs in the sidebar to update DE calls in the table"),
+                              tags$li("Plot shows VST-normalized expression for the selected gene across all samples"),
+                              tags$li("Use X-axis, Color, and Shape controls to group samples by any experimental variable from the SE metadata")
+
+                            )
+                        )
+                 ),
+                 column(width = 5,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            strong("Download Options"),
+                            tags$div(
+                              style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                              downloadButton("downloadGenePlot", "Download Expression Plot for Selected Gene", class = "btn btn-info")
+                            )
+                        )
+                 )
+               ),
+               hr(),
+               h4(strong("DE Results Across All Contrasts")),
+               DTOutput("geneContrasts"),
+               hr(),
+               fluidRow(
+                 column(width = 6,
+                        h4(strong("Expression Plot"), style = "margin-top: 10px;"),
+                        tags$h5(textOutput("geneSymbol"), style = "margin-top: 5px; color: #555;")
+                 ),
+                 column(width = 6,
+                        div(
+                          style = "display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;",
+                          div(style = "min-width: 140px;",
+                              selectInput("x_col",     "X-axis", choices = NULL, width = "100%")),
+                          div(style = "min-width: 140px;",
+                              selectInput("color_col", "Color",  choices = NULL, width = "100%")),
+                          div(style = "min-width: 140px;",
+                              selectInput("shape_col", "Shape",  choices = NULL, width = "100%"))
+                        )
+                 )
+               ),
+               plotOutput("genePlot", height = "600px")
+      )
     )
     
+    # ── Tab 3 (conditional): Variance Decomposition ──────────────────
     if (!is.null(state$varpart_obj())) {
       tabs <- append(tabs,
-                     list(tabPanel("Variance Decomposition",
-                                   plotOutput("varPartPlot", height = "600px"))))
+        list(tabPanel("Variance Decomposition",
+               fluidRow(
+                 column(width = 7,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            h4(strong("Variance Decomposition for Selected Gene"),
+                               style = "margin-top: 0; margin-bottom: 8px;"),
+                            tags$ul(
+                              style = "margin: 5px 0 0 15px; padding:0;",
+                              tags$li("Bar chart shows the fraction of total expression variance attributed to each experimental factor"),
+                              tags$li("Variance partition is computed from the full VST expression matrix using variancePartition"),
+                              tags$li("Factors with higher bars contribute more to explaining expression differences across samples")
+                            )
+                        )
+                 ),
+                 column(width = 5,
+                        div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                            strong("Download Options"),
+                            tags$div(
+                              style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
+                              downloadButton("downloadVarPartPlot", "Download Variance Plot", class = "btn btn-info")
+                            )
+                        )
+                 )
+               ),
+               hr(),
+               plotOutput("varPartPlot", height = "600px")
+        ))
+      )
     }
     
-    # Neighbourhood tab intentionally restricted to Bacteria.
-    # Show even without annotation — but display a clear message if missing coords
+    # ── Tab 4 (conditional): Neighbourhood Analysis (Bacteria only) ──
     is_bacteria <- !is.null(organism()) && organism() == "Bacteria"
     if (is_bacteria) {
-      annot    <- state$annotation_df()
+      annot      <- state$annotation_df()
       has_coords <- !is.null(annot) &&
         all(c("start", "end", "strand") %in% colnames(annot))
       
       neigh_content <- if (has_coords) {
         tagList(
-          uiOutput("contrastSelectGene"),
-          numericInput("neigh_window", "Neighbourhood window (nt)",
-                       value = 10000, step = 100, min = 0),
+          fluidRow(
+            column(width = 7,
+                   div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                       h4(tagList(
+                         strong("Genomic Neighbourhood Analysis"),
+                         tags$span("BETA",
+                                   style = "font-size: 0.6em; vertical-align: middle; margin-left: 8px;
+                                background-color: #f0ad4e; color: white; padding: 2px 7px;
+                                border-radius: 10px; font-weight: bold; letter-spacing: 0.05em;")
+                       ), style = "margin-top: 0; margin-bottom: 8px;"),
+                       tags$ul(
+                         style = "margin: 5px 0 0 15px; padding:0;",
+                         tags$li("Displays genes upstream and downstream of the selected gene within a configurable window"),
+                         tags$li("Genes are colored by fold-change for the selected contrast; hover to see gene details"),
+                         tags$li("Forward and reverse strand genes are shown in separate panels with greedy interval packing to avoid overlap"),
+                         tags$li("Requires genomic coordinate columns (start, end, strand) in the annotation file and Organism set to 'Bacteria' in the SE")
+                       )
+                   )
+            ),
+            column(width = 5,
+                   div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                       div(style = "margin-top: 0;",
+                           uiOutput("contrastSelectGene"),
+                           numericInput("neigh_window", "Neighbourhood window (nt)",
+                                        value = 10000, step = 100, min = 0)
+                       )
+                   )
+            )
+          ),
+          hr(),
           girafeOutput("neighbourhoodPlot", height = "600px")
         )
       } else {
-        div(class = "alert alert-warning", style = "margin-top: 20px;",
-            icon("exclamation-triangle"),
-            strong("Annotation required for Neighbourhood Analysis."),
-            tags$p("Upload an annotation file that includes genomic coordinate columns ",
-                   code("start"), ", ", code("end"), ", and ", code("strand"),
-                   " (e.g. derived from a GFF3 file) to enable this feature.")
+        tagList(
+          fluidRow(
+            column(width = 12,
+                   div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
+                       h4(strong("Genomic Neighbourhood Analysis"),
+                          style = "margin-top: 0; margin-bottom: 8px;"),
+                       tags$ul(
+                         style = "margin: 5px 0 0 15px; padding:0;",
+                         tags$li("Displays genes upstream and downstream of the selected gene within a configurable window"),
+                         tags$li("Genes are colored by log2 fold-change; hover to see gene details"),
+                         tags$li("Forward and reverse strand genes are shown in separate panels")
+                       )
+                   )
+            )
+          ),
+          hr(),
+          div(class = "alert alert-warning", style = "margin-top: 20px;",
+              icon("exclamation-triangle"),
+              strong("Annotation required for Neighbourhood Analysis."),
+              tags$p("Upload an annotation file that includes genomic coordinate columns ",
+                     code("start"), ", ", code("end"), ", and ", code("strand"),
+                     " (e.g. derived from a GFF3 file) to enable this feature.")
+          )
         )
       }
       
@@ -364,8 +494,54 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadGenePlot <- downloadHandler(
     function() build_download_filename(input, state, ext = "png",
-                                       type = "GenePlot", gene = input$geneSelect),
+                                       type = "GenePlot", suffix = input$geneSelect),
     function(file) {
+      req(input$geneSelect, input$x_col, state$se_obj())
+      tryCatch({
+        vst_mat         <- assay(state$se_obj(), "vst")
+        meta            <- as.data.frame(colData(state$se_obj()))
+        meta$expression <- vst_mat[input$geneSelect, ]
+        n_colors        <- length(unique(meta[[input$color_col]]))
+        palette_colors  <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
+        p <- ggplot(meta, aes(.data[[input$x_col]], expression)) +
+          geom_boxplot(aes(color = .data[[input$color_col]]),
+                       outliers = FALSE, show.legend = FALSE) +
+          geom_jitter(aes(color = .data[[input$color_col]], shape = .data[[input$shape_col]]),
+                      width = 0.2, size = 3, alpha = 0.9) +
+          scale_color_manual(values = palette_colors) +
+          labs(y = "VST expression", x = input$x_col) +
+          theme_bw(base_size = 20) +
+          theme(axis.text = element_text(angle = 45, hjust = 1),
+                panel.grid.major.x = element_blank(),
+                panel.grid.minor.x = element_blank())
+        png(file, width = 1800, height = 1200, res = 150)
+        print(p)
+        dev.off()
+      }, error = function(e) message("Download plot error: ", e$message))
+    }
+  )
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: Variance Decomposition Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadVarPartPlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "VarPart", suffix = input$geneSelect),
+    function(file) {
+      req(input$geneSelect, state$varpart_obj())
+      vp_gene <- state$varpart_obj()$varPart[input$geneSelect, ]
+      vp_df   <- data.frame(Factor = names(vp_gene), Variance = as.numeric(vp_gene))
+      p <- ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
+        geom_col(fill = "steelblue") +
+        scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+        labs(x = NULL, y = "Fraction of Variance") +
+        theme_bw(base_size = 20) +
+        theme(axis.text = element_text(angle = 45, hjust = 1),
+              panel.grid.major.x = element_blank(),
+              panel.grid.minor.x = element_blank())
+      png(file, width = 1600, height = 900, res = 150)
+      print(p)
+      dev.off()
     }
   )
   

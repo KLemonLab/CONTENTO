@@ -21,6 +21,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                             tags$ul(
                               style = "margin: 5px 0 0 15px; padding:0;",
                               tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar; download the full gene list or just the DEGs"),
+                              tags$li("Genes are color-coded by regulation direction (up/down-regulated)"),
                               tags$li("Volcano plot highlights DEGs based on your cutoffs; hover over points to view gene details, and download the plot in the interactive viewer")
                             )
                         )
