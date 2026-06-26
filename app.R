@@ -32,6 +32,18 @@ source("R/load_files_server.R")
 source("R/explore_contrast_server.R")
 source("R/compare_contrast_server.R")
 source("R/explore_gene_server.R")
+source("R/dev_preload_server.R")
+
+# ==============================================================================
+# DEV CONFIG — set enabled = TRUE while testing, FALSE for production
+# ==============================================================================
+DEV_CONFIG <- list(
+  enabled             = TRUE,                   
+  se_path             = "inst/test/RSVBac_human_SE.rds",             
+  annotation_path     = NULL,                        
+  default_contrasts   = c("DpivsNB_VF", "DpivsNB_VT", "HinvsNB_VF", "HinvsNB_VT", "Line_9009_vs_9007", "SpnvsNB_VF", "SpnvsNB_VT", "VirusEffectDiff_Dpi", "VirusEffectDiff_Hin", "VirusEffectDiff_Spn", "VirusTvsF_Dpi", "VirusTvsF_Hin", "VirusTvsF_NB", "VirusTvsF_Spn"), 
+  start_tab           = "compare"                   
+)
 
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 # ============================= UI =========================================
@@ -214,6 +226,10 @@ server <- function(input, output, session) {
     available_gsea_columns = reactiveVal(list()), # named list of functional columns
     ensembl_col            = reactiveVal(NULL)    # column name holding Ensembl IDs, or NULL
   )
+  
+  # DEV preloading (for development/testing)
+  if (isTRUE(DEV_CONFIG$enabled))
+    dev_preload_server(input, output, session, state, DEV_CONFIG)
   
   # Convenience reactive: organism string (same as state$se_organism but reactive)
   organism <- reactive({ state$se_organism() })
