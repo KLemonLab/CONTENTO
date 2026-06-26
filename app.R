@@ -132,12 +132,11 @@ ui <- dashboardPage(
                       tags$li(strong("Expression Plot:"), " VST-normalized expression for the selected gene."),
                       tags$li(strong("Gene Table:"), " DE results across all contrasts, colored by regulation."),
                       tags$li(strong("Variance Decomposition:"), " Fraction of variance explained by experimental factors."),
-                      tags$li(strong("Neighbourhood Analysis:"), " Genes upstream/downstream in bacterial datasets.")
+                      tags$li(strong("Neighborhood Analysis:"), " Genes upstream/downstream in bacterial datasets.")
                     )
                 )
               )
       ),
-      
       
       ## ---- Explore by Contrast -----
       tabItem(tabName = "contrast",

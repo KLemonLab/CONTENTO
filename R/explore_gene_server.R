@@ -115,7 +115,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
       )
     }
     
-    # ── Tab 4 (conditional): Neighbourhood Analysis (Bacteria only) ──
+    # ── Tab 4 (conditional): Neighborhood Analysis (Bacteria only) ──
     is_bacteria <- !is.null(organism()) && organism() == "Bacteria"
     if (is_bacteria) {
       annot      <- state$annotation_df()
@@ -128,7 +128,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
             column(width = 7,
                    div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
                        h4(tagList(
-                         strong("Genomic Neighbourhood Analysis"),
+                         strong("Genomic Neighborhood Analysis"),
                          tags$span("BETA",
                                    style = "font-size: 0.6em; vertical-align: middle; margin-left: 8px;
                                 background-color: #f0ad4e; color: white; padding: 2px 7px;
@@ -147,21 +147,21 @@ explore_gene_server <- function(input, output, session, state, organism) {
                    div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
                        div(style = "margin-top: 0;",
                            uiOutput("contrastSelectGene"),
-                           numericInput("neigh_window", "Neighbourhood window (nt)",
+                           numericInput("neigh_window", "Neighborhood window (nt)",
                                         value = 10000, step = 100, min = 0)
                        )
                    )
             )
           ),
           hr(),
-          girafeOutput("neighbourhoodPlot", height = "600px")
+          girafeOutput("neighborhoodPlot", height = "600px")
         )
       } else {
         tagList(
           fluidRow(
             column(width = 12,
                    div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
-                       h4(strong("Genomic Neighbourhood Analysis"),
+                       h4(strong("Genomic Neighborhood Analysis"),
                           style = "margin-top: 0; margin-bottom: 8px;"),
                        tags$ul(
                          style = "margin: 5px 0 0 15px; padding:0;",
@@ -175,7 +175,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
           hr(),
           div(class = "alert alert-warning", style = "margin-top: 20px;",
               icon("exclamation-triangle"),
-              strong("Annotation required for Neighbourhood Analysis."),
+              strong("Annotation required for Neighborhood Analysis."),
               tags$p("Upload an annotation file that includes genomic coordinate columns ",
                      code("start"), ", ", code("end"), ", and ", code("strand"),
                      " (e.g. derived from a GFF3 file) to enable this feature.")
@@ -184,7 +184,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
       }
       
       tabs <- append(tabs,
-                     list(tabPanel("Neighbourhood Analysis", neigh_content)))
+                     list(tabPanel("Neighborhood Analysis", neigh_content)))
     }
     
     do.call(tabsetPanel, c(list(type = "pills"), tabs))
@@ -275,7 +275,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Contrast Dropdown for Neighbourhood #####
+  ##### UI: Contrast Dropdown for Neighborhood #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$contrastSelectGene <- renderUI({
     req(state$de_df())
@@ -299,60 +299,23 @@ explore_gene_server <- function(input, output, session, state, organism) {
     }, error = handle_gene_filter_error)
   })
   
-  # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  #### SECTION 3: OUTPUT RENDERING ####
-  # == == == == == == == == == == == == == == == == == == == == == == == == ==
-  
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Gene Symbol Text #####
+  ##### Reactive: Gene Expression Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$geneSymbol <- renderText({
-    req(input$geneSelect, state$de_df())
-    if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$geneSelect))
-    sym <- state$de_df() |>
-      filter(Geneid == input$geneSelect) |>
-      pull(symbol) |> unique()
-    if (length(sym) > 0 && !all(is.na(sym))) paste("Gene:", sym[!is.na(sym)][1])
-    else "Gene name: not found"
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Gene Info Table #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$geneDetails <- renderDT({
-    req(input$geneSelect, state$de_df()) 
-    gene_row <- state$de_df() |>
-      filter(Geneid == input$geneSelect) |>
-      select(-any_of(c("contrast", "baseMean", "log2FC", "log2FC_shrunk",
-                       "lfcSE", "stat", "pvalue", "padj", "regulated", "DE", "tooltip"))) |>
-      distinct()
-    if (nrow(gene_row) == 0) gene_row <- data.frame(Geneid = input$geneSelect)
-    transposed        <- as.data.frame(t(gene_row))
-    colnames(transposed) <- "Value"
-    transposed$Field  <- rownames(transposed)
-    transposed        <- transposed[, c("Field", "Value")]
-    datatable(transposed,
-              options = list(dom = "t", ordering = FALSE, pageLength = nrow(transposed)),
-              rownames = FALSE)
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Gene Expression Plot #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$genePlot <- renderPlot({
+  gene_plot <- reactive({
     req(input$geneSelect, input$x_col, state$se_obj())
     tryCatch({
       vst_mat <- assay(state$se_obj(), "vst")
       if (!input$geneSelect %in% rownames(vst_mat)) stop("Gene not found in dataset")
-      meta             <- as.data.frame(colData(state$se_obj()))
-      meta$expression  <- vst_mat[input$geneSelect, ]
-      n_colors         <- length(unique(meta[[input$color_col]]))
-      palette_colors   <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
+      meta            <- as.data.frame(colData(state$se_obj()))
+      meta$expression <- vst_mat[input$geneSelect, ]
+      n_colors        <- length(unique(meta[[input$color_col]]))
+      palette_colors  <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
       ggplot(meta, aes(.data[[input$x_col]], expression)) +
         geom_boxplot(aes(color = .data[[input$color_col]]),
                      outliers = FALSE, show.legend = FALSE) +
         geom_jitter(aes(color = .data[[input$color_col]], shape = .data[[input$shape_col]]),
-                        width = 0.2, size = 3, alpha = 0.9) +
+                    width = 0.2, size = 3, alpha = 0.9) +
         scale_color_manual(values = palette_colors) +
         labs(y = "VST expression", x = input$x_col) +
         theme_bw(base_size = 20) +
@@ -361,34 +324,11 @@ explore_gene_server <- function(input, output, session, state, organism) {
               panel.grid.minor.x = element_blank())
     }, error = handle_gene_plot_error)
   })
-  
+
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Gene Contrasts Table #####
+  ##### Reactive: Variance Decomposition Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$geneContrasts <- renderDT({
-    req(selected_gene_data())
-    display_cols <- intersect(c("contrast", "log2FC", "log2FC_shrunk", "padj", "DE", "regulated"),
-                              colnames(selected_gene_data()))
-    gene_contrasts <- selected_gene_data() |>
-      mutate(across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
-             padj = formatC(padj, format = "e", digits = 2)) |>
-      arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
-      select(all_of(display_cols))
-    dt <- datatable(gene_contrasts,
-                    options = list(dom = "t", ordering = TRUE, pageLength = nrow(gene_contrasts)),
-                    rownames = FALSE)
-    if ("regulated" %in% colnames(gene_contrasts)) {
-      dt <- dt |>
-        formatStyle("regulated", target = "row",
-                    backgroundColor = DT::styleEqual(c("up", "down"), c("#d9f2f9", "#f8d7da")))
-    }
-    dt
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Variance Decomposition Plot #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$varPartPlot <- renderPlot({
+  varpart_plot <- reactive({
     req(input$geneSelect, state$varpart_obj())
     vp_gene <- state$varpart_obj()$varPart[input$geneSelect, ]
     vp_df   <- data.frame(Factor = names(vp_gene), Variance = as.numeric(vp_gene))
@@ -403,9 +343,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Neighbourhood Analysis #####
+  ##### Reactive: Neighborhood Analysis #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$neighbourhoodPlot <- renderGirafe({
+  
+  neighborhood_plot <- reactive({
     req(state$de_df(), input$contrast_gene, input$geneSelect, input$neigh_window)
     tryCatch({
       de           <- state$de_df()
@@ -481,10 +422,77 @@ explore_gene_server <- function(input, output, session, state, organism) {
       girafe(ggobj = gg,
              options = list(opts_tooltip(opacity = 0.9, offx = 10, offy = -10),
                             opts_sizing(rescale = TRUE)))
-    }, error = handle_neighbourhood_plot_error)
+    }, error = handle_neighborhood_plot_error)
+  })
+
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  #### SECTION 3: OUTPUT RENDERING ####
+  # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Gene Symbol Text #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$geneSymbol <- renderText({
+    req(input$geneSelect, state$de_df())
+    if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$geneSelect))
+    sym <- state$de_df() |>
+      filter(Geneid == input$geneSelect) |>
+      pull(symbol) |> unique()
+    if (length(sym) > 0 && !all(is.na(sym))) paste("Gene:", sym[!is.na(sym)][1])
+    else "Gene name: not found"
   })
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Gene Info Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$geneDetails <- renderDT({
+    req(input$geneSelect, state$de_df()) 
+    gene_row <- state$de_df() |>
+      filter(Geneid == input$geneSelect) |>
+      select(-any_of(c("contrast", "baseMean", "log2FC", "log2FC_shrunk",
+                       "lfcSE", "stat", "pvalue", "padj", "regulated", "DE", "tooltip"))) |>
+      distinct()
+    if (nrow(gene_row) == 0) gene_row <- data.frame(Geneid = input$geneSelect)
+    transposed        <- as.data.frame(t(gene_row))
+    colnames(transposed) <- "Value"
+    transposed$Field  <- rownames(transposed)
+    transposed        <- transposed[, c("Field", "Value")]
+    datatable(transposed,
+              options = list(dom = "t", ordering = FALSE, pageLength = nrow(transposed)),
+              rownames = FALSE)
+  })
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Gene Contrasts Table #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$geneContrasts <- renderDT({
+    req(selected_gene_data())
+    display_cols <- intersect(c("contrast", "log2FC", "log2FC_shrunk", "padj", "DE", "regulated"),
+                              colnames(selected_gene_data()))
+    gene_contrasts <- selected_gene_data() |>
+      mutate(across(any_of(c("log2FC", "log2FC_shrunk")), ~ round(.x, 2)),
+             padj = formatC(padj, format = "e", digits = 2)) |>
+      arrange(desc(abs(.data[[input$global_lfc_col]]))) |>
+      select(all_of(display_cols))
+    dt <- datatable(gene_contrasts,
+                    options = list(dom = "t", ordering = TRUE, pageLength = nrow(gene_contrasts)),
+                    rownames = FALSE)
+    if ("regulated" %in% colnames(gene_contrasts)) {
+      dt <- dt |>
+        formatStyle("regulated", target = "row",
+                    backgroundColor = DT::styleEqual(c("up", "down"), c("#d9f2f9", "#f8d7da")))
+    }
+    dt
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Plots from Reactives #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$genePlot <- renderPlot({ gene_plot() })
+  output$varPartPlot <- renderPlot({ varpart_plot() })
+  output$neighborhoodPlot <- renderGirafe({ neighborhood_plot() })
+  
+
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 4: DOWNLOAD HANDLERS ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
@@ -496,28 +504,9 @@ explore_gene_server <- function(input, output, session, state, organism) {
     function() build_download_filename(input, state, ext = "png",
                                        type = "GenePlot", suffix = input$geneSelect),
     function(file) {
-      req(input$geneSelect, input$x_col, state$se_obj())
-      tryCatch({
-        vst_mat         <- assay(state$se_obj(), "vst")
-        meta            <- as.data.frame(colData(state$se_obj()))
-        meta$expression <- vst_mat[input$geneSelect, ]
-        n_colors        <- length(unique(meta[[input$color_col]]))
-        palette_colors  <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
-        p <- ggplot(meta, aes(.data[[input$x_col]], expression)) +
-          geom_boxplot(aes(color = .data[[input$color_col]]),
-                       outliers = FALSE, show.legend = FALSE) +
-          geom_jitter(aes(color = .data[[input$color_col]], shape = .data[[input$shape_col]]),
-                      width = 0.2, size = 3, alpha = 0.9) +
-          scale_color_manual(values = palette_colors) +
-          labs(y = "VST expression", x = input$x_col) +
-          theme_bw(base_size = 20) +
-          theme(axis.text = element_text(angle = 45, hjust = 1),
-                panel.grid.major.x = element_blank(),
-                panel.grid.minor.x = element_blank())
-        png(file, width = 1800, height = 1200, res = 150)
-        print(p)
-        dev.off()
-      }, error = function(e) message("Download plot error: ", e$message))
+      png(file, width = 1800, height = 1200, res = 150)
+      print(gene_plot())
+      dev.off()
     }
   )
 
@@ -528,29 +517,18 @@ explore_gene_server <- function(input, output, session, state, organism) {
     function() build_download_filename(input, state, ext = "png",
                                        type = "VarPart", suffix = input$geneSelect),
     function(file) {
-      req(input$geneSelect, state$varpart_obj())
-      vp_gene <- state$varpart_obj()$varPart[input$geneSelect, ]
-      vp_df   <- data.frame(Factor = names(vp_gene), Variance = as.numeric(vp_gene))
-      p <- ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
-        geom_col(fill = "steelblue") +
-        scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-        labs(x = NULL, y = "Fraction of Variance") +
-        theme_bw(base_size = 20) +
-        theme(axis.text = element_text(angle = 45, hjust = 1),
-              panel.grid.major.x = element_blank(),
-              panel.grid.minor.x = element_blank())
       png(file, width = 1600, height = 900, res = 150)
-      print(p)
+      print(varpart_plot())
       dev.off()
     }
   )
-  
+
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 5: ERROR HANDLERS ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   handle_gene_filter_error        <- \(e) { showNotification(paste("Error filtering gene data:", e$message), type = "error"); NULL }
   handle_gene_plot_error          <- \(e) { showNotification(paste("Error creating expression plot:", e$message), type = "error"); NULL }
-  handle_neighbourhood_plot_error <- \(e) { showNotification(paste("Error creating neighbourhood plot:", e$message), type = "error"); NULL }
+  handle_neighborhood_plot_error <- \(e) { showNotification(paste("Error creating neighborhood plot:", e$message), type = "error"); NULL }
   
 }
