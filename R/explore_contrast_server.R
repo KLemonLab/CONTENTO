@@ -215,11 +215,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       
       # Generate table plot (only if there are significant pathways)
       tableplot <- if (length(topPathways) > 0) {
-        plotGseaTable(
-          pathways = pathways_list[topPathways], 
-          stats = ranks_vec, 
-          fgseaRes = fgseaRes, 
-          gseaParam = 0.5
+        gridExtra::arrangeGrob(
+          plotGseaTable(pathways = pathways_list[topPathways], stats = ranks_vec,
+                        fgseaRes = fgseaRes, gseaParam = 0.5),
+          top = grid::textGrob(
+            paste0("Contrast: ", input$contrast, " | Gene Set Collection: ", genesets()$label),
+            gp = grid::gpar(fontsize = 14, fontface = "bold")
+          )
         )
       } else {
         NULL
@@ -289,6 +291,12 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     
     tryCatch({
       x_col <- if (input$global_lfc_col %in% colnames(selected_data())) input$global_lfc_col else "log2FC"
+      fc_label <- case_when(
+        x_col == "log2FC_shrunk" ~ "log2FC (shrunken)",
+        x_col == "log2FC"        ~ "log2FC",
+        TRUE                     ~ x_col
+      )
+
       gg <- ggplot(selected_data(), aes(x = .data[[x_col]], y = -log10(padj), text = tooltip)) +
         geom_point(aes(color = regulated), alpha = 0.7) +
         scale_color_manual(values = c("up" = "#00a9cf", "down" = "#d9534f"),
@@ -298,14 +306,11 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         geom_hline(
           yintercept = -log10(input$global_padj_cutoff), linetype = "dashed", color = "#888888") +
         labs(
-          x = case_when(
-            x_col == "log2FC_shrunk" ~ "log2 Fold Change (shrunken)",
-            x_col == "log2FC"        ~ "log2 Fold Change",
-            TRUE                     ~ x_col  
-          ),
+          title = paste0(
+            "Contrast: ", input$contrast, " | ", fc_label, " > ", input$global_log2FC_cutoff, " | FDR cutoff = ", input$global_padj_cutoff),
+          x = fc_label,
           y = "-log10(FDR)"
-        ) +
-        theme_minimal()
+        ) + theme_minimal()
       
       ggplotly(gg, tooltip = "text") |>
         config(toImageButtonOptions = list(
@@ -330,7 +335,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       plot.new()
       text(0.5, 0.5, "No significant gene sets found (FDR < 0.05)", cex = 1.5)
     } else {
-      gsea_result()$tableplot
+      grid::grid.draw(gsea_result()$tableplot) 
     }
   })
   
@@ -433,7 +438,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     function(file) {
       req(gsea_result())
       png(file, width = 1800, height = 900, res = 150)
-      print(gsea_result()$tableplot)
+      grid::grid.draw(gsea_result()$tableplot) 
       dev.off()
     })
   

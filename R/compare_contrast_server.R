@@ -395,6 +395,19 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   deg_upset_plot <- reactive({
     req(compare_data())
     df <- compare_data()
+    
+    x_col <- if (input$global_lfc_col %in% colnames(compare_data())) {
+      input$global_lfc_col
+    } else {
+      "log2FC"
+    }
+    
+    fc_label <- case_when(
+      x_col == "log2FC_shrunk" ~ "log2FC (shrunken)",
+      x_col == "log2FC"        ~ "log2FC",
+      TRUE                     ~ x_col
+    )
+    
     set_cols <- names(df)[sapply(df, is.logical)]
     validate(need(length(set_cols) >= 2, "Need ≥2 contrasts"),
              need(nrow(df) > 0, "No DEGs found"))
@@ -410,7 +423,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         axis.title = element_text(size = 16),
         axis.text  = element_text(size = 14)
       )
-    )
+    ) +
+      patchwork::plot_annotation(
+        title = paste0(fc_label, " > ", input$global_log2FC_cutoff, " | FDR cutoff = ", input$global_padj_cutoff),
+      )
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -573,6 +589,8 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     
     hm <- Heatmap(
       nes_mat, name = "NES", col = col_fun,
+      column_title = paste0("Gene Set Collection: ", genesets_compare()$label),
+      column_title_gp = grid::gpar(fontface = "bold"),
       cluster_rows = FALSE, cluster_columns = FALSE,
       show_row_dend = FALSE, show_column_dend = FALSE,
       row_names_gp = grid::gpar(fontsize = row_fontsize),
@@ -670,9 +688,12 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         axis.title = element_text(size = 16),
         axis.text  = element_text(size = 14)
       )
-    )
+    ) +
+      patchwork::plot_annotation(
+        title = paste0("Gene Set: ", input$selected_pathway_compare, " — ", genesets_compare()$label)
+      )
   })
-  
+
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: GESECA Results #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -695,9 +716,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         arrange(desc(abs(pctVar))) |> slice_head(n = 20) |> pull(pathway)
       
       tableplot <- if (length(topPathways) > 0) {
-        plotGesecaTable(gesecaRes = gesecaRes,
-                        pathways  = pathways_list[topPathways],
-                        E         = vst_matrix)
+        gridExtra::arrangeGrob(
+          plotGesecaTable(gesecaRes = gesecaRes, pathways = pathways_list[topPathways], E = vst_matrix),
+          top = grid::textGrob(paste0("Gene Set Collection: ", genesets_geseca()$label),
+                               gp = grid::gpar(fontsize = 14, fontface = "bold"))
+        )
       } else { NULL }
       
       list(tableplot = tableplot, gesecaRes = gesecaRes,
@@ -721,7 +744,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       })
     }
     
-    function() print(tp)
+    function() grid::grid.draw(tp)
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -747,11 +770,11 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       conditions = color_cond[sample_order],
       scale = TRUE
     ) +
-      labs(title = input$selected_pathway_geseca) +
+      labs(title = paste0("Gene Set: ", input$selected_pathway_geseca, " — ", genesets_geseca()$label)) +
       theme_minimal()
   })
   
-  
+
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 3: OUTPUT RENDERING ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==

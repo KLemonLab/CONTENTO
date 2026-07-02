@@ -63,8 +63,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
                hr(),
                fluidRow(
                  column(width = 6,
-                        h4(strong("Expression Plot"), style = "margin-top: 10px;"),
-                        tags$h5(textOutput("geneSymbol"), style = "margin-top: 5px; color: #555;")
+                        h4(strong("Expression Plot"), style = "margin-top: 10px;")
                  ),
                  column(width = 6,
                         div(
@@ -300,6 +299,19 @@ explore_gene_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Gene Name #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  gene_name <- reactive({
+    req(input$geneSelect, state$de_df())
+    if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$geneSelect))
+    sym <- state$de_df() |>
+      filter(Geneid == input$geneSelect) |>
+      pull(symbol) |> unique()
+    if (length(sym) > 0 && !all(is.na(sym))) paste("Gene:", sym[!is.na(sym)][1])
+    else "Gene name: not found"
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: Gene Expression Plot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   gene_plot <- reactive({
@@ -317,7 +329,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
         geom_jitter(aes(color = .data[[input$color_col]], shape = .data[[input$shape_col]]),
                     width = 0.2, size = 3, alpha = 0.9) +
         scale_color_manual(values = palette_colors) +
-        labs(y = "VST expression", x = input$x_col) +
+        labs(title = gene_name(), y = "VST expression", x = input$x_col) +
         theme_bw(base_size = 20) +
         theme(axis.text = element_text(angle = 45, hjust = 1),
               panel.grid.major.x = element_blank(),
@@ -430,19 +442,6 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Output: Gene Symbol Text #####
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  output$geneSymbol <- renderText({
-    req(input$geneSelect, state$de_df())
-    if (!"symbol" %in% colnames(state$de_df())) return(paste("ID:", input$geneSelect))
-    sym <- state$de_df() |>
-      filter(Geneid == input$geneSelect) |>
-      pull(symbol) |> unique()
-    if (length(sym) > 0 && !all(is.na(sym))) paste("Gene:", sym[!is.na(sym)][1])
-    else "Gene name: not found"
-  })
-  
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Output: Gene Info Table #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneDetails <- renderDT({
@@ -502,7 +501,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadGenePlot <- downloadHandler(
     function() build_download_filename(input, state, ext = "png",
-                                       type = "GenePlot", suffix = input$geneSelect),
+                                       type = "GenePlot", suffix = gene_name()),
     function(file) {
       png(file, width = 1800, height = 1200, res = 150)
       print(gene_plot())
@@ -515,7 +514,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadVarPartPlot <- downloadHandler(
     function() build_download_filename(input, state, ext = "png",
-                                       type = "VarPart", suffix = input$geneSelect),
+                                       type = "VarPart", suffix = gene_name()),
     function(file) {
       png(file, width = 1600, height = 900, res = 150)
       print(varpart_plot())
