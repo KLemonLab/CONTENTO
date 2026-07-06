@@ -32,18 +32,6 @@ source("R/load_files_server.R")
 source("R/explore_contrast_server.R")
 source("R/compare_contrast_server.R")
 source("R/explore_gene_server.R")
-source("R/dev_preload_server.R")
-
-# ==============================================================================
-# DEV CONFIG — set enabled = TRUE while testing, FALSE for production
-# ==============================================================================
-DEV_CONFIG <- list(
-  enabled             = FALSE,                   
-  se_path             = "inst/test/5772AIB_LAC_SE.rds",             
-  annotation_path     = NULL,                        
-  default_contrasts   = NULL, 
-  start_tab           = "gene"                   
-)
 
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 # ============================= UI =========================================
@@ -225,10 +213,6 @@ server <- function(input, output, session) {
     available_gsea_columns = reactiveVal(list()), # named list of functional columns
     ensembl_col            = reactiveVal(NULL)    # column name holding Ensembl IDs, or NULL
   )
-  
-  # DEV preloading (for development/testing)
-  if (isTRUE(DEV_CONFIG$enabled))
-    dev_preload_server(input, output, session, state, DEV_CONFIG)
   
   # Convenience reactive: organism string (same as state$se_organism but reactive)
   organism <- reactive({ state$se_organism() })
