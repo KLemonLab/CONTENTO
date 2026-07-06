@@ -28,7 +28,13 @@ se_info_ui <- function(se, organism = NULL, annotation = NULL) {
   )
 }
 
-
+#' Empty-state placeholder message
+#'
+#' Warning alert shown in place of dependent UI elements before an SE file
+#' has been uploaded.
+#'
+#' @return A div containing a Bootstrap warning alert
+#' @export
 empty_state_msg <- function() {
   div(class = "alert alert-warning",
       icon("exclamation-triangle"),
