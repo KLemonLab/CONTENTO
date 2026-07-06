@@ -1,3 +1,7 @@
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+#### SECTION 1: FILE / SE LOADING ####
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+
 #' Find built-in annotation file path for a given annotation name
 #'
 #' Searches first in the installed package, then falls back to the local
@@ -17,6 +21,12 @@ find_annotation_path <- function(annotation) {
 }
 
 #' Check if SE rownames are Ensembl-style IDs
+#'
+#' Samples up to 20 non-empty rownames and checks whether any match the
+#' Ensembl gene ID pattern (e.g. ENSG..., ENSMUSG...).
+#'
+#' @param se A SummarizedExperiment object
+#' @return Logical; TRUE if rownames appear to be Ensembl-style IDs
 #' @export
 se_rownames_are_ensembl <- function(se) {
   ids <- head(rownames(se)[nzchar(rownames(se))], 20)
@@ -43,6 +53,11 @@ detect_ensembl_col <- function(annot_df) {
   }
   NULL
 }
+
+
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+#### SECTION 2: DE EXTRACTION, ANNOTATION MERGE & GENE SYMBOLS ####
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 #' Extract all contrasts from a SummarizedExperiment into long format
 #'
@@ -186,8 +201,19 @@ apply_symbol <- function(df, primary_col, secondary_col = "none") {
   }
 }
 
-
 #' Map a data frame's Geneid to Ensembl IDs using an annotation lookup column
+#'
+#' Replaces the Geneid column with the corresponding Ensembl ID from an
+#' annotation lookup column, falling back to the original Geneid where no
+#' match is found. Used before MSigDB-based GSEA/GESECA when SE rownames
+#' are not already Ensembl IDs.
+#'
+#' @param df Data frame containing a Geneid column to remap
+#' @param annot_df Annotation data frame containing Geneid and ensembl_col
+#' @param ensembl_col Character; name of the column in annot_df holding Ensembl IDs
+#' @return df with Geneid replaced by the matched Ensembl ID (or left as ensembl_col.
+#'   Returns df unchanged if annot_df or ensembl_col is NULL, or if ensembl_col
+#'   is not a column of annot_df.
 #' @export
 remap_to_ensembl <- function(df, annot_df, ensembl_col) {
   if (is.null(annot_df) || is.null(ensembl_col) || !ensembl_col %in% colnames(annot_df)) return(df)
@@ -197,6 +223,11 @@ remap_to_ensembl <- function(df, annot_df, ensembl_col) {
     dplyr::mutate(Geneid = dplyr::coalesce(ensembl, Geneid)) |>
     dplyr::select(-ensembl)
 }
+
+
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+#### SECTION 3: DE FLAGS & CONTRAST TABLES ####
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 #' Add DE and regulation flags
 #'
@@ -296,6 +327,10 @@ build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
 }
 
 
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+#### SECTION 4: EXPRESSION MATRICES ####
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+
 #' Subset, optionally relabel, and scale VST assay values for a specified set of genes
 #' @description
 #' Subsets a VST assay from a SummarizedExperiment object to a specified set of
@@ -329,6 +364,11 @@ subset_scale_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
   scale(mat)
 }
 
+
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+#### SECTION 5: ORGANISM / MSIGDB ROUTING ####
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+
 #' Get the msigdbr db_species code for a given organism name
 #'
 #' Returns "MM" for Mus musculus and "HS" for all other species supported by
@@ -354,7 +394,6 @@ get_msigdbr_db_species <- function(organism, override = NULL) {
   if (organism == "Mus musculus") "MM" else "HS"
 }
 
-
 #' Get available MSigDB collections for a given db_species
 #'
 #' Calls msigdbr_collections() and returns a tidy data frame of available
@@ -372,7 +411,9 @@ get_msigdbr_collections <- function(db_species) {
 }
 
 
-
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+#### SECTION 6: GENE SETS FOR GSEA / GESECA ####
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 #' Get all potential gsea columns available in dataframe
 #'
@@ -559,6 +600,11 @@ resolve_gsea_source <- function(input, state, organism,
   }
 }
 
+
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+#### SECTION 7: DOWNLOADS ####
+# == == == == == == == == == == == == == == == == == == == == == == == == ==
+
 #' Build a standardised download filename for Shiny downloadHandler
 #'
 #' Derives the base name from the SE object metadata or uploaded filename,
@@ -627,5 +673,3 @@ build_download_filename <- function(input, state,
   
   return(fname)
 }
-
-
