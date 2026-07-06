@@ -32,11 +32,20 @@ load_files_server <- function(input, output, session, state) {
   refresh_annotation_state <- function(annot, organism) {
     if (!is.null(annot)) {
       state$available_gsea_columns(get_gsea_columns(annot))
-      state$ensembl_col(detect_ensembl_col(annot))
     } else {
       state$available_gsea_columns(list())
-      state$ensembl_col(NULL)
     }
+    
+    # Determine Ensembl column (if any)
+    state$ensembl_col(
+      if (se_rownames_are_ensembl(state$se_obj())) {
+        "rownames"                          # SE rownames already Ensembl
+      } else if (!is.null(annot)) {
+        detect_ensembl_col(annot)           # Look for an Ensembl column in annotation 
+      } else {
+        NULL                                # No annotation & no Ensembl rownames -> MSigDB unavailable
+      }
+    )
     
     # Determine msigdbr db_species
     db_override <- tryCatch(metadata(state$se_obj())$db_species, error = function(e) NULL)

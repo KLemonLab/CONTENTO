@@ -612,3 +612,22 @@ build_download_filename <- function(input, state,
   
   return(fname)
 }
+
+#' Check if SE rownames are Ensembl-style IDs
+#' @export
+se_rownames_are_ensembl <- function(se) {
+  ids <- head(rownames(se)[nzchar(rownames(se))], 20)
+  length(ids) > 0 && any(grepl("^ENS[A-Z]*G[0-9]{11}", ids))
+}
+
+
+#' Map a data frame's Geneid to Ensembl IDs using an annotation lookup column
+#' @export
+remap_to_ensembl <- function(df, annot_df, ensembl_col) {
+  if (is.null(annot_df) || is.null(ensembl_col) || !ensembl_col %in% colnames(annot_df)) return(df)
+  lookup <- annot_df |> dplyr::select(Geneid, ensembl = dplyr::all_of(ensembl_col)) |> dplyr::distinct()
+  df |>
+    dplyr::left_join(lookup, by = "Geneid") |>
+    dplyr::mutate(Geneid = dplyr::coalesce(ensembl, Geneid)) |>
+    dplyr::select(-ensembl)
+}

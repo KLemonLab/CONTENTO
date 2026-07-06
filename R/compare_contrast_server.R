@@ -471,7 +471,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         showNotification("No gene sets found in selected collection", type = "warning")
         return(NULL)
       }
-      list(data = gs, label = src$label)
+      list(data = gs, label = src$label, source_type = src$source_type)
     }, error = handle_compare_geneset_error)
   })
   
@@ -487,7 +487,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
         showNotification("No gene sets found in selected collection", type = "warning")
         return(NULL)
       }
-      list(data = gs, label = src$label)
+      list(data = gs, label = src$label, source_type = src$source_type)
     }, error = handle_compare_geneset_error)
   })
   
@@ -502,7 +502,14 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       ranks <- state$de_df() |>
         dplyr::filter(contrast == ct, !is.na(stat))
       if (nrow(ranks) == 0) return(NULL)
+      
+      if (genesets_compare()$source_type == "msigdb" &&
+          !is.null(state$ensembl_col()) && !identical(state$ensembl_col(), "rownames")) {
+        ranks <- remap_to_ensembl(ranks, state$annotation_df(), state$ensembl_col())
+      }
+      
       ranks_vec <- setNames(ranks$stat, ranks$Geneid)
+      
       if (length(unique(ranks_vec)) < 10) return(NULL)
       if (all(ranks_vec > 0) || all(ranks_vec < 0)) return(NULL)
       tryCatch(
@@ -706,6 +713,16 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       if (is.null(vst_matrix)) {
         showNotification("VST matrix not found in SummarizedExperiment object", type = "error")
         return(NULL)
+      }
+      
+      if (genesets_geseca()$source_type == "msigdb" &&
+          !is.null(state$ensembl_col()) && !identical(state$ensembl_col(), "rownames")) {
+        annot  <- state$annotation_df()
+        lookup <- setNames(annot[[state$ensembl_col()]], annot$Geneid)
+        new_rn <- lookup[rownames(vst_matrix)]
+        keep   <- !is.na(new_rn)
+        vst_matrix <- vst_matrix[keep, , drop = FALSE]
+        rownames(vst_matrix) <- new_rn[keep]
       }
       
       gesecaRes <- geseca(pathways = pathways_list, E = vst_matrix,

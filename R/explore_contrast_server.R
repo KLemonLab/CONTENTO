@@ -166,7 +166,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     tryCatch({
       list(
         data  = do.call(load_genesets, src[names(src) != "label"]),
-        label = src$label
+        label = src$label,
+        source_type = src$source_type
       )
     }, error = handle_geneset_error)
   })
@@ -187,6 +188,13 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         showNotification("No valid statistics found for GSEA", type = "warning")
         return(NULL)
       }
+      
+      # Remap gene IDs to Ensembl if rownames are not Ensembl and MSigDB is used
+      if (genesets()$source_type == "msigdb" &&
+          !is.null(state$ensembl_col()) && !identical(state$ensembl_col(), "rownames")) {
+        ranks <- remap_to_ensembl(ranks, state$annotation_df(), state$ensembl_col())
+      }
+      
       ranks_vec <- setNames(ranks$stat, ranks$Geneid)
       
       # Get gene sets for GSEA
