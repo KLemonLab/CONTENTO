@@ -1,0 +1,17 @@
+---
+title: "Create SE for CONTENTO"
+date: last-modified
+execute:
+  eval: false
+  echo: true
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: false
+    theme: cosmo
+---
+
+# Overview:
+
+This is a placeholder file

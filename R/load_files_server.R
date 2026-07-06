@@ -76,6 +76,10 @@ load_files_server <- function(input, output, session, state) {
       return(NULL)
     }
     
+    # Reset state for new SE upload
+    state$annotation_df(NULL)
+    state$varpart_obj(NULL)
+    
     state$se_obj(se)
     
     de_df <- tryCatch(extract_de_results(se), error = handle_contrast_extraction_error)
@@ -101,7 +105,7 @@ load_files_server <- function(input, output, session, state) {
     annotation    <- if (!is.null(se_annotation) && nzchar(trimws(se_annotation))) se_annotation else NULL
     
     annot_status  <- "none"
-    annot_message <- NULL
+    annot_message <- "No annotation specified in SE metadata."
     annot_cols    <- NULL
     sym_primary   <- NULL
     annot         <- NULL

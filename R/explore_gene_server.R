@@ -342,16 +342,18 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   varpart_plot <- reactive({
     req(input$geneSelect, state$varpart_obj())
-    vp_gene <- state$varpart_obj()$varPart[input$geneSelect, ]
-    vp_df   <- data.frame(Factor = names(vp_gene), Variance = as.numeric(vp_gene))
-    ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
-      geom_col(fill = "steelblue") +
-      scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-      labs(x = NULL, y = "Fraction of Variance") +
-      theme_bw(base_size = 20) +
-      theme(axis.text = element_text(angle = 45, hjust = 1),
-            panel.grid.major.x = element_blank(),
-            panel.grid.minor.x = element_blank())
+    tryCatch({
+      vp_gene <- state$varpart_obj()$varPart[input$geneSelect, ]
+      vp_df   <- data.frame(Factor = names(vp_gene), Variance = as.numeric(vp_gene))
+      ggplot(vp_df, aes(x = reorder(Factor, -Variance), y = Variance)) +
+        geom_col(fill = "steelblue") +
+        scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+        labs(x = NULL, y = "Fraction of Variance") +
+        theme_bw(base_size = 20) +
+        theme(axis.text = element_text(angle = 45, hjust = 1),
+              panel.grid.major.x = element_blank(),
+              panel.grid.minor.x = element_blank())
+    }, error = handle_varpart_plot_error)
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -528,6 +530,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
   
   handle_gene_filter_error        <- \(e) { showNotification(paste("Error filtering gene data:", e$message), type = "error"); NULL }
   handle_gene_plot_error          <- \(e) { showNotification(paste("Error creating expression plot:", e$message), type = "error"); NULL }
-  handle_neighborhood_plot_error <- \(e) { showNotification(paste("Error creating neighborhood plot:", e$message), type = "error"); NULL }
+  handle_varpart_plot_error       <- \(e) { showNotification(paste("Error creating variance plot:", e$message), type = "error"); NULL }
+  handle_neighborhood_plot_error  <- \(e) { showNotification(paste("Error creating neighborhood plot:", e$message), type = "error"); NULL }
   
 }

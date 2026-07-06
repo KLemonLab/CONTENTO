@@ -353,7 +353,7 @@ build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
 #' (Geneids or symbols, depending on \code{de_df}) and columns corresponding to samples.
 #' @export
 subset_scale_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
-  mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], ]
+  mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], , drop = FALSE]
   
   if (!is.null(de_df) && "symbol" %in% colnames(de_df)) {
     sym_lookup <- de_df |>

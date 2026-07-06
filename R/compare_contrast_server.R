@@ -510,8 +510,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       
       ranks_vec <- setNames(ranks$stat, ranks$Geneid)
       
-      if (length(unique(ranks_vec)) < 10) return(NULL)
-      if (all(ranks_vec > 0) || all(ranks_vec < 0)) return(NULL)
+      if (length(unique(ranks_vec)) < 10) {
+        showNotification("Not enough unique statistics for GSEA in this contrast", type = "warning")
+        return(NULL)
+      }
+      if (all(ranks_vec > 0) || all(ranks_vec < 0)) {
+        showNotification("All statistics have the same sign; GSEA requires both directions", type = "warning")
+        return(NULL)
+      }
+      
       tryCatch(
         suppressWarnings(fgseaMultilevel(pathways = pathways_list, stats = ranks_vec,
                                          minSize = 15, maxSize = 500)),
