@@ -14,73 +14,88 @@ format:
 
 # Overview:
 
-Annotation files are optional, but they unlock several features in CONTENTO. Depending on your organism and the information included on your SummarizedExperiment (SE) object, your experience with CONTENTO can be highly limited without an annotation file, specifically for functional enrichment analysis and gene labeling.
+Annotation files are optional in CONTENTO, but they enable many of the platform's most useful features. Depending on your organism and the identifiers used in your SummarizedExperiment (SE) object, functionality may be limited without an annotation file. In particular, annotation files are used for:
+
+- Functional enrichment analysis (GSEA/GESECA)
+- Displaying informative gene labels and symbols
+- Genomic neighborhood analysis (bacterial genomes only)
 
 ## Annotation files for functional enrichment analysis
 
-CONTENTO can run functional enrichment analysis (GSEA/GESECA) using gene set collections from two sources:
+CONTENTO can perform functional enrichment analysis using gene sets from two sources:
 
-1.  **Annotation**: Available for any organism via user-provided data frame (in `.rds` format) with the following:
+1.  **Annotation-Based Gene Sets:** Available for any organism through a user-provided annotation data frame (`.rds` format). Required elements:
 
-    - A `Geneid` column that matches the `rownames()` of your SE object.
-    - At least one functional column (e.g. COG categories, KEGG pathways, custom gene sets, etc.) to be used as source for enrichment. Multiple values per gene should be separated by `!!!` (e.g., `"GO:0006415!!!GO:0016149"`) to be parsed correctly by counting the gene as belonging to each category for functional enrichment analysis.
+    - A `Geneid` column matching the `rownames()` of the SE object.
+    - One or more functional annotation columns containing gene set assignments (e.g. COG categories, KEGG pathways, GO terms, regulons, custom categories). Multiple values per gene should be separated by `!!!` (e.g., `"GO:0006415!!!GO:0016149"`). CONTENTO will parse them by counting the gene as belonging to each category for functional enrichment analysis.
 
-2.  [**MSigDB**](https://www.gsea-msigdb.org/gsea/msigdb): Available only for human, mouse, and other species supported by [msigdbr](https://igordot.github.io/msigdbr/reference/msigdbr_species.html) R package. It requires:
+2.  [**MSigDB**](https://www.gsea-msigdb.org/gsea/msigdb) **Gene Sets:** Available only for human, mouse, and other species supported by [msigdbr](https://igordot.github.io/msigdbr/reference/msigdbr_species.html) R package. It requires:
 
-    - A `metadata(se)$organism` that matches the `msigdbr` species name exactly (e.g. `Homo sapiens`, `Mus musculus`, etc.).
-    - SE's `rownames()` should be Ensembl-style gene IDs (`ENSG...`, `ENSMUSG...`, etc.) or a column in the annotation file that contains Ensembl-style IDs. CONTENTO will auto-detect this column.
-    
+    - `metadata(se)$organism` must exactly match a valid `msigdbr` species name (e.g. `Homo sapiens`, `Mus musculus`, etc.).
+    - Gene identifiers must be Ensembl gene IDs (`ENSG...`, `ENSMUSG...`, etc.), either: directly in `rownames(se)`, or in a column of the annotation file containing Ensembl IDs. CONTENTO automatically detects Ensembl identifier columns when present.
 
-## Other benefits of annotation files
+## Additional Benefits of Annotation Files
 
-Annotation files also enable:
+Annotation files also improve the general CONTENTO experience.
 
-- **Gene symbols/labels** in place of raw Geneids throughout tables and plots. This is especially useful for bacteria, where `Geneid` is often a locus tag (e.g. `b0001`) and not not an informative label.
+- **Gene symbols/labels** can be displayed throughout tables and visualizations instead of raw gene identifiers. This is especially useful for bacteria, where `Geneid` is often a locus tag (e.g. `SAUSA300_0001`) and not not an informative label like the associated gene name or product description.
 - **Genomic neighborhood analysis**, which additionally requires `start`, `end`, `strand` columns in the annotation file. This is a beta feature available only when `metadata(se)$organism` is exactly "Bacteria")
 
 ## Examples: Do I need an annotation file?
 
-| SE's organism name | SE rownames | Desired Enrichment | Annotation file needed? |
+| SE organism | SE rownames | Desired Enrichment | Annotation file needed? |
 |------------------|------------------|------------------|------------------|
-| msigdbr-supported (e.g. Homo sapiens) | Ensembl IDs | MSigDB-based | No (optional, for symbols only) |
-| msigdbr-supported (e.g. Homo sapiens) | Not Ensembl IDs | MSigDB-based | Yes (must include an Ensembl ID column) |
-| any | any | Annotation-based | Yes, mandatory for enrichment |
-| any | any | No GSEA/GESECA needed | No, only DE analysis available |
-
+| Supported by `msigdbr` (e.g. *Homo sapiens*) | Ensembl IDs | MSigDB | No (optional for gene labels) |
+| Supported by `msigdbr` (e.g. *Homo sapiens*) | Non-Ensembl IDs | MSigDB | Yes (must contain an Ensembl ID column) |
+| Any organism | Any identifiers | Annotation-based enrichment | Yes |
+| Any organism | Any identifiers | None (Differential Expression only) | No |
 
 ------------------------------------------------------------------------
 
 # Step 1: Source Genome Annotations
 
-> Add somethign here about this is the same annotation used on the dowstrean RNASeq Aanlysis to create the SE file
+The annotation file used by CONTENTO should be derived from the same genome annotation used during RNA-Seq alignment and quantification. Using the same annotation source ensures that:
 
-## 1.1 Ensembl-based organisms (human, mouse, other msigdbr species)
+- Gene identifiers match the rownames() of your SE object.
+- Functional annotations can be merged without identifier conversion.
+- Gene coordinates used in the genomic neighborhood analyses are consistent with the reference genome used for alignment.
 
-Example for  `Homo_sapiens_GRCh38` 
+The following sections describe how to obtain the source annotation files required to build a CONTENTO annotation data frame.
 
+## 1.1 Ensembl-Based Organisms (Human, Mouse, other msigdbr Species)
+
+For organisms distributed through Ensembl, download the same GTF and genome assembly used during RNA-seq analysis. The genome FASTA is not required to create a CONTENTO annotation file, but is often downloaded alongside the GTF because both are used during alignment, genome indexing, or other downstream analyses.
+
+**Example:** Human GRCh38 (Ensembl Release 113)
 
 ```{bash, eval=FALSE}
 FILES_DIR="inst/extdata/Ensembl" 
 GENOME_NAME="Homo_sapiens.GRCh38" 
 VERSION=113
 
-# File used for 
+# Gene annotation file used here and in the downstream analysis
 wget -P "$FILES_DIR" \
   "https://ftp.ensembl.org/pub/release-${VERSION}/gtf/homo_sapiens/${GENOME_NAME}.${VERSION}.gtf.gz"
 
-# File used for 
+# Reference genome used in the downstream analysis (alignment/quantification)
 wget -P "$FILES_DIR" \ 
   "https://ftp.ensembl.org/pub/release-${VERSION}/fasta/homo_sapiens/dna/${GENOME_NAME}.dna_sm.primary_assembly.fa.gz"
 ```
 
-## 1.2 NCBI/GFF3-based organisms (bacteria and others outside Ensembl)
+## 1.2 NCBI/RefSeq-Based Organisms (Bacteria and Other Non-Ensembl Genomes)
+
+For organisms that are not maintained in Ensembl, the preferred annotation source is typically the NCBI RefSeq assembly. These annotations are distributed as GFF3 and GenBank (`.gbff`) files and contain gene coordinates, locus tags, product descriptions, and other metadata that can be incorporated into CONTENTO annotation files.
+
+### Option A: Download from the NCBI Assembly Website
 
 1.  Go to [NCBI Assembly](https://www.ncbi.nlm.nih.gov/assembly/)
 2.  Search for your genome accession (e.g., `GCF_000013465.1` for *Staphylococcus aureus* subsp. aureus FPR3757)
 3.  Download the assembly in GFF3 format
 4.  Unzip and save in your working directory
 
-**Alternative: Use NCBI Datasets CLI**
+### Option B: Download Using the NCBI Datasets CLI
+
+For reproducible workflows, the NCBI Datasets command-line tool is recommended.
 
 ```{bash, eval = FALSE}
 # Install NCBI Datasets CLI if you haven't already. This should be run in your terminal.
@@ -100,17 +115,26 @@ unzip "$FILES_DIR/$GENOME_NAME.zip" -d "$FILES_DIR"
 # Individual files can be renamed to include the genome name for easier identification.
 ```
 
+The accompanying GenBank file (`.gbff`) is optional for CONTENTO itself but is useful for downstream tools such as anvi'o, Prokka, or Bakta.
+
 ## 1.3 Generate your own GFF3 file (Optional)
 
-For genomes not available in NCBI, you can generate your own GFF3 file using Prokka [@Seemann2014] or similar annotation tools. Ensure your GFF3 includes necessary attributes (e.g., `locus_tag`, `product`, etc.).
+For newly assembled genomes or organisms lacking public annotations, you may generate your own annotation files using tools such as Prokka or Bakta. These tools typically produce GFF3 files that can be processed using the same workflow described below.
+Regardless of the annotation source, the resulting GFF3 should contain stable gene identifiers (e.g. locus_tag) that correspond to the identifiers used in downstream RNA-Seq quantification.
 
 ------------------------------------------------------------------------
 
-# Step 2: Parse Source File into an Annotation Data Frame
+# Step 2: Parse Source Annotations into a CONTENTO Annotation Data Frame
+
+::: callout-important
+### IMPORTANT:
+
+CONTENTO annotation files are standard R data frames saved as `.rds` files. The only universally required column is `Geneid` whose values must match the gene identifiers stored in `rownames(se)`.
+:::
 
 ## 2.1 From a GTF (Ensembl)
 
-CONTENTO minimal requirement is a `Geneid` column. We can import this from the `gene_id` attribute in the GTF file using `rtracklayer`, along with other useful information such as gene name and biotype.
+We can import `Geneid` from the `gene_id` attribute in the GTF file using `rtracklayer`, along with other useful information such as gene name and biotype.
 
 ```{r}
 # Set up your R environment and read the GTF file. Adapt based on the GTF name and location
@@ -140,7 +164,7 @@ saveRDS(annotations, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.rds")))
 
 ## 2.2 From a GFF3 (NCBI/Prokka)
 
-CONTENTO minimal requirement is a `Geneid` column. The GFF3 file contains this information as `locus_tag` which we can parse along with other useful information from the `attributes` column.
+The GFF3 file contains the `Geneid` info information as `locus_tag`, which we can parse along with other useful information from the `attributes` column.
 
 ```{r}
 # Set up your R environment and read the GFF3 file. Adapt based on the GFF3 name and location
@@ -223,7 +247,7 @@ saveRDS(annotations, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.rds")))
 
 ------------------------------------------------------------------------
 
-# Step 3: Add Additional Annotations (Optional)
+# Step 3: Enhance Your Annotation File (Optional)
 
 The GTF/GFF3 derived file provides basic gene information, but you can significantly enhance your annotations by running additional bioinformatic tools.
 
@@ -428,7 +452,7 @@ anvio_annot <- anvio_annot |>
   left_join(anvio_calls, by = "gene_callers_id")
 ```
 
-### Merge Anvi'o Annotations 
+### Merge Anvi'o Annotations
 
 Finally, you should merge the anvi'o annotations with the GFF3-derived annotations and the custom annotations from RegPrecise to create a comprehensive annotation CSV file for CONTENTO.
 
@@ -450,7 +474,6 @@ write_csv(annotations_merged, output_file)
 saveRDS(annotations_merged, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise_Anvio.rds")))
 ```
 
-
 ------------------------------------------------------------------------
 
 # Step 4: Verify Your Annotation File
@@ -464,7 +487,3 @@ Before uploading, confirm:
 - [ ] File is saved as `.rds` containing a data frame (not a tibble-only object issue, not a list).
 
 If a feature is greyed out or missing in the app (e.g. MSigDB radio button absent, neighborhood tab missing), it's almost always one of the above checks failing silently.
-
-
-
-
