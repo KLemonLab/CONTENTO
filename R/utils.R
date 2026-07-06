@@ -16,6 +16,33 @@ find_annotation_path <- function(annotation) {
   }
 }
 
+#' Check if SE rownames are Ensembl-style IDs
+#' @export
+se_rownames_are_ensembl <- function(se) {
+  ids <- head(rownames(se)[nzchar(rownames(se))], 20)
+  length(ids) > 0 && any(grepl("^ENS[A-Z]*G[0-9]{11}", ids))
+}
+
+#' Detect the Ensembl gene ID column in an annotation data frame
+#'
+#' Scans column values looking for Ensembl-style IDs (ENSG..., ENSMUSG...,
+#' ENSRNOG..., etc.). Returns the first matching column name, or NULL.
+#'
+#' @param annot_df Data frame of gene annotations
+#' @return Character column name, or NULL if none detected
+#' @export
+detect_ensembl_col <- function(annot_df) {
+  if (!is.data.frame(annot_df) || nrow(annot_df) == 0) return(NULL)
+  for (col in colnames(annot_df)) {
+    vals <- as.character(annot_df[[col]])
+    # Sample up to 20 non-NA values for speed
+    sample_vals <- vals[!is.na(vals) & nzchar(vals)]
+    if (length(sample_vals) == 0) next
+    sample_vals <- head(sample_vals, 20)
+    if (any(grepl("^ENS[A-Z]*G[0-9]{11}", sample_vals))) return(col)
+  }
+  NULL
+}
 
 #' Extract all contrasts from a SummarizedExperiment into long format
 #'
@@ -65,7 +92,6 @@ extract_de_results <- function(se) {
   
   do.call(rbind, de_list)
 }
-
 
 #' Merge annotation data frame into a contrast data frame
 #'
@@ -119,6 +145,58 @@ merge_annotation <- function(de_df, annot) {
   }
 }
 
+#' Determine the default symbol column from available annotation columns
+#'
+#' Checks a prioritised list of common gene name column names and returns
+#' the first match found, falling back to the first available column.
+#'
+#' @param annot_cols Character vector of column names from the annotation data frame
+#' @return Character string with the name of the best candidate symbol column
+#' @export
+default_symbol_col <- function(annot_cols) {
+  found <- intersect(c("gene", "Gene", "product", "symbol", "hgnc_symbol", "gene_name"), annot_cols)
+  if (length(found) > 0) found[1] else annot_cols[1]
+}
+
+#' Apply a symbol column to a data frame with optional fallback
+#'
+#' Creates or overwrites a 'symbol' column using the specified primary column,
+#' falling back to a secondary column when the primary value is NA or empty.
+#'
+#' @param df Data frame to modify
+#' @param primary_col Character string naming the column to use as symbol
+#' @param secondary_col Character string naming the fallback column, or "none"
+#'   to disable fallback (default: "none")
+#' @return The input data frame with a 'symbol' column added or updated.
+#'   Returns df unchanged if primary_col is not present.
+#' @export
+apply_symbol <- function(df, primary_col, secondary_col = "none") {
+  if (!primary_col %in% colnames(df)) return(df)
+  if (!is.null(secondary_col) && secondary_col != "none" &&
+      secondary_col %in% colnames(df)) {
+    df |>
+      dplyr::mutate(symbol = ifelse(
+        is.na(.data[[primary_col]]) | as.character(.data[[primary_col]]) == "",
+        as.character(.data[[secondary_col]]),
+        as.character(.data[[primary_col]])
+      ))
+  } else {
+    df |>
+      dplyr::mutate(symbol = as.character(.data[[primary_col]]))
+  }
+}
+
+
+#' Map a data frame's Geneid to Ensembl IDs using an annotation lookup column
+#' @export
+remap_to_ensembl <- function(df, annot_df, ensembl_col) {
+  if (is.null(annot_df) || is.null(ensembl_col) || !ensembl_col %in% colnames(annot_df)) return(df)
+  lookup <- annot_df |> dplyr::select(Geneid, ensembl = dplyr::all_of(ensembl_col)) |> dplyr::distinct()
+  df |>
+    dplyr::left_join(lookup, by = "Geneid") |>
+    dplyr::mutate(Geneid = dplyr::coalesce(ensembl, Geneid)) |>
+    dplyr::select(-ensembl)
+}
 
 #' Add DE and regulation flags
 #'
@@ -150,49 +228,6 @@ add_de_flags <- function(df, lfc_cut, padj_cut, lfc_col = "log2FC") {
     )
 }
 
-#' Determine the default symbol column from available annotation columns
-#'
-#' Checks a prioritised list of common gene name column names and returns
-#' the first match found, falling back to the first available column.
-#'
-#' @param annot_cols Character vector of column names from the annotation data frame
-#' @return Character string with the name of the best candidate symbol column
-#' @export
-default_symbol_col <- function(annot_cols) {
-  found <- intersect(c("gene", "Gene", "product", "symbol", "hgnc_symbol", "gene_name"), annot_cols)
-  if (length(found) > 0) found[1] else annot_cols[1]
-}
-
-
-#' Apply a symbol column to a data frame with optional fallback
-#'
-#' Creates or overwrites a 'symbol' column using the specified primary column,
-#' falling back to a secondary column when the primary value is NA or empty.
-#'
-#' @param df Data frame to modify
-#' @param primary_col Character string naming the column to use as symbol
-#' @param secondary_col Character string naming the fallback column, or "none"
-#'   to disable fallback (default: "none")
-#' @return The input data frame with a 'symbol' column added or updated.
-#'   Returns df unchanged if primary_col is not present.
-#' @export
-apply_symbol <- function(df, primary_col, secondary_col = "none") {
-  if (!primary_col %in% colnames(df)) return(df)
-  if (!is.null(secondary_col) && secondary_col != "none" &&
-      secondary_col %in% colnames(df)) {
-    df |>
-      dplyr::mutate(symbol = ifelse(
-        is.na(.data[[primary_col]]) | as.character(.data[[primary_col]]) == "",
-        as.character(.data[[secondary_col]]),
-        as.character(.data[[primary_col]])
-      ))
-  } else {
-    df |>
-      dplyr::mutate(symbol = as.character(.data[[primary_col]]))
-  }
-}
-
-
 #' Get top DE genes as a character vector of Geneids
 #' @param selected_data Data frame from selected_data() reactive with DE flags
 #' @param top_n Integer number of top genes to return
@@ -208,41 +243,6 @@ get_top_de_genes <- function(selected_data, top_n, lfc_col = "log2FC") {
     slice_head(n = top_n) |>
     pull(Geneid)
 }
-
-
-#' Subset, optionally relabel, and scale VST assay values for a specified set of genes
-#' @description
-#' Subsets a VST assay from a SummarizedExperiment object to a specified set of
-#' Geneids, optionally replaces rownames with gene symbols, and returns a
-#' column-wise scaled expression matrix.
-#' @param se_obj A \code{SummarizedExperiment} object containing a \code{"vst"} assay.
-#' @param geneids Character vector of Geneids to subset from the VST matrix.
-#' @param de_df Optional data frame containing columns \code{Geneid} and
-#'   \code{symbol} used to relabel rows. If provided, rownames are replaced with
-#'   matching gene symbols.
-#' @details
-#' Geneids not present in \code{se_obj} are silently dropped. When \code{de_df} is
-#' provided, rownames are replaced using a match between \code{Geneid} and
-#' \code{symbol}. Unmatched Geneids may result in \code{NA} rownames, and duplicated
-#' symbols are not resolved.
-#' The resulting matrix is scaled using \code{scale()}, which centers and
-#' standardizes values across columns (i.e., per sample).
-#' @return
-#' A numeric matrix of scaled VST values with rows corresponding to genes
-#' (Geneids or symbols, depending on \code{de_df}) and columns corresponding to samples.
-#' @export
-subset_scale_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
-  mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], ]
-  
-  if (!is.null(de_df) && "symbol" %in% colnames(de_df)) {
-    sym_lookup <- de_df |>
-      dplyr::distinct(Geneid, symbol)
-    rownames(mat) <- sym_lookup$symbol[match(rownames(mat), sym_lookup$Geneid)]
-  }
-  
-  scale(mat)
-}
-
 
 #' Build a wide comparison table of log2FC and DE status per contrast
 #'
@@ -295,6 +295,40 @@ build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
     arrange(Geneid)
 }
 
+
+#' Subset, optionally relabel, and scale VST assay values for a specified set of genes
+#' @description
+#' Subsets a VST assay from a SummarizedExperiment object to a specified set of
+#' Geneids, optionally replaces rownames with gene symbols, and returns a
+#' column-wise scaled expression matrix.
+#' @param se_obj A \code{SummarizedExperiment} object containing a \code{"vst"} assay.
+#' @param geneids Character vector of Geneids to subset from the VST matrix.
+#' @param de_df Optional data frame containing columns \code{Geneid} and
+#'   \code{symbol} used to relabel rows. If provided, rownames are replaced with
+#'   matching gene symbols.
+#' @details
+#' Geneids not present in \code{se_obj} are silently dropped. When \code{de_df} is
+#' provided, rownames are replaced using a match between \code{Geneid} and
+#' \code{symbol}. Unmatched Geneids may result in \code{NA} rownames, and duplicated
+#' symbols are not resolved.
+#' The resulting matrix is scaled using \code{scale()}, which centers and
+#' standardizes values across columns (i.e., per sample).
+#' @return
+#' A numeric matrix of scaled VST values with rows corresponding to genes
+#' (Geneids or symbols, depending on \code{de_df}) and columns corresponding to samples.
+#' @export
+subset_scale_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
+  mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], ]
+  
+  if (!is.null(de_df) && "symbol" %in% colnames(de_df)) {
+    sym_lookup <- de_df |>
+      dplyr::distinct(Geneid, symbol)
+    rownames(mat) <- sym_lookup$symbol[match(rownames(mat), sym_lookup$Geneid)]
+  }
+  
+  scale(mat)
+}
+
 #' Get the msigdbr db_species code for a given organism name
 #'
 #' Returns "MM" for Mus musculus and "HS" for all other species supported by
@@ -338,26 +372,7 @@ get_msigdbr_collections <- function(db_species) {
 }
 
 
-#' Detect the Ensembl gene ID column in an annotation data frame
-#'
-#' Scans column values looking for Ensembl-style IDs (ENSG..., ENSMUSG...,
-#' ENSRNOG..., etc.). Returns the first matching column name, or NULL.
-#'
-#' @param annot_df Data frame of gene annotations
-#' @return Character column name, or NULL if none detected
-#' @export
-detect_ensembl_col <- function(annot_df) {
-  if (!is.data.frame(annot_df) || nrow(annot_df) == 0) return(NULL)
-  for (col in colnames(annot_df)) {
-    vals <- as.character(annot_df[[col]])
-    # Sample up to 20 non-NA values for speed
-    sample_vals <- vals[!is.na(vals) & nzchar(vals)]
-    if (length(sample_vals) == 0) next
-    sample_vals <- head(sample_vals, 20)
-    if (any(grepl("^ENS[A-Z]*G[0-9]{11}", sample_vals))) return(col)
-  }
-  NULL
-}
+
 
 #' Get all potential gsea columns available in dataframe
 #'
@@ -613,21 +628,4 @@ build_download_filename <- function(input, state,
   return(fname)
 }
 
-#' Check if SE rownames are Ensembl-style IDs
-#' @export
-se_rownames_are_ensembl <- function(se) {
-  ids <- head(rownames(se)[nzchar(rownames(se))], 20)
-  length(ids) > 0 && any(grepl("^ENS[A-Z]*G[0-9]{11}", ids))
-}
 
-
-#' Map a data frame's Geneid to Ensembl IDs using an annotation lookup column
-#' @export
-remap_to_ensembl <- function(df, annot_df, ensembl_col) {
-  if (is.null(annot_df) || is.null(ensembl_col) || !ensembl_col %in% colnames(annot_df)) return(df)
-  lookup <- annot_df |> dplyr::select(Geneid, ensembl = dplyr::all_of(ensembl_col)) |> dplyr::distinct()
-  df |>
-    dplyr::left_join(lookup, by = "Geneid") |>
-    dplyr::mutate(Geneid = dplyr::coalesce(ensembl, Geneid)) |>
-    dplyr::select(-ensembl)
-}
