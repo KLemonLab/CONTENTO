@@ -352,11 +352,15 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   output$conditionSelectUI_geseca <- renderUI({
     req(state$se_obj())
     available_vars <- colnames(colData(state$se_obj()))
-    default_var <- tryCatch({
-      meta <- metadata(state$se_obj())
-      if (!is.null(meta$design_formula)) all.vars(as.formula(meta$design_formula))[1]
-      else available_vars[1]
-    }, error = function(e) available_vars[1])
+    default_var <- if ("condition" %in% available_vars) {
+      "condition"
+    } else {
+      tryCatch({
+        meta <- metadata(state$se_obj())
+        if (!is.null(meta$design_formula)) all.vars(as.formula(meta$design_formula))[1]
+        else available_vars[1]
+      }, error = function(e) available_vars[1])
+    }
     fluidRow(
       column(6, selectInput("geseca_color_var", "Color by:", choices = available_vars, selected = default_var)),
       column(6, selectInput("geseca_sort_var",  "Sort by:",  choices = available_vars, selected = default_var))
