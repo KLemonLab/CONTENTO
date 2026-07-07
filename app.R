@@ -38,8 +38,18 @@ source("R/explore_gene_server.R")
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 
 ui <- dashboardPage(
-  dashboardHeader(title = "RNASeq Explorer"),
-  
+  dashboardHeader(
+    title = strong("CONTENTO"),
+    tags$li(class = "dropdown",
+            tags$a(icon("github"), " GitHub",
+                   href = "https://github.com/KLemonLab/RNASeqApp",
+                   target = "_blank")),
+    tags$li(class = "dropdown",
+            tags$a(icon("flask"), " Lemon Lab",
+                   href = "https://www.bcm.edu/research/faculty-labs/katherine-lemon-lab",
+                   target = "_blank"))
+  ),
+
   dashboardSidebar(
     collapsed = FALSE,
     sidebarMenu(
@@ -56,7 +66,7 @@ ui <- dashboardPage(
               placeholder = "SE object (.rds)"),
     uiOutput("annotationStatus"),
     hr(),
-    h4("DE Cutoffs", style = "padding-left: 20px;"),
+    h4("Differential Expression Settings", style = "padding-left: 20px;"),
     selectInput("global_lfc_col", "fold-change column",
                 choices = c("Shrunken (log2FC_shrunk)" = "log2FC_shrunk",
                             "Unshrunken (log2FC)"      = "log2FC"),
@@ -75,54 +85,57 @@ ui <- dashboardPage(
       
       ## ---- Getting Started -----
       tabItem(tabName = "intro",
-              
               fluidRow(
-                box(title = "Welcome to the KLemon Lab RNASeq Explorer!", width = 12,
-                    status = "info", solidHeader = TRUE,
-                    tags$h4("Required Inputs (Upload on the left sidebar):"),
-                    tags$ul(
-                      tags$li(strong("SE file:"), " SummarizedExperiment object containing counts, contrasts, and optional variance partition data."),
-                      tags$li(strong("Annotation:"), " Automatically loaded from your annotations folder to match the metadata in your SE object. Upload if needed."),
-                      tags$li(strong("DE Cutoffs:"), " Select fold-change column and adjust cutoffs for fold-change and p-value to define significance.")
-                    )
-                )
-              ),
-              
-              fluidRow(
-                box(title = tagList(icon("chart-line"), "Explore by Contrast"), width = 12,
-                    status = "success", solidHeader = TRUE,
-                    p("Select a contrast to explore its results."),
-                    tags$ul(
-                      tags$li(strong("Selected Genes:"), " Table of differential expression results."),
-                      tags$li(strong("Volcano Plot:"), " Interactive plot of significance vs. fold-change."),
-                      tags$li(strong("GSEA:"), " Gene Set Enrichment Analysis ranked by DE statistics.")
-                    )
-                )
-              ),
-              fluidRow(
-                box(title = tagList(icon("exchange-alt"), "Compare Contrast"), width = 12,
-                    status = "warning", solidHeader = TRUE,
-                    p("Compare multiple contrasts simultaneously."),
-                    tags$ul(
-                      tags$li(strong("Heatmap:"), " Visualizes top DE genes across all samples using VST Z-scores."),
-                      tags$li(strong("DEG Overlap:"), " Shows overlap of significant genes between selected contrasts."),
-                      tags$li(strong("Gene Sets Overlap:"), " Shows overlap of enriched gene sets between selected contrasts (GSEA)."),
-                      tags$li(strong("GESECA:"), " Gene Set Co-expression Analysis across all samples.")
-                    )
-                )
+                column(width = 2,
+                       tags$img(src = "logo_hex.svg", style = "width: 100%; max-width: 160px; margin-top: 10px;")),
+                column(width = 10,
+                       box(title = strong("Welcome CONTENTO: CONTrast ExploratioN Toolkit for Omics"), width = 12,
+                           status = "info", solidHeader = TRUE,
+                           p(strong("CONTENTO"), " is an interactive dashboard for exploring and comparing differential ",
+                             "expression and functional enrichment results across any number of contrasts from ",
+                             "DESeq2-processed RNAseq data. Supporting both microbial and host transcriptomes, ",
+                             "it is a great resource for dual host-microbe experimental designs."),
+                           p("Upload a", strong("SummarizedExperiment (SE) object"), "on the left sidebar to begin. ",
+                             "An annotation file is optional but unlocks gene labels, functional enrichment, ",
+                             "and (for bacteria) neighborhood analysis."),
+                           p("Once an annotation is loaded, use ", strong("Select Gene symbol/label column"), " to choose ",
+                             "which annotation column is displayed as the gene label throughout tables and plots."),
+                           p("Use the ", strong("Differential Expression Settings"), " in the sidebar to choose your ",
+                             "fold-change column and set fold-change and FDR cutoffs — these apply globally across ",
+                             "all tabs and update DE calls, tables, and plots in real time."),
+                           tags$div(style = "display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;",
+                                    tags$a(icon("file-alt"), "How to install CONTENTO",
+                                           href = "articles/install.html", target = "_blank",
+                                           class = "btn btn-outline-secondary"),
+                                    tags$a(icon("file-alt"), " How to create your SE file",
+                                           href = "articles/create-se-file.html", target = "_blank",
+                                           class = "btn btn-outline-secondary"),
+                                    tags$a(icon("file-alt"), " How to create annotation files",
+                                           href = "articles/create-genome-annotations.html", target = "_blank",
+                                           class = "btn btn-outline-secondary")
+                           )
+                       ))
               ),
               fluidRow(
-                box(title = tagList(icon("dna"), "Explore by Gene"), width = 12,
-                    status = "danger", solidHeader = TRUE,
-                    p("Visualize expression for a single gene across conditions."),
-                    tags$ul(
-                      tags$li(strong("Gene Info:"), " Displays gene annotations from your annotation file."),
-                      tags$li(strong("Expression Plot:"), " VST-normalized expression for the selected gene."),
-                      tags$li(strong("Gene Table:"), " DE results across all contrasts, colored by regulation."),
-                      tags$li(strong("Variance Decomposition:"), " Fraction of variance explained by experimental factors."),
-                      tags$li(strong("Neighborhood Analysis:"), " Genes upstream/downstream in bacterial datasets.")
-                    )
-                )
+                style = "margin-top: 15px;",
+                column(width = 4,
+                       actionButton("go_contrast", class = "info-card-btn",
+                                    label = tagList(
+                                      h4(icon("chart-line"), strong(" Explore by Contrast")),
+                                      p("DE table, volcano plot, and single-contrast GSEA.")
+                                    ))),
+                column(width = 4,
+                       actionButton("go_compare", class = "info-card-btn",
+                                    label = tagList(
+                                      h4(icon("exchange-alt"), strong(" Compare Contrast")),
+                                      p("DEG overlap, heatmap, multi-contrast GSEA, GESECA.")
+                                    ))),
+                column(width = 4,
+                       actionButton("go_gene", class = "info-card-btn",
+                                    label = tagList(
+                                      h4(icon("dna"), strong(" Explore by Gene")),
+                                      p("Gene info, expression plot, variance decomposition.")
+                                    )))
               )
       ),
       
@@ -196,6 +209,10 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 200 * 1024^2)
+  
+  observeEvent(input$go_contrast, updateTabItems(session, "tabs", "contrast"))
+  observeEvent(input$go_compare,  updateTabItems(session, "tabs", "compare"))
+  observeEvent(input$go_gene,     updateTabItems(session, "tabs", "gene"))
 
   # Shared state across all server modules
   state <- list(
