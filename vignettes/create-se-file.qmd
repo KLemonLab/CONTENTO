@@ -12,6 +12,174 @@ format:
     theme: cosmo
 ---
 
-# Overview:
+# Overview
 
-This is a placeholder file
+CONTENTO expects a single `SummarizedExperiment` (SE) object, saved as `.rds`,
+containing your DESeq2 (or equivalent) contrast results, a variance-stabilized
+expression matrix, and a small set of metadata fields that drive routing
+throughout the app (organism detection, MSigDB eligibility, gene labels,
+download filenames, etc.).
+
+This document describes, piece by piece, how to build that object from a
+typical DESeq2 workflow with multiple contrasts. Adapt the `dds`/`res` object
+names to your own pipeline — the important part is the **shape** of the final
+SE, not the tool used to generate it.
+
+::: callout-important
+### Minimum requirements
+
+- `assay(se, "vst")` — variance-stabilized expression matrix (genes x samples)
+- `rowData(se)` — per-contrast columns named `<statistic>_<contrast>`
+- `metadata(se)$contrasts` — character vector of contrast names, matching the
+  suffixes used in `rowData(se)`
+- `rownames(se)` — gene identifiers (Ensembl IDs, locus tags, etc.), matching
+  the annotation file's `Geneid` column if you use one
+:::
+
+------------------------------------------------------------------------
+
+# Step 1: Build the rowData contrast columns
+
+For each contrast, CONTENTO looks for columns following the pattern
+`baseMean_<contrast>`, `log2FoldChange_<contrast>`,
+`log2FoldChange_shrunk_<contrast>`, `lfcSE_<contrast>`, `stat_<contrast>`,
+`pvalue_<contrast>`, and `padj_<contrast>` (see `extract_de_results()` in
+`utils.R`). Any of these can be missing for a given contrast — missing columns
+are filled with `NA` — but `stat_<contrast>` is required if you want to run
+GSEA for that contrast (used as the ranking statistic).
+
+```{r}
+library(DESeq2)
+library(tidyverse)
+
+# Example: dds already fit with DESeq(); contrasts is a named list of
+# contrast specifications passed to results()/lfcShrink()
+contrasts_list <- list(
+  "treated_vs_control"   = c("condition", "treated", "control"),
+  "mutant_vs_wildtype"   = c("genotype", "mutant", "wildtype")
+)
+
+rd <- data.frame(row.names = rownames(dds))
+
+for (cname in names(contrasts_list)) {
+  res        <- results(dds, contrast = contrasts_list[[cname]])
+  res_shrunk <- lfcShrink(dds, contrast = contrasts_list[[cname]], type = "ashr")
+
+  rd[[paste0("baseMean_", cname)]]             <- res$baseMean
+  rd[[paste0("log2FoldChange_", cname)]]        <- res$log2FoldChange
+  rd[[paste0("log2FoldChange_shrunk_", cname)]] <- res_shrunk$log2FoldChange
+  rd[[paste0("lfcSE_", cname)]]                  <- res$lfcSE
+  rd[[paste0("stat_", cname)]]                   <- res$stat
+  rd[[paste0("pvalue_", cname)]]                 <- res$pvalue
+  rd[[paste0("padj_", cname)]]                   <- res$padj
+}
+```
+
+------------------------------------------------------------------------
+
+# Step 2: Add the VST assay
+
+The `"vst"` assay is used for the expression plots, heatmaps, and GESECA
+co-expression analysis. It must be named exactly `"vst"`.
+
+```{r}
+vst_mat <- assay(vst(dds, blind = FALSE))
+```
+
+------------------------------------------------------------------------
+
+# Step 3: Assemble the SE object
+
+```{r}
+se <- SummarizedExperiment(
+  assays  = list(vst = vst_mat),
+  rowData = DataFrame(rd),
+  colData = colData(dds)
+)
+```
+
+------------------------------------------------------------------------
+
+# Step 4: Set metadata fields
+
+All of these live in `metadata(se)` and are optional except `contrasts`,
+which is required for the app to load at all (`extract_de_results()` errors
+without it).
+
+```{r}
+metadata(se)$contrasts <- names(contrasts_list)
+
+# Organism name — must exactly match a msigdbr species name (e.g.
+# "Homo sapiens", "Mus musculus") to enable MSigDB gene sets, or the literal
+# string "Bacteria" to enable the Genomic Neighborhood Analysis tab.
+metadata(se)$organism <- "Homo sapiens"
+
+# Name of a built-in annotation .rds file (without extension) shipped in
+# inst/annotations/ — see create-genome-annotations.qmd. Leave NULL/omit to
+# require the user to upload their own annotation file instead.
+metadata(se)$annotation <- "Homo_sapiens.GRCh38.113"
+
+# Optional: force MSigDB db_species ("HS" or "MM") instead of deriving it
+# from `organism`, e.g. for a species only supported via ortholog mapping.
+metadata(se)$db_species <- NULL
+
+# Optional: used only in the GESECA condition-selector default
+# (conditionSelectUI_geseca in compare_contrast_server.R).
+metadata(se)$design_formula <- "~ condition"
+
+# Optional: used as the base name for all download filenames
+# (build_download_filename() in utils.R). Falls back to the uploaded
+# file name if omitted.
+metadata(se)$dataset_name <- "MyStudy_RNAseq"
+```
+
+------------------------------------------------------------------------
+
+# Step 5 (Optional): Add variance partition data
+
+If you've run `variancePartition::fitExtractVarPartModel()`, store the result
+under `varpart_` prefixed columns in `rowData(se)` — `load_files_server.R`
+detects any column matching `^varpart_` and builds the Variance Decomposition
+tab automatically.
+
+```{r}
+library(variancePartition)
+
+varPart <- fitExtractVarPartModel(vst_mat, ~ (1|condition) + (1|batch), colData(dds))
+
+for (factor_name in colnames(varPart)) {
+  rowData(se)[[paste0("varpart_", factor_name)]] <- varPart[[factor_name]]
+}
+```
+
+------------------------------------------------------------------------
+
+# Step 6: Save the SE object
+
+```{r}
+saveRDS(se, "MyStudy_SE.rds")
+```
+
+------------------------------------------------------------------------
+
+# Step 7: Verify your SE file
+
+Before uploading, confirm:
+
+- [ ] `assay(se, "vst")` exists and has the same genes/samples as `rowData`/`colData`.
+- [ ] `metadata(se)$contrasts` is a character vector, and each name has a
+  matching set of `<statistic>_<contrast>` columns in `rowData(se)`.
+- [ ] `rownames(se)` match the `Geneid` values in your annotation file exactly
+  (same case, same format).
+- [ ] If using MSigDB: `metadata(se)$organism` exactly matches a `msigdbr`
+  species name, and either `rownames(se)` are Ensembl IDs or your annotation
+  file has a detectable Ensembl ID column.
+- [ ] If using the Bacteria neighborhood tab: `metadata(se)$organism` is
+  exactly `"Bacteria"` and the annotation file has `start`, `end`, `strand`.
+- [ ] File is saved as `.rds` and contains a `SummarizedExperiment` object
+  (not a `DESeqDataSet` or list).
+
+If a feature is missing in the app (e.g. no contrasts show up, MSigDB radio
+absent, Variance Decomposition tab missing), it is almost always one of the
+above checks failing silently — see `create-genome-annotations.qmd` for the
+matching annotation-file checklist.
