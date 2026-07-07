@@ -90,7 +90,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                withSpinner(DTOutput("gseaResultsTable"), type = 5),
                hr(),
                h4(strong("Top 20 Enriched Gene Sets (FDR < 0.05)")),
-               withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5)
+               withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
+               uiOutput("volcanoGeneSetPlotUI")
+
       )
     )
     do.call(tabsetPanel, c(list(type = "pills"), tabs))
@@ -129,6 +131,27 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     )
   })
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### UI: Volcano Plot Colored by Gene Set #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$volcanoGeneSetPlotUI <- renderUI({
+    req(state$se_obj())
+    has_annot <- length(state$available_gsea_columns()) > 0
+    if (!has_annot) return(NULL)
+    
+    # Only show once the user has actually selected the annotation source
+    # (covers the "both available" case where a radio does exist)
+    src <- resolve_gsea_source(input, state, organism(), "gsea_source", "gs_collection", "annot_source")
+    req_ok <- !is.null(src) && src$source_type == "annotation"
+    if (!req_ok) return(NULL)
+    
+    tagList(
+      hr(),
+      h4(strong("Volcano Plot Colored by Gene Set")),
+      withSpinner(plotlyOutput("volcanoGeneSetPlot", height = "500px"), type = 5)
+    )
+  })
+  
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 2: DATA PROCESSING & ANALYSIS ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
@@ -155,6 +178,43 @@ explore_contrast_server <- function(input, output, session, state, organism) {
           )
         )
     }, error = handle_filter_data_error)
+  })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: DEG Colored by Gene Set #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  volcano_geneset_data <- reactive({
+    req(selected_data(), genesets())
+    req(genesets()$source_type == "annotation")
+    
+    col <- genesets()$label
+    annot <- state$annotation_df()
+    req(col %in% colnames(annot))
+    
+    lookup <- annot |>
+      dplyr::filter(!is.na(.data[[col]]) & .data[[col]] != "") |>
+      dplyr::select(Geneid, geneset_val = dplyr::all_of(col)) |>
+      dplyr::mutate(geneset_val = strsplit(as.character(geneset_val), "!!!")) |>
+      tidyr::unnest(geneset_val) |>
+      dplyr::mutate(geneset_val = trimws(geneset_val)) |>
+      dplyr::filter(geneset_val != "") |>
+      dplyr::distinct()
+    
+    de_only <- selected_data() |> dplyr::filter(DE)
+    
+    de_colored <- de_only |>
+      dplyr::inner_join(lookup, by = "Geneid") |>
+      dplyr::mutate(tooltip2 = paste0(tooltip, "\n", col, ": ", geneset_val))
+    
+    de_na <- de_only |>
+      dplyr::filter(!Geneid %in% de_colored$Geneid) |>
+      dplyr::mutate(tooltip2 = paste0(tooltip, "\n", col, ": NA"))
+    
+    list(
+      not_de  = selected_data() |> dplyr::filter(!DE),
+      de_na   = de_na,
+      colored = de_colored
+    )
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -396,6 +456,45 @@ explore_contrast_server <- function(input, output, session, state, organism) {
         )
       )
     }, server = FALSE)
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Volcano Plot Colored by Gene Set ###
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$volcanoGeneSetPlot <- renderPlotly({
+    req(volcano_geneset_data())
+    tryCatch({
+      x_col <- if (input$global_lfc_col %in% colnames(selected_data())) input$global_lfc_col else "log2FC"
+      d <- volcano_geneset_data()
+      has_colored <- nrow(d$colored) > 0
+      
+      gg <- ggplot() +
+        geom_point(data = d$not_de, aes(x = .data[[x_col]], y = -log10(padj), text = tooltip),
+                   color = "#d9d9d9", alpha = 0.5) +
+        geom_point(data = d$de_na, aes(x = .data[[x_col]], y = -log10(padj), text = tooltip2),
+                   color = "#6e6e6e", alpha = 0.7)
+      
+      if (has_colored) {
+        n_cat <- length(unique(d$colored$geneset_val))
+        gg <- gg +
+          geom_point(data = d$colored, aes(x = .data[[x_col]], y = -log10(padj),
+                                           color = geneset_val, text = tooltip2),
+                     alpha = 0.8, show.legend = FALSE) +
+          scale_color_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(n_cat))
+      }
+      
+      gg <- gg +
+        geom_vline(xintercept = c(-input$global_log2FC_cutoff, input$global_log2FC_cutoff), linetype = "dashed", color = "#888888") +
+        geom_hline(yintercept = -log10(input$global_padj_cutoff), linetype = "dashed", color = "#888888") +
+        labs(title = paste0("DEGs colored by: ", genesets()$label), x = x_col, y = "-log10(FDR)") +
+        theme_minimal()
+      
+      if (!has_colored) {
+        showNotification("No DE genes matched any category in this column", type = "warning")
+      }
+      
+      ggplotly(gg, tooltip = "text") |> layout(showlegend = FALSE)
+    }, error = handle_volcano_plot_error)
+  })
 
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
