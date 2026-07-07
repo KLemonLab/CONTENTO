@@ -71,7 +71,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                                       tags$b("Annotation: "), 
                                       "Gene sets from your annotation columns (e.g. KEGG, COG)."),
                               tags$li("Gene sets are ranked by NES (Normalized Enrichment Score) and Leading-edge genes indicate core contributors to enrichment"),
-                              tags$li("Plot shows top 20 enriched gene sets (FDR < 0.05) based on selected gene set source and collection")
+                              tags$li("Plot shows top 20 enriched gene sets (FDR < 0.05) based on selected gene set source and collection"),
+                              tags$li("Volcano plot highlights DEGs colored by gene set (annotation-based only); hover over points to view gene details, and download the plot in the interactive viewer")
                             )
                         )
                  ),
