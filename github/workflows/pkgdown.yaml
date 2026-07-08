@@ -1,9 +1,9 @@
+name: pkgdown
+
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
-
-name: pkgdown
 
 permissions:
   contents: write
@@ -17,10 +17,7 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
       - uses: r-lib/actions/setup-pandoc@v2
 
-      - name: Install system deps
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
-
-      - name: Install R deps
+      - name: Install dependencies
         run: |
           install.packages(c("pkgdown", "remotes"))
           remotes::install_deps(dependencies = TRUE)
