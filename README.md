@@ -1,24 +1,24 @@
-# Contendo
-> _RNASeq explorer and analysis dashboard_
+# CONTENTO
+> _CONTrast ExploratioN Toolkit for Omics_
 
 ## Intro
 
 Shiny App for RNASeq Results Exploration
 
-## Running Contendo
+## Running CONTENTO
 
-Contendo can be executed in three different ways depending on your computational environment and familiarity with containerized software. We strongly recommend the Docker-based workflows, as they guarantee complete reproducibility across operating systems and avoid dependency conflicts.
+CONTENTO can be executed in three different ways depending on your computational environment and familiarity with containerized software. We strongly recommend the Docker-based workflows, as they guarantee complete reproducibility across operating systems and avoid dependency conflicts.
 
 ### _Option 1:_ Run using Docker (recommended)
 
-If Docker is not yet installed on your system, we recommend you install Docker Desktop for your operating from the [official website](https://www.docker.com/products/docker-desktop/), since it provides a friendly graphic interface to manage your images and keep your Docker Engine up-to-date. If you already have Docker installed, running Contendo requires a single command from your terminal _(make sure while Docker Desktop is running)_:
+If Docker is not yet installed on your system, we recommend you install Docker Desktop for your operating from the [official website](https://www.docker.com/products/docker-desktop/), since it provides a friendly graphic interface to manage your images and keep your Docker Engine up-to-date. If you already have Docker installed, running CONTENTO requires a single command from your terminal _(make sure while Docker Desktop is running)_:
 
 ```bash
 docker run \
     --rm \
     -p 3838:3838 \
     -v $(pwd)/inst:/srv/shiny-server/app/inst \
-    ghcr.io/KLemonLab/contendo:latest
+    ghcr.io/KLemonLab/contento:latest
 ```
 
 The terminal window will show the app startup and soon will start accepting connections. When you see the message that the app is listening, open your web browser (any browser) and navigate to:
@@ -32,11 +32,11 @@ This approach provides a fully reproducible computational environment with all R
 > [!NOTE] Rebuilding image from scratch
 >
 > A Dockerfile is included in the repository so taht users familiar with building container images
-> can self-build with `docker build -t contendo .` if necessary.
+> can self-build with `docker build -t contento .` if necessary.
 
 ### _Option 2:_ Run using Docker Compose
 
-For users who prefer a persistent local setup and he convenience of a preconfigured container mount, **Contendo** can also be launched using [Docker Compose](https://docs.docker.com/compose/). To do this, make sure you have the `compose` plugin installed (it is bundled with modern distributions of Docker Desktop by default) by running
+For users who prefer a persistent local setup and he convenience of a preconfigured container mount, **CONTENTO** can also be launched using [Docker Compose](https://docs.docker.com/compose/). To do this, make sure you have the `compose` plugin installed (it is bundled with modern distributions of Docker Desktop by default) by running
 
 ```bash
 docker compose --help
@@ -61,7 +61,7 @@ http://localhost:3838
 
 ### _Option 3:_ Run locally within R/RStudio
 
-Some users may prefer to execute **Contendo** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop).
+Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop).
 
 #### Install required packages
 
