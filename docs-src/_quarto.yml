@@ -1,18 +1,19 @@
 project:
   type: website
-  output-dir: docs
+  output-dir: ../docs
   render:
-    - docs-src/*.qmd
+    - "*.qmd"
 
 website:
+  title: "CONTENTO Documentation"
   navbar:
     left:
       - text: Home
-        href: docs-src/index.qmd
+        href: index.qmd
       - text: Create SE
-        href: docs-src/create-se-file.qmd
+        href: create-se-file.qmd
       - text: Genome Annotations
-        href: docs-src/create-genome-annotations.qmd
+        href: create-genome-annotations.qmd
 
 format:
   html:
