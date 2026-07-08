@@ -3,7 +3,7 @@
 
 ## Intro
 
-Shiny App for RNASeq Results Exploration
+Shiny App for RNASeq Results Exploration.
 
 ## Running CONTENTO
 
