@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-07-06">
+
+<title>CONTENTO Documentation - Create Genome Annotations for CONTENTO</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">CONTENTO Documentation</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html" rel="" target="">
+ <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./create-se-file.html" rel="" target="">
+ <span class="menu-text">Create SE</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./create-genome-annotations.html" rel="" target="" aria-current="page">
+ <span class="menu-text">Genome Annotations</span></a>
+  </li>  
+</ul>
+            <div class="quarto-navbar-tools ms-auto">
+</div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul class="collapse">
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview:</a>
+  <ul class="collapse">
+  <li><a href="#annotation-files-for-functional-enrichment-analysis" id="toc-annotation-files-for-functional-enrichment-analysis" class="nav-link" data-scroll-target="#annotation-files-for-functional-enrichment-analysis">Annotation files for functional enrichment analysis</a></li>
+  <li><a href="#additional-benefits-of-annotation-files" id="toc-additional-benefits-of-annotation-files" class="nav-link" data-scroll-target="#additional-benefits-of-annotation-files">Additional Benefits of Annotation Files</a></li>
+  <li><a href="#examples-do-i-need-an-annotation-file" id="toc-examples-do-i-need-an-annotation-file" class="nav-link" data-scroll-target="#examples-do-i-need-an-annotation-file">Examples: Do I need an annotation file?</a></li>
+  </ul></li>
+  <li><a href="#step-1-source-genome-annotations" id="toc-step-1-source-genome-annotations" class="nav-link" data-scroll-target="#step-1-source-genome-annotations">Step 1: Source Genome Annotations</a>
+  <ul class="collapse">
+  <li><a href="#ensembl-based-organisms-human-mouse-other-msigdbr-species" id="toc-ensembl-based-organisms-human-mouse-other-msigdbr-species" class="nav-link" data-scroll-target="#ensembl-based-organisms-human-mouse-other-msigdbr-species">1.1 Ensembl-Based Organisms (Human, Mouse, other msigdbr Species)</a></li>
+  <li><a href="#ncbirefseq-based-organisms-bacteria-and-other-non-ensembl-genomes" id="toc-ncbirefseq-based-organisms-bacteria-and-other-non-ensembl-genomes" class="nav-link" data-scroll-target="#ncbirefseq-based-organisms-bacteria-and-other-non-ensembl-genomes">1.2 NCBI/RefSeq-Based Organisms (Bacteria and Other Non-Ensembl Genomes)</a></li>
+  <li><a href="#generate-your-own-gff3-file-optional" id="toc-generate-your-own-gff3-file-optional" class="nav-link" data-scroll-target="#generate-your-own-gff3-file-optional">1.3 Generate your own GFF3 file (Optional)</a></li>
+  </ul></li>
+  <li><a href="#step-2-parse-source-annotations-into-a-contento-annotation-data-frame" id="toc-step-2-parse-source-annotations-into-a-contento-annotation-data-frame" class="nav-link" data-scroll-target="#step-2-parse-source-annotations-into-a-contento-annotation-data-frame">Step 2: Parse Source Annotations into a CONTENTO Annotation Data Frame</a>
+  <ul class="collapse">
+  <li><a href="#from-a-gtf-ensembl" id="toc-from-a-gtf-ensembl" class="nav-link" data-scroll-target="#from-a-gtf-ensembl">2.1 From a GTF (Ensembl)</a></li>
+  <li><a href="#from-a-gff3-ncbiprokka" id="toc-from-a-gff3-ncbiprokka" class="nav-link" data-scroll-target="#from-a-gff3-ncbiprokka">2.2 From a GFF3 (NCBI/Prokka)</a></li>
+  </ul></li>
+  <li><a href="#step-3-enhance-your-annotation-file-optional" id="toc-step-3-enhance-your-annotation-file-optional" class="nav-link" data-scroll-target="#step-3-enhance-your-annotation-file-optional">Step 3: Enhance Your Annotation File (Optional)</a>
+  <ul class="collapse">
+  <li><a href="#merge-custom-annotations" id="toc-merge-custom-annotations" class="nav-link" data-scroll-target="#merge-custom-annotations">3.1 Merge Custom Annotations</a></li>
+  <li><a href="#enhance-annotations-with-anvio-bacterial-genomes" id="toc-enhance-annotations-with-anvio-bacterial-genomes" class="nav-link" data-scroll-target="#enhance-annotations-with-anvio-bacterial-genomes">3.2 Enhance Annotations with Anvi’o (Bacterial Genomes)</a></li>
+  </ul></li>
+  <li><a href="#step-4-verify-your-annotation-file" id="toc-step-4-verify-your-annotation-file" class="nav-link" data-scroll-target="#step-4-verify-your-annotation-file">Step 4: Verify Your Annotation File</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Create Genome Annotations for CONTENTO</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">July 6, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="overview" class="level1">
+<h1>Overview:</h1>
+<p>Annotation files are optional in CONTENTO, but they enable many of the platform’s most useful features. Depending on your organism and the identifiers used in your SummarizedExperiment (SE) object, functionality may be limited without an annotation file. In particular, annotation files are used for:</p>
+<ul>
+<li>Functional enrichment analysis (GSEA/GESECA)</li>
+<li>Displaying informative gene labels and symbols</li>
+<li>Genomic neighborhood analysis (bacterial genomes only)</li>
+</ul>
+<section id="annotation-files-for-functional-enrichment-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="annotation-files-for-functional-enrichment-analysis">Annotation files for functional enrichment analysis</h2>
+<p>CONTENTO can perform functional enrichment analysis using gene sets from two sources:</p>
+<ol type="1">
+<li><p><strong>Annotation-Based Gene Sets:</strong> Available for any organism through a user-provided annotation data frame (<code>.rds</code> format). Required elements:</p>
+<ul>
+<li>A <code>Geneid</code> column matching the <code>rownames()</code> of the SE object.</li>
+<li>One or more functional annotation columns containing gene set assignments (e.g.&nbsp;COG categories, KEGG pathways, GO terms, regulons, custom categories). Multiple values per gene should be separated by <code>!!!</code> (e.g., <code>"GO:0006415!!!GO:0016149"</code>). CONTENTO will parse them by counting the gene as belonging to each category for functional enrichment analysis.</li>
+</ul></li>
+<li><p><a href="https://www.gsea-msigdb.org/gsea/msigdb"><strong>MSigDB</strong></a> <strong>Gene Sets:</strong> Available only for human, mouse, and other species supported by <a href="https://igordot.github.io/msigdbr/reference/msigdbr_species.html">msigdbr</a> R package. It requires:</p>
+<ul>
+<li><code>metadata(se)$organism</code> must exactly match a valid <code>msigdbr</code> species name (e.g.&nbsp;<code>Homo sapiens</code>, <code>Mus musculus</code>, etc.).</li>
+<li>Gene identifiers must be Ensembl gene IDs (<code>ENSG...</code>, <code>ENSMUSG...</code>, etc.), either: directly in <code>rownames(se)</code>, or in a column of the annotation file containing Ensembl IDs. CONTENTO automatically detects Ensembl identifier columns when present.</li>
+</ul></li>
+</ol>
+</section>
+<section id="additional-benefits-of-annotation-files" class="level2">
+<h2 class="anchored" data-anchor-id="additional-benefits-of-annotation-files">Additional Benefits of Annotation Files</h2>
+<p>Annotation files also improve the general CONTENTO experience.</p>
+<ul>
+<li><strong>Gene symbols/labels</strong> can be displayed throughout tables and visualizations instead of raw gene identifiers. This is especially useful for bacteria, where <code>Geneid</code> is often a locus tag (e.g.&nbsp;<code>SAUSA300_0001</code>) and not not an informative label like the associated gene name or product description.</li>
+<li><strong>Genomic neighborhood analysis</strong>, which additionally requires <code>start</code>, <code>end</code>, <code>strand</code> columns in the annotation file. This is a beta feature available only when <code>metadata(se)$organism</code> is exactly “Bacteria”)</li>
+</ul>
+</section>
+<section id="examples-do-i-need-an-annotation-file" class="level2">
+<h2 class="anchored" data-anchor-id="examples-do-i-need-an-annotation-file">Examples: Do I need an annotation file?</h2>
+<table class="table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>SE organism</th>
+<th>SE rownames</th>
+<th>Desired Enrichment</th>
+<th>Annotation file needed?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Supported by <code>msigdbr</code> (e.g.&nbsp;<em>Homo sapiens</em>)</td>
+<td>Ensembl IDs</td>
+<td>MSigDB</td>
+<td>No (optional for gene labels)</td>
+</tr>
+<tr class="even">
+<td>Supported by <code>msigdbr</code> (e.g.&nbsp;<em>Homo sapiens</em>)</td>
+<td>Non-Ensembl IDs</td>
+<td>MSigDB</td>
+<td>Yes (must contain an Ensembl ID column)</td>
+</tr>
+<tr class="odd">
+<td>Any organism</td>
+<td>Any identifiers</td>
+<td>Annotation-based enrichment</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>Any organism</td>
+<td>Any identifiers</td>
+<td>None (Differential Expression only)</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="step-1-source-genome-annotations" class="level1">
+<h1>Step 1: Source Genome Annotations</h1>
+<p>The annotation file used by CONTENTO should be derived from the same genome annotation used during RNA-Seq alignment and quantification. Using the same annotation source ensures that:</p>
+<ul>
+<li>Gene identifiers match the rownames() of your SE object.</li>
+<li>Functional annotations can be merged without identifier conversion.</li>
+<li>Gene coordinates used in the genomic neighborhood analyses are consistent with the reference genome used for alignment.</li>
+</ul>
+<p>The following sections describe how to obtain the source annotation files required to build a CONTENTO annotation data frame.</p>
+<section id="ensembl-based-organisms-human-mouse-other-msigdbr-species" class="level2">
+<h2 class="anchored" data-anchor-id="ensembl-based-organisms-human-mouse-other-msigdbr-species">1.1 Ensembl-Based Organisms (Human, Mouse, other msigdbr Species)</h2>
+<p>For organisms distributed through Ensembl, download the same GTF and genome assembly used during RNA-seq analysis. The genome FASTA is not required to create a CONTENTO annotation file, but is often downloaded alongside the GTF because both are used during alignment, genome indexing, or other downstream analyses.</p>
+<p><strong>Example:</strong> Human GRCh38 (Ensembl Release 113)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">FILES_DIR</span><span class="op">=</span><span class="st">"inst/extdata/Ensembl"</span> </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">GENOME_NAME</span><span class="op">=</span><span class="st">"Homo_sapiens.GRCh38"</span> </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="va">VERSION</span><span class="op">=</span>113</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Gene annotation file used here and in the downstream analysis</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-P</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"https://ftp.ensembl.org/pub/release-</span><span class="va">${VERSION}</span><span class="st">/gtf/homo_sapiens/</span><span class="va">${GENOME_NAME}</span><span class="st">.</span><span class="va">${VERSION}</span><span class="st">.gtf.gz"</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Reference genome used in the downstream analysis (alignment/quantification)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-P</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">"</span> <span class="dt">\ </span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"https://ftp.ensembl.org/pub/release-</span><span class="va">${VERSION}</span><span class="st">/fasta/homo_sapiens/dna/</span><span class="va">${GENOME_NAME}</span><span class="st">.dna_sm.primary_assembly.fa.gz"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="ncbirefseq-based-organisms-bacteria-and-other-non-ensembl-genomes" class="level2">
+<h2 class="anchored" data-anchor-id="ncbirefseq-based-organisms-bacteria-and-other-non-ensembl-genomes">1.2 NCBI/RefSeq-Based Organisms (Bacteria and Other Non-Ensembl Genomes)</h2>
+<p>For organisms that are not maintained in Ensembl, the preferred annotation source is typically the NCBI RefSeq assembly. These annotations are distributed as GFF3 and GenBank (<code>.gbff</code>) files and contain gene coordinates, locus tags, product descriptions, and other metadata that can be incorporated into CONTENTO annotation files.</p>
+<section id="option-a-download-from-the-ncbi-assembly-website" class="level3">
+<h3 class="anchored" data-anchor-id="option-a-download-from-the-ncbi-assembly-website">Option A: Download from the NCBI Assembly Website</h3>
+<ol type="1">
+<li>Go to <a href="https://www.ncbi.nlm.nih.gov/assembly/">NCBI Assembly</a></li>
+<li>Search for your genome accession (e.g., <code>GCF_000013465.1</code> for <em>Staphylococcus aureus</em> subsp. aureus FPR3757)</li>
+<li>Download the assembly in GFF3 format</li>
+<li>Unzip and save in your working directory</li>
+</ol>
+</section>
+<section id="option-b-download-using-the-ncbi-datasets-cli" class="level3">
+<h3 class="anchored" data-anchor-id="option-b-download-using-the-ncbi-datasets-cli">Option B: Download Using the NCBI Datasets CLI</h3>
+<p>For reproducible workflows, the NCBI Datasets command-line tool is recommended.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install NCBI Datasets CLI if you haven't already. This should be run in your terminal.</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate ncbi_datasets </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Update the genome accession and directory as needed</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="va">FILES_DIR</span><span class="op">=</span><span class="st">"inst/extdata/genomes"</span> </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="va">GENOME_NAME</span><span class="op">=</span><span class="st">"GCF_000013465.1"</span> </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Update to download the desired files (genome sequence, GenBank flat file, GFF3...)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="ex">datasets</span> download genome accession <span class="st">"</span><span class="va">$GENOME_NAME</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">--include</span> genome,gbff,gff3,seq-report <span class="dt">\</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">--filename</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">$GENOME_NAME</span><span class="st">.zip"</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Unzip</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">$GENOME_NAME</span><span class="st">.zip"</span> <span class="at">-d</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">"</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Individual files can be renamed to include the genome name for easier identification.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The accompanying GenBank file (<code>.gbff</code>) is optional for CONTENTO itself but is useful for downstream tools such as anvi’o, Prokka, or Bakta.</p>
+</section>
+</section>
+<section id="generate-your-own-gff3-file-optional" class="level2">
+<h2 class="anchored" data-anchor-id="generate-your-own-gff3-file-optional">1.3 Generate your own GFF3 file (Optional)</h2>
+<p>For newly assembled genomes or organisms lacking public annotations, you may generate your own annotation files using tools such as Prokka or Bakta. These tools typically produce GFF3 files that can be processed using the same workflow described below. Regardless of the annotation source, the resulting GFF3 should contain stable gene identifiers (e.g.&nbsp;locus_tag) that correspond to the identifiers used in downstream RNA-Seq quantification.</p>
+<hr>
+</section>
+</section>
+<section id="step-2-parse-source-annotations-into-a-contento-annotation-data-frame" class="level1">
+<h1>Step 2: Parse Source Annotations into a CONTENTO Annotation Data Frame</h1>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+IMPORTANT:
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>CONTENTO annotation files are standard R data frames saved as <code>.rds</code> files. The only universally required column is <code>Geneid</code> whose values must match the gene identifiers stored in <code>rownames(se)</code>.</p>
+</div>
+</div>
+<section id="from-a-gtf-ensembl" class="level2">
+<h2 class="anchored" data-anchor-id="from-a-gtf-ensembl">2.1 From a GTF (Ensembl)</h2>
+<p>We can import <code>Geneid</code> from the <code>gene_id</code> attribute in the GTF file using <code>rtracklayer</code>, along with other useful information such as gene name and biotype.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the GTF file. Adapt based on the GTF name and location</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rtracklayer)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/Ensembl"</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"Homo_sapiens.GRCh38.113"</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Import GTF file</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>gtf_data <span class="ot">&lt;-</span> <span class="fu">import</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">".gtf.gz"</span>)))</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract gene annotations. For available column names check colnames(mcols(gtf_data))</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">Geneid =</span> <span class="fu">mcols</span>(gtf_data)<span class="sc">$</span>gene_id,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">gene =</span> <span class="fu">mcols</span>(gtf_data)<span class="sc">$</span>gene_name,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">biotype =</span> <span class="fu">mcols</span>(gtf_data)<span class="sc">$</span>gene_biotype</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Sanity check: Ensure there are no duplicated Gene IDs</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> annotations[<span class="sc">!</span><span class="fu">duplicated</span>(annotations<span class="sc">$</span>Geneid), ]</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.csv"</span>)))</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="from-a-gff3-ncbiprokka" class="level2">
+<h2 class="anchored" data-anchor-id="from-a-gff3-ncbiprokka">2.2 From a GFF3 (NCBI/Prokka)</h2>
+<p>The GFF3 file contains the <code>Geneid</code> info information as <code>locus_tag</code>, which we can parse along with other useful information from the <code>attributes</code> column.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the GFF3 file. Adapt based on the GFF3 name and location</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>gff_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">".gff"</span>))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the GFF3 file into a data frame</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>gff_df <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  gff_file,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_names =</span> <span class="fu">c</span>(<span class="st">"seqname"</span>, <span class="st">"source"</span>, <span class="st">"feature"</span>, <span class="st">"start"</span>, <span class="st">"end"</span>, <span class="st">"score"</span>, <span class="st">"strand"</span>, <span class="st">"frame"</span>, <span class="st">"attributes"</span>),</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">comment =</span> <span class="st">"#"</span>,</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_col_types =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for CDS (protein-coding genes)</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>gff_cds <span class="ot">&lt;-</span> gff_df <span class="sc">|&gt;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(feature <span class="sc">==</span> <span class="st">"CDS"</span>)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to parse the attributes column of GFF3</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>parse_gff3_attributes <span class="ot">&lt;-</span> <span class="cf">function</span>(attributes_string) {</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  pairs <span class="ot">&lt;-</span> <span class="fu">str_split</span>(attributes_string, <span class="st">";"</span>)[[<span class="dv">1</span>]]</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  attr_list <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (pair <span class="cf">in</span> pairs) {</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (pair <span class="sc">==</span> <span class="st">""</span>) <span class="cf">next</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    parts <span class="ot">&lt;-</span> <span class="fu">str_split</span>(pair, <span class="st">"="</span>, <span class="at">n =</span> <span class="dv">2</span>)[[<span class="dv">1</span>]]</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">length</span>(parts) <span class="sc">==</span> <span class="dv">2</span>) {</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>      key <span class="ot">&lt;-</span> parts[<span class="dv">1</span>]</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>      value <span class="ot">&lt;-</span> parts[<span class="dv">2</span>]</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>      attr_list[[key]] <span class="ot">&lt;-</span> value</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(attr_list)</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the parsing function to the attributes column and create new columns for each key</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> gff_cds <span class="sc">|&gt;</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">|&gt;</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">attr_list =</span> <span class="fu">list</span>(<span class="fu">parse_gff3_attributes</span>(attributes)))  <span class="sc">|&gt;</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest_wider</span>(attr_list, <span class="at">names_repair =</span> <span class="st">"universal"</span>) <span class="sc">|&gt;</span> <span class="co"># Unnest all key=value pairs as columns</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>attributes) <span class="sc">|&gt;</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Geneid =</span> locus_tag) <span class="co"># Required column for CONTENTO</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Replace commas in GO-related annotation fields with "!!!" to be used in multiple groupings in functional analysis</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(Ontology_term, go_function, go_process, go_component), <span class="sc">~</span> <span class="fu">gsub</span>(<span class="st">","</span>, <span class="st">"!!!"</span>, .x)))</span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a><span class="co"># Aggregate CDS fragments into gene-level annotations (handles programmed frameshifts)</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Geneid) <span class="sc">|&gt;</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">start  =</span> <span class="fu">min</span>(start),</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>    <span class="at">end    =</span> <span class="fu">max</span>(end),</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="at">strand =</span> <span class="fu">unique</span>(strand),   <span class="co"># should be invariant per gene</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(</span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span><span class="fu">c</span>(start, end, strand, frame),</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>      first</span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Sanity check: Ensure there are no duplicated Gene IDs</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">duplicated</span>(annotations<span class="sc">$</span>Geneid))</span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.csv"</span>)))</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<hr>
+</section>
+</section>
+<section id="step-3-enhance-your-annotation-file-optional" class="level1">
+<h1>Step 3: Enhance Your Annotation File (Optional)</h1>
+<p>The GTF/GFF3 derived file provides basic gene information, but you can significantly enhance your annotations by running additional bioinformatic tools.</p>
+<p>These annotations are useful in CONTENTO for:</p>
+<ul>
+<li><strong>Functional enrichment analysis (GSEA)</strong> using for example COG and KEGG categories</li>
+<li><strong>Gene exploration</strong> - displaying comprehensive functional information for individual genes</li>
+</ul>
+<section id="merge-custom-annotations" class="level2">
+<h2 class="anchored" data-anchor-id="merge-custom-annotations">3.1 Merge Custom Annotations</h2>
+<p>You can merge annotations from any source that contains gene identifiers (Gene IDs). These can be sourced from:</p>
+<ul>
+<li>Public repositories</li>
+<li>Your own experimental data (e.g., Tn-seq, RNA-seq, proteomics)</li>
+<li>Manually curated annotations from literature searches</li>
+</ul>
+<p><strong>In this example</strong>, we demonstrate using RegPrecise regulon annotations, but the same approach works for any custom annotation file.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Found a Useful Annotation Source?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Open an <a href="https://github.com/KLemonLab/RNASeqApp/issues">issue on GitHub</a> to share it with the community! Include the name, URL, and how you used it.</p>
+</div>
+</div>
+<section id="requirements-and-format" class="level3">
+<h3 class="anchored" data-anchor-id="requirements-and-format">Requirements and Format</h3>
+<p><strong>Key requirement:</strong> Your custom annotation file must have a column with gene identifiers that match the <code>Geneid</code> column in your GTF/GFF3 derived annotations. This column might have a different name in your custom file (e.g., “Geneid”, “Gene ID”, “Locus tag”, …), but it should contain the same values as <code>Geneid</code>.</p>
+<p><strong>Important notes:</strong></p>
+<ul>
+<li><p><strong>Columns:</strong> Your custom annotation file can have as many additional columns as you want. All columns will be merged into the final dataframe, or you can select only a subset of columns before merging. In the merging step, you can <strong>add a prefix</strong> to custom annotation columns (e.g., <code>RegPrecise_</code>, <code>reg_</code>) to avoid name clashes and easily identify annotation sources.</p></li>
+<li><p><strong>Gene coverage:</strong> No requirement for the same number of genes as in the GTF/GFF3 derived annotations, as long as there is a common key (<code>Geneid</code>) for merging. Genes in GTF/GFF3 derived annotations without a corresponding custom annotation entry will be included in the final dataframe with <code>NA</code> values for the custom columns.</p></li>
+<li><p><strong>Multiple annotations per gene:</strong> There should be only <strong>one entry per gene</strong> in the custom annotation file. If a gene has multiple annotations, concatenate them into a single string separated by !!! (e.g., <code>"regulon1!!!regulon2"</code>). See the anvi’o example below for how to concatenate multiple values. CONTENTO will parse these and count the gene as belonging to each category for functional enrichment analysis.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Load your GFF3-derived annotations</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.csv"</span>)))</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Load custom annotation file tab delimited</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>custom_annot <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="st">"USA300_FPR3757_RegPrecise.txt"</span>))</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge the custom annotations with the GFF3-derived annotations using locus_tag as the key</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>annotations_merged <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(custom_annot, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"Geneid"</span> <span class="ot">=</span> <span class="st">"locus_tag"</span>)) <span class="sc">|&gt;</span> <span class="co"># Adjust to the "Geneid" column name in your custom annotation file</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"RegPrecise_"</span>, .), <span class="co"># Prefix custom annotation columns to avoid name clashes with GFF3-derived annotations</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">all_of</span>(<span class="fu">colnames</span>(annotations))  </span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  ) </span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>output_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.csv"</span>))</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations_merged, output_file)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations_merged, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.rds"</span>))) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="enhance-annotations-with-anvio-bacterial-genomes" class="level2">
+<h2 class="anchored" data-anchor-id="enhance-annotations-with-anvio-bacterial-genomes">3.2 Enhance Annotations with Anvi’o (Bacterial Genomes)</h2>
+<p><strong>Anvi’o</strong> is a comprehensive platform that integrates multiple annotation sources and can be used to generate a rich annotation file for bacterial genomes. It can be run on any genome in GenBank format and will produce a single annotation file with multiple functional annotations for each gene.</p>
+<ul>
+<li><strong>HMMs</strong> - Generic protein domain detection</li>
+<li><strong>COG24</strong> - Clusters of Orthologous Groups (excellent for functional enrichment)</li>
+<li><strong>KEGG</strong> - Kyoto Encyclopedia of Genes and Genomes pathways (excellent for functional enrichment)</li>
+<li><strong>Pfams</strong> - Protein family annotations</li>
+<li><strong>CAZymes</strong> - Carbohydrate-active enzyme classification</li>
+</ul>
+<section id="run-anvio-annotation-pipeline" class="level3">
+<h3 class="anchored" data-anchor-id="run-anvio-annotation-pipeline">Run Anvi’o Annotation Pipeline</h3>
+<p>For more details on how to run anvi’o see the <a href="https://anvio.org/learn/">Anvi’o documentation</a>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Anvio if you haven't already. This should be run in your terminal.</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate anvio-9</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Update the genome accession and directory as needed</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="va">FILES_DIR</span><span class="op">=</span><span class="st">"inst/extdata/genomes"</span> </span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="va">GENOME_NAME</span><span class="op">=</span><span class="st">"GCF_000013465.1"</span> </span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Process the GenBank file to extract gene calls, functions, and fasta sequences </span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-script-process-genbank</span> <span class="at">-i</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">$GENOME_NAME</span><span class="st">.gbff"</span> <span class="dt">\</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>--output-gene-calls <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_calls.txt"</span> <span class="dt">\</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>--output-functions <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_prodigal.txt"</span> <span class="dt">\</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>--output-fasta <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">.fa"</span> <span class="dt">\</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>--annotation-source prodigal <span class="dt">\</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>--include-locus-tags-as-functions</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Create anvi'o contigs database from the fasta file and gene calls</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-gen-contigs-database</span> <span class="at">-f</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">.fa"</span> <span class="dt">\</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>-o <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>--external-gene-calls <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_calls.txt"</span> <span class="dt">\</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>-n <span class="st">"</span><span class="va">$GENOME_NAME</span><span class="st">"</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Import functions from prodigal output</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-import-functions</span> <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>-i <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_prodigal.txt"</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Run HMM annotations </span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-hmms</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Run NCBI COG annotations with DIAMOND</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-ncbi-cogs</span> <span class="at">-T</span> 8 <span class="at">--search-with</span> diamond <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Run KEGG KOfam annotations</span></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-kegg-kofams</span> <span class="at">-T</span> 8 <span class="at">-E</span> 1e-15 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Run Pfam domain annotations</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-pfams</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Run CAZyme annotations</span></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-cazymes</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Export all functions to text file</span></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-export-functions</span> <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>-o <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_annot.txt"</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Export contigs stats and database info</span></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-display-contigs-stats</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>--report-as-text <span class="at">-o</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_stats.txt"</span></span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-db-info</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="op">&amp;&gt;&gt;</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_log.txt"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="parse-anvio-annotations-into-csv" class="level3">
+<h3 class="anchored" data-anchor-id="parse-anvio-annotations-into-csv">Parse Anvi’o Annotations into CSV</h3>
+<p>The resulting anvi’o annotation file contains comprehensive functional annotations for each gene, which can be parsed into a CSV format with the following R code.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the anvi'o annotation </span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.txt"</span>)), <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">source =</span> <span class="fu">as.factor</span>(source)) <span class="sc">|&gt;</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.character), trimws)) <span class="sc">|&gt;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>e_value) <span class="sc">|&gt;</span> <span class="co"># Exclude e-values to keep dataframe simple</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="st">"acc"</span> <span class="ot">=</span> <span class="st">"accession"</span>, <span class="st">"func"</span> <span class="ot">=</span> <span class="st">"function"</span>) <span class="sc">|&gt;</span> <span class="co"># Shorter names</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(acc, func), trimws))</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert from long format (multiple rows per gene) to wide format (one row per gene)</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_from =</span> source,</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_from =</span> <span class="fu">c</span>(acc, func),</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_fn =</span> <span class="fu">list</span>(</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">acc =</span> <span class="sc">~</span> <span class="fu">paste</span>(<span class="fu">unique</span>(.), <span class="at">collapse =</span> <span class="st">"!!!"</span>), </span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">func =</span> <span class="sc">~</span> <span class="fu">paste</span>(<span class="fu">unique</span>(.), <span class="at">collapse =</span> <span class="st">"!!!"</span>))</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  ) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="parse-kegg-hierarchical-annotations" class="level3">
+<h3 class="anchored" data-anchor-id="parse-kegg-hierarchical-annotations">Parse KEGG Hierarchical Annotations</h3>
+<p>The KEGG annotations from anvi’o come as hierarchical levels separated by semicolons (e.g., “Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis”). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it’s useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split multiple KEGG annotations into separate rows (one row per KEGG annotation) </span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_rows</span>(func_KEGG_Class, <span class="at">sep =</span> <span class="st">","</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Split into hierarchy levels (separated by ;)</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(func_KEGG_Class, </span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">into =</span> <span class="fu">c</span>(<span class="st">"func_KEGG_Class"</span>, <span class="st">"func_KEGG_Subclass"</span>, <span class="st">"func_KEGG_Pathway"</span>),</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep =</span> <span class="st">";"</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>           <span class="at">extra =</span> <span class="st">"drop"</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">fill =</span> <span class="st">"right"</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Collapse back to one row per gene</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="fu">starts_with</span>(<span class="st">"func_KEGG_"</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Class =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Class)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Subclass =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Subclass)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Pathway =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Pathway)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">"func_KEGG_"</span>), <span class="sc">~</span> <span class="fu">na_if</span>(., <span class="st">""</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="add-aa-sequences-to-annotations-optional" class="level3">
+<h3 class="anchored" data-anchor-id="add-aa-sequences-to-annotations-optional">Add AA Sequences to Annotations (Optional)</h3>
+<p>You can also merge the anvi’o annotations with the aa sequences from the calls file to have a comprehensive annotation dataframe with all the information for each gene. This can be useful for gene exploration in CONTENTO, where you can display the sequence along with the functional annotations for each gene.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read calls file to get aa sequences</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>anvio_calls <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_calls.txt"</span>)), <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gene_callers_id, aa_sequence)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge with anvio_annot by gene_callers_id</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(anvio_calls, <span class="at">by =</span> <span class="st">"gene_callers_id"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="merge-anvio-annotations" class="level3">
+<h3 class="anchored" data-anchor-id="merge-anvio-annotations">Merge Anvi’o Annotations</h3>
+<p>Finally, you should merge the anvi’o annotations with the GFF3-derived annotations and the custom annotations from RegPrecise to create a comprehensive annotation CSV file for CONTENTO.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load GFF3-derived annotations (with RegPrecise already merged, or use original if skipping section 3.1)</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.csv"</span>)))</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge anvi'o annotations using GENBANK_LOCUS_TAG (the column added by anvi'o) as a key for merging, which should match the Geneid column in the GFF3-derived annotations. </span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>annotations_merged <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(anvio_annot, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"Geneid"</span> <span class="ot">=</span> <span class="st">"func_GENBANK_LOCUS_TAG"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"anvio_"</span>, .), <span class="co"># Prefix anvio annotation columns </span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">all_of</span>(<span class="fu">colnames</span>(annotations))  </span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  ) </span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>output_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise_Anvio.csv"</span>))</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations_merged, output_file)</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations_merged, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise_Anvio.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<hr>
+</section>
+</section>
+</section>
+<section id="step-4-verify-your-annotation-file" class="level1">
+<h1>Step 4: Verify Your Annotation File</h1>
+<p>Before uploading, confirm:</p>
+<ul class="task-list">
+<li><input type="checkbox"><code>Geneid</code> column exists, is character type, and matches <code>rownames(SE)</code> exactly (same values, same case).</li>
+<li><input type="checkbox">Functional columns (if any) use <code>!!!</code> to separate multiple values per gene — required for GSEA/GESECA to parse multi-membership correctly.</li>
+<li><input type="checkbox">If you want MSigDB and your rownames aren’t Ensembl-style, at least one column contains Ensembl-style IDs (<code>ENSG...</code>, <code>ENSMUSG...</code>, etc.) — CONTENTO auto-detects this column.</li>
+<li><input type="checkbox">For genomic neighborhood analysis (bacteria), <code>start</code>, <code>end</code>, and <code>strand</code> columns are present and numeric/character as appropriate.</li>
+<li><input type="checkbox">File is saved as <code>.rds</code> containing a data frame (not a tibble-only object issue, not a list).</li>
+</ul>
+<p>If a feature is greyed out or missing in the app (e.g.&nbsp;MSigDB radio button absent, neighborhood tab missing), it’s almost always one of the above checks failing silently.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
