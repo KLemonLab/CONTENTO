@@ -1,0 +1,11 @@
+services:
+  shiny:
+    image: ghcr.io/KLemonLab/contendo:latest
+    container_name: contendo
+    ports:
+      - "3838:3838"
+    volumes:
+      - ./inst:/srv/shiny-server/app/inst
+    environment:
+      - SHINY_PORT=3838
+    restart: unless-stopped

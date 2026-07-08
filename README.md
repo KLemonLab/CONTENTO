@@ -1,3 +1,135 @@
-# RNASeqApp
+# Contendo
+> _RNASeq explorer and analysis dashboard_
+
+## Intro
 
 Shiny App for RNASeq Results Exploration
+
+## Running Contendo
+
+Contendo can be executed in three different ways depending on your computational environment and familiarity with containerized software. We strongly recommend the Docker-based workflows, as they guarantee complete reproducibility across operating systems and avoid dependency conflicts.
+
+### _Option 1:_ Run using Docker (recommended)
+
+If Docker is not yet installed on your system, we recommend you install Docker Desktop for your operating from the [official website](https://www.docker.com/products/docker-desktop/), since it provides a friendly graphic interface to manage your images and keep your Docker Engine up-to-date. If you already have Docker installed, running Contendo requires a single command from your terminal _(make sure while Docker Desktop is running)_:
+
+```bash
+docker run \
+    --rm \
+    -p 3838:3838 \
+    -v $(pwd)/inst:/srv/shiny-server/app/inst \
+    ghcr.io/KLemonLab/contendo:latest
+```
+
+The terminal window will show the app startup and soon will start accepting connections. When you see the message that the app is listening, open your web browser (any browser) and navigate to:
+
+```
+http://localhost:3838
+```
+
+This approach provides a fully reproducible computational environment with all R, Bioconductor, and system dependencies pre-installed.
+
+> [!NOTE] Rebuilding image from scratch
+>
+> A Dockerfile is included in the repository so taht users familiar with building container images
+> can self-build with `docker build -t contendo .` if necessary.
+
+### _Option 2:_ Run using Docker Compose
+
+For users who prefer a persistent local setup and he convenience of a preconfigured container mount, **Contendo** can also be launched using [Docker Compose](https://docs.docker.com/compose/). To do this, make sure you have the `compose` plugin installed (it is bundled with modern distributions of Docker Desktop by default) by running
+
+```bash
+docker compose --help
+```
+The helper string for the `compose` plugin should come up. To start the application, navigate to the working directory and simply run:
+
+```bash
+docker compose up
+```
+
+Or run it in the background:
+
+```bash
+docker compose up -d
+```
+
+Once the container starts, access the application again at:
+
+```
+http://localhost:3838
+```
+
+### _Option 3:_ Run locally within R/RStudio
+
+Some users may prefer to execute **Contendo** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop).
+
+#### Install required packages
+
+After opening the project (`ENASeqApp.Rptoj`) within Rstudio, install the dependencies by running:
+
+```r
+install.packages(c(
+    "shiny",
+    "shinydashboard",
+    "shinycssloaders",
+    "DT",
+    "plotly",
+    "tidyverse",
+    "purrr",
+    "viridis",
+    "RColorBrewer",
+    "ComplexUpset",
+    "scales",
+    "ggiraph"
+))
+
+if (!requireNamespace("BiocManager"))
+    install.packages("BiocManager")
+
+BiocManager::install(c(
+    "ComplexHeatmap",
+    "DESeq2",
+    "fgsea",
+    "msigdbr",
+    "circlize",
+    "SummarizedExperiment"
+))
+```
+
+#### Launch the application
+
+Open `app.R` in RStudio and click the interactive  **:arrow_forward: Run App** button, or execute:
+
+```r
+shiny::runApp("app.R")
+```
+
+The application will then become available in your web browser.
+
+---
+
+### Which option should I choose?
+
+| Method         | Recommended for               | Widely Reproducible    | Requires installation    |
+| -------------- | ----------------------------- | ---------------------- | ------------------------ |
+| Docker         | Most users                    | ✓                      | Docker                   |
+| Docker Compose | Persistent local deployments  | ✓                      | Docker + Compose         |
+| R/RStudio      | RStudio users and developers  | Depends on environment | R + package installation |
+
+## Citation
+
+If you use this application in scientific work, please cite:
+
+> _**[TODO: citation for manuscript/preprint]**_.
+
+and cite this software repository:
+
+> _**[TODO: citation for the github Repo]**_.
+
+## License
+
+MIT License. See LICENSE file for more details _**[TODO: add LICENSE file]**_.
+
+## Contact
+
+Issues, bug reports, and feature requests are welcome through the GitHub issue tracker.
