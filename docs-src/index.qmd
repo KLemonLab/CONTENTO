@@ -1,0 +1,9 @@
+# Welcome
+
+This site contains documentation for **CONTENTO**.
+
+Use the navigation bar to access:
+- **Create SE**
+- **Genome Annotations**
+
+> This is a placeholder homepage. Replace this text with project overview, installation, and quick-start instructions.
