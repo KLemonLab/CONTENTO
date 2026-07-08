@@ -42,7 +42,7 @@ ui <- dashboardPage(
     title = strong("CONTENTO"),
     tags$li(class = "dropdown",
             tags$a(icon("github"), " GitHub",
-                   href = "https://github.com/KLemonLab/RNASeqApp",
+                   href = "https://github.com/KLemonLab/CONTENTO",
                    target = "_blank")),
     tags$li(class = "dropdown",
             tags$a(icon("flask"), " Lemon Lab",

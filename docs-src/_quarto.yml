@@ -3,19 +3,37 @@ project:
   output-dir: ../docs
   render:
     - "*.qmd"
-
+  
 website:
-  title: "CONTENTO Documentation"
+  title: "<strong>CONTENTO</strong>"
+  
   navbar:
-    left:
-      - text: Home
-        href: index.qmd
-      - text: Create SE
-        href: create-se-file.qmd
-      - text: Genome Annotations
-        href: create-genome-annotations.qmd
+    right:
+      - icon: github
+        href: https://github.com/KLemonLab/CONTENTO
+        aria-label: GitHub
+
+      - text: Lemon Lab
+        href: https://www.bcm.edu/research/faculty-labs/katherine-lemon-lab
+
+  sidebar:
+    style: docked
+    search: true
+    collapse-level: 2
+    contents:
+      - href: index.qmd
+        text: Installation
+
+      - section: Input Files
+        contents:
+          - href: create-se-file.qmd
+            text: SE File
+          - href: create-genome-annotations.qmd
+            text: Genome Annotations
 
 format:
   html:
-    theme: cosmo
+    theme: yeti
     toc: true
+    toc-location: right
+    page-layout: full
