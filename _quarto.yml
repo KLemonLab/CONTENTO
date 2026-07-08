@@ -1,19 +1,17 @@
 project:
   type: website
-  output-dir: _site
+  output-dir: docs
   render:
     - docs-src/*.qmd
 
 website:
-  title: "CONTENTO Documentation"
-  site-url: https://klemonlab.github.io/CONTENTO/
   navbar:
     left:
-      - text: "Home"
+      - text: Home
         href: docs-src/index.qmd
-      - text: "Create SE"
+      - text: Create SE
         href: docs-src/create-se-file.qmd
-      - text: "Genome Annotations"
+      - text: Genome Annotations
         href: docs-src/create-genome-annotations.qmd
 
 format:
