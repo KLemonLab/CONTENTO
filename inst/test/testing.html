@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-07-08">
+
+<title>CONTENTO App Testing and Validation Plan</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="testing_files/libs/clipboard/clipboard.min.js"></script>
+<script src="testing_files/libs/quarto-html/quarto.js"></script>
+<script src="testing_files/libs/quarto-html/popper.min.js"></script>
+<script src="testing_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="testing_files/libs/quarto-html/anchor.min.js"></script>
+<link href="testing_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="testing_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="testing_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="testing_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="testing_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul class="collapse">
+  <li><a href="#rotation-project-goalsdeliverables" id="toc-rotation-project-goalsdeliverables" class="nav-link active" data-scroll-target="#rotation-project-goalsdeliverables">1. Rotation Project Goals/Deliverables</a></li>
+  <li><a href="#reading-reference-materials" id="toc-reading-reference-materials" class="nav-link" data-scroll-target="#reading-reference-materials">2. Reading &amp; Reference Materials</a></li>
+  <li><a href="#installation-download-testing" id="toc-installation-download-testing" class="nav-link" data-scroll-target="#installation-download-testing">3. Installation / Download Testing</a></li>
+  <li><a href="#se-file-vignette-validation" id="toc-se-file-vignette-validation" class="nav-link" data-scroll-target="#se-file-vignette-validation">4. SE-File Vignette Validation</a></li>
+  <li><a href="#genome-annotation-vignette-validation" id="toc-genome-annotation-vignette-validation" class="nav-link" data-scroll-target="#genome-annotation-vignette-validation">5. Genome-Annotation Vignette Validation</a></li>
+  <li><a href="#standardize-errorwarning-handling" id="toc-standardize-errorwarning-handling" class="nav-link" data-scroll-target="#standardize-errorwarning-handling">6. Standardize Error/Warning Handling</a></li>
+  <li><a href="#systematic-errorwarning-triggering" id="toc-systematic-errorwarning-triggering" class="nav-link" data-scroll-target="#systematic-errorwarning-triggering">7. Systematic Error/Warning Triggering</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">CONTENTO App Testing and Validation Plan</h1>
+<p class="subtitle lead">Jeyasri Venkatasubramani Rotation Project</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">July 8, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<p>The <strong>CONTENTO</strong> Shiny app was initially created as an internal set of tools for the Lemon Lab and it is now in the process of being released to the public. The app was built to be a user-friendly interface for visualizing results from RNA-seq differential expression analysis and to perform gene set enrichment analysis (GSEA). The main unique feature of the app is its ability to handle multi-contrast datasets, allowing users to compare multiple experimental conditions simultaneously. The app is designed to be used by users with limited programming experience.</p>
+<section id="rotation-project-goalsdeliverables" class="level1">
+<h1>1. Rotation Project Goals/Deliverables</h1>
+<p><strong>CONTENTO</strong> is still under development and has not yet been fully tested. <u>The purpose of this rotation project is to perform a comprehensive testing and validation of the app, including installation, vignette validation, and error/warning handling</u>.</p>
+<p>The <strong>main goals</strong> of this rotation project are:</p>
+<ul>
+<li>Verify installation/download instructions work end-to-end on both Windows and Mac.</li>
+<li>Validate the SE-object creation vignette and the genome-annotation vignette using real/simulated datasets covering all described examples.</li>
+<li>Standardize all error/warning handling to the 4-category scheme suggested in the code audit below.</li>
+<li>Systematically trigger every warning/error condition in the app and confirm the handler behaves as intended. This requires building a test matrix covering all known error/warning handlers and feature-unavailability states, together with representative user input files to trigger them.</li>
+</ul>
+<p>The <strong>deliverables</strong> for this rotation project are:</p>
+<ul>
+<li>A reusable regression test kit (input files + test matrix + testthat tests) that future contributors can re-run.</li>
+<li>Code changes to the app to address any issues found during testing, including error/warning handling and vignette updates. This should be done as PR contributions to the main repo, with clear commit messages and references to the relevant test cases.</li>
+<li>Contribute to the manuscript that describes the app and its features, including a section on the testing and validation process.</li>
+</ul>
+</section>
+<section id="reading-reference-materials" class="level1">
+<h1>2. Reading &amp; Reference Materials</h1>
+<p>This document defines a preliminary testing plan. I suggest reading the following materials before starting the testing work:</p>
+<ul>
+<li>The app’s README and vignettes available in the GitHub repo.</li>
+<li>R Packages (2e) <a href="https://r-pkgs.org/testing-basics.html">Testing basics chapter</a>. (read fully before Week 2; this defines the testthat conventions to follow).</li>
+</ul>
+<p>Based on that reading and the contents of this document <strong>the first week should focus on familiarization with the codebase, reviewing existing documentation, and refining the testing plan ans its deliverables as needed</strong>.</p>
+</section>
+<section id="installation-download-testing" class="level1">
+<h1>3. Installation / Download Testing</h1>
+<ul>
+<li>Follow the published install documentation exactly as a new user would, if possible in both a Windows and a Mac machine.</li>
+<li>Try every documented installation alternative, not just the primary path.</li>
+<li>Note any step requiring undocumented manual intervention.</li>
+<li>Confirm all dependency packages install cleanly. Bioconductor packages (DESeq2, ComplexHeatmap, fgsea, SummarizedExperiment) are the most likely to need special install instructions per OS.</li>
+<li>Launch the app after each install method and confirm functionality of all sections using testing data sets.</li>
+</ul>
+</section>
+<section id="se-file-vignette-validation" class="level1">
+<h1>4. SE-File Vignette Validation</h1>
+<p>Follow the ‘How to create your SE file’ vignette step by step, exactly as written, using real or simulated/AI-generated count data. For each scenario below, note every point where the vignette’s instructions are ambiguous, out of date, or produce an SE object the app can’t load.</p>
+<table class="table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Dataset variant</th>
+<th>Things to check</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Test already created datasets in inst/test</td>
+<td>Baseline case should work cleanly end-to-end</td>
+</tr>
+<tr class="even">
+<td>Single-contrast dataset</td>
+<td>Confirm app tabs behave sensibly with only 1 contrast</td>
+</tr>
+<tr class="odd">
+<td>Multi-contrast dataset (3+)</td>
+<td>Confirm Compare Contrast tab UI scales reasonably</td>
+</tr>
+<tr class="even">
+<td>Annotation specified in SE metadata, built-in / bundled</td>
+<td>Confirm auto-load path works</td>
+</tr>
+<tr class="odd">
+<td>No annotation specified in SE metadata</td>
+<td>Confirm custom-annotation upload path in sidebar works</td>
+</tr>
+<tr class="even">
+<td>Missing/blank optional metadata fields (organism, dataset_name, db_species override)</td>
+<td>Confirm graceful fallback, not a crash</td>
+</tr>
+<tr class="odd">
+<td>SE rownames are Ensembl IDs</td>
+<td>Confirm MSigDB path skips remapping (state$ensembl_col == ‘rownames’)</td>
+</tr>
+<tr class="even">
+<td>SE rownames are NOT Ensembl (e.g.&nbsp;locus tags/symbols)</td>
+<td>Confirm MSigDB path requires + correctly uses an annotation Ensembl column</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="genome-annotation-vignette-validation" class="level1">
+<h1>5. Genome-Annotation Vignette Validation</h1>
+<p>Follow the ‘How to create genome annotations’ vignette for both a human genome and a bacterial genome, from the simplest supported input through the anvi’o-derived workflow.</p>
+<table class="table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Dataset variant</th>
+<th>Things to check</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Human genome</td>
+<td>Annotation loads successfully, Ensembl column is detected, symbol column is available for display and GSEA</td>
+</tr>
+<tr class="even">
+<td>Bacterial</td>
+<td>start/end/strand columns present, neighborhood analysis available, annotation-based GSEA columns detected</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="standardize-errorwarning-handling" class="level1">
+<h1>6. Standardize Error/Warning Handling</h1>
+<p>Dr.&nbsp;Escapa made an initial <a href="https://claude.ai/share/7bf06cdb-b2f8-4940-a4cd-29b2671159ff">AI code audit</a> to evaluate if the app is using a consistent error/warning handling scheme. The audit suggested to follow a 4-category scheme for error/warning handling:</p>
+<table class="table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Situation</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1. Can’t proceed until user fixes an upload</td>
+<td><code>showModal</code></td>
+</tr>
+<tr class="even">
+<td>2. Reactive/render threw an unexpected error</td>
+<td><code>showNotification(type="error")</code> via named handler</td>
+</tr>
+<tr class="odd">
+<td>3. Reactive computed fine but result is empty/degenerate</td>
+<td><code>showNotification(type="warning")</code> via named handler</td>
+</tr>
+<tr class="even">
+<td>4. Whole feature/tab is unavailable given current data (annotation, coordinates, MSigDB)</td>
+<td>inline alert-warning div</td>
+</tr>
+</tbody>
+</table>
+<p>The audit also flags candidate issues in the current code; treat its suggestions as a starting hypothesis to verify, not ground truth. The goal is to have a consistent, user-friendly error/warning handling scheme across the app.</p>
+<p>The first step is to make an inventory of all the error/warning handling in the app, and identify which of the 4 categories each belongs to and ensure that the handling is consistent with the category. See section 7 for the next step, which is to systematically trigger each.</p>
+<p>Based on the pace of the project, Dr.&nbsp;Escapa might start implementing some of these changes so you can focus on the testing and validation work.</p>
+</section>
+<section id="systematic-errorwarning-triggering" class="level1">
+<h1>7. Systematic Error/Warning Triggering</h1>
+<p>For every handler identified in the previous step, create a test case that triggers it. Track results in a spreadsheet with informative columns such as:</p>
+<ul>
+<li>Handler ID (from inventory)</li>
+<li>Category (1-4)</li>
+<li>Triggering input combination (e.g.&nbsp;SE file with missing metadata, or MSigDB upload with wrong format)</li>
+<li>Actual file(s) used to trigger (if applicable). Create a test dataset if needed and store it in inst/test.</li>
+<li>Expected behavior (e.g.&nbsp;modal appears, notification appears, inline alert appears)</li>
+<li>Actual behavior</li>
+<li>Pass/Fail (based on whether actual behavior matches expected)</li>
+<li>GitHub issue if applicable (if the test fails, create an issue in the repo and link in the spreadsheet)</li>
+</ul>
+<p>Example trigger conditions to build test files for (non-exhaustive):</p>
+<ul>
+<li>SE object missing metadata(se)$contrasts entirely.</li>
+<li>SE object that is not a SummarizedExperiment</li>
+<li>Annotation file missing a Geneid column, or with Geneid as a non-character type.</li>
+<li>Contrast with all-NA stat values, or fewer than 10 unique stat values (GSEA degenerate case).</li>
+<li>Contrast where all statistics have the same sign (GSEA requires both directions).</li>
+<li>Annotation column selected for GSEA that yields zero gene sets after filtering.</li>
+<li>SE with no varpart_* columns (Variance Decomposition tab should not appear).</li>
+<li>Bacteria-organism SE with annotation lacking start/end/strand (Neighborhood tab inline alert).</li>
+<li>Fold-change cutoff/FDR cutoff combination that yields zero DEGs for a contrast.</li>
+</ul>
+<p>Most of these are just small, hand-built .rds files. You would need to create an R notebook or script to generate them, and store them in inst/test. The goal is to have a complete set of test files that can be used to trigger every error/warning condition in the app.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

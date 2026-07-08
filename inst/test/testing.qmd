@@ -1,0 +1,120 @@
+---
+title: "CONTENTO App Testing and Validation Plan"
+format:
+  pdf:
+    geometry:
+      - margin=0.8in
+header-includes:
+  - \pagenumbering{gobble}
+---
+
+The **CONTENTO** Shiny app was initially created as an internal set of tools for the Lemon Lab and it is now in the process of being released to the public. The app was built to be a user-friendly interface for visualizing results from RNA-seq differential expression analysis and to perform gene set enrichment analysis (GSEA). The main unique feature of the app is its ability to handle multi-contrast datasets, allowing users to compare multiple experimental conditions simultaneously. The app is designed to be used by users with limited programming experience.
+
+# 1. Rotation Project Goals/Deliverables
+
+::: {.callout-note appearance="minimal"}
+**CONTENTO** is still under development and has not yet been fully tested. The purpose of this rotation project is to perform a comprehensive testing and validation of the app, including installation, vignette validation, and error/warning handling.
+:::
+
+The **main goals** of this rotation project are:
+
+- Verify installation/download instructions work end-to-end on both Windows and Mac.
+- Validate the SE-object creation vignette and the genome-annotation vignette using real/simulated datasets covering all described examples.
+- Standardize all error/warning handling to the 4-category scheme suggested in the code audit below.
+- Systematically trigger every warning/error condition in the app and confirm the handler behaves as intended. This requires building a test matrix covering all known error/warning handlers and feature-unavailability states, together with representative user input files to trigger them.
+
+The **deliverables** for this rotation project are:
+
+- A reusable regression test kit (input files + test matrix + testthat tests) that future contributors can re-run.
+- Code changes to the app to address any issues found during testing, including error/warning handling and vignette updates. This should be done as Git PR contributions to the main repo, with clear commit messages and references to the relevant test cases.
+- Contribute to the manuscript that describes the app and its features, including a section on the testing and validation process.
+
+The **timeline** for this rotation project is 8 weeks (8-10 hours per week).
+
+# 2. Reading & Reference Materials
+
+::: {.callout-note appearance="minimal"}
+**The first week should focus on familiarization with the codebase, reviewing existing documentation, and refining this preliminary testing plan/deliverables as needed**.
+:::
+
+Key reading materials before starting the testing work:
+
+- The app's README and vignettes available in the GitHub repo.
+- R Packages (2e) [Testing basics](https://r-pkgs.org/testing-basics.html). (read fully before Week 2; this defines the testthat conventions).
+- Lab tutorial on Git for R Studio (/GitHub_Notebook_Renders/KLemonLab_Setup_GitHub.html). If you are new to Git I also recommend https://happygitwithr.com
+
+# 3. Installation / Download Testing
+
+- Follow the published install documentation exactly as a new user would, if possible in both a Windows and a Mac machine.
+- Try every documented installation alternative, not just the primary path.
+- Note any step requiring undocumented manual intervention.
+- Confirm all dependency packages install cleanly. Bioconductor packages are the most likely to need special install instructions per OS.
+- Launch the app after each install method and confirm functionality of all sections using testing data sets.
+
+# 4. SE-File Vignette Validation
+
+Follow the 'How to create your SE file' vignette step by step, exactly as written, using real or simulated/AI-generated count data. For each scenario below (not exhaustive), identify every point where the vignette's instructions are ambiguous, out of date, or produce an SE object the app can't load.
+
+| Dataset variant | Things to check |
+|------------------------------------|------------------------------------|
+| Test already created datasets in inst/test | Baseline case should work cleanly end-to-end |
+| Single-contrast dataset | Confirm app tabs behave sensibly with only 1 contrast |
+| Multi-contrast dataset (3+) | Confirm Compare Contrast tab UI scales reasonably |
+| Annotation specified in SE metadata, built-in / bundled | Confirm auto-load path works |
+| No annotation specified in SE metadata | Confirm custom-annotation upload path in sidebar works |
+| Missing/blank optional metadata fields (organism, dataset_name, db_species override) | Confirm graceful fallback, not a crash |
+| SE rownames are Ensembl IDs | Confirm MSigDB path skips remapping (state\$ensembl_col == 'rownames') |
+| SE rownames are NOT Ensembl (e.g. locus tags/symbols) | Confirm MSigDB path requires + correctly uses an annotation Ensembl column |
+
+# 5. Genome-Annotation Vignette Validation
+
+Follow the 'How to create genome annotations' vignette for both a human genome and a bacterial genome, from the simplest supported input through the anvi'o-derived workflow.
+
+| Dataset variant | Things to check |
+|---------------------|---------------------------------------------------|
+| Human genome | Annotation loads successfully, Ensembl column is detected, symbol column is available for display and GSEA |
+| Bacterial | start/end/strand columns present, neighborhood analysis available, annotation-based GSEA columns detected |
+
+# 6. Standardize Error/Warning Handling
+
+Dr. Escapa made an initial [AI code audit](https://claude.ai/share/7bf06cdb-b2f8-4940-a4cd-29b2671159ff) to evaluate if the app is using a consistent error/warning handling scheme. The audit suggested to follow a 4-category scheme for error/warning handling:
+
+| Situation | Mechanism |
+|--------------------------------------|----------------------------------|
+| 1\. Can't proceed until user fixes an upload | `showModal` |
+| 2\. Reactive/render threw an unexpected error | `showNotification(type="error")` via named handler |
+| 3\. Reactive computed fine but result is empty/degenerate | `showNotification(type="warning")` via named handler |
+| 4\. Whole feature/tab is unavailable given current data (annotation, coordinates, MSigDB) | inline alert-warning div |
+
+The audit also flags candidate issues in the current code; treat its suggestions as a starting hypothesis to verify, not ground truth. The goal is to have a consistent, user-friendly error/warning handling scheme across the app.
+
+The first step is to make an inventory of all the error/warning handling in the app, and identify which of the 4 categories each belongs to and ensure that the handling is consistent with the category. See section 7 for the next step, which is to systematically trigger each.
+
+Based on the pace of the project, Dr. Escapa might start implementing some of these changes so you can focus on the testing and validation work.
+
+# 7. Systematic Error/Warning Triggering
+
+For every handler identified in the previous step, create a test case that triggers it. Track results in a spreadsheet with informative columns such as:
+
+- Handler ID (from inventory)
+- Category (1-4)
+- Triggering input combination (e.g. SE file with missing metadata, or MSigDB upload with wrong format)
+- Actual file(s) used to trigger (if applicable). Create a test dataset if needed and store it in inst/test.
+- Expected behavior (e.g. modal appears, notification appears, inline alert appears)
+- Actual behavior
+- Pass/Fail (based on whether actual behavior matches expected)
+- GitHub issue if applicable (if the test fails, create an issue in the repo and link in the spreadsheet)
+
+Example trigger conditions to build test files for (non-exhaustive):
+
+- SE object missing metadata(se)\$contrasts entirely.
+- SE object that is not a SummarizedExperiment
+- Annotation file missing a Geneid column, or with Geneid as a non-character type.
+- Contrast with all-NA stat values, or fewer than 10 unique stat values (GSEA degenerate case).
+- Contrast where all statistics have the same sign (GSEA requires both directions).
+- Annotation column selected for GSEA that yields zero gene sets after filtering.
+- SE with no varpart\_\* columns (Variance Decomposition tab should not appear).
+- Bacteria-organism SE with annotation lacking start/end/strand (Neighborhood tab inline alert).
+- Fold-change cutoff/FDR cutoff combination that yields zero DEGs for a contrast.
+
+Most of these are just small, hand-built .rds files. You would need to create an R notebook or script to generate them, and store them in inst/test. The goal is to have a complete set of test files that can be used to trigger every error/warning condition in the app.
