@@ -2,7 +2,7 @@
 title: "Create SE for CONTENTO"
 date: last-modified
 execute:
-  eval: false
+  eval: true
   echo: true
 format:
   html:
@@ -12,7 +12,525 @@ format:
     theme: cosmo
 ---
 
+```{r}
+# Set up your R environment and read the metadata file. Adapt based on the metadata name and location
+library(tidyverse)
+library(here)
+library(tximport)
+library(DESeq2)
+library(vsn)
+library(edgeR)
+library(variancePartition)
+library(ashr)
+
+
+SE_DIR <- here("../inst/extdata/SE")
+```
+
+# Example 1: Single Contrast 
+
+Simple experiment RSV infecting HNO-ALI N=3 experiments  (HNO control vs RSV infected). TRUE/FALSE for virus
+
+## Metadata Preparation
+
+```{r}
+# Read metadata file
+project_name <- "ExpSingleContrast"
+meta <- read_csv(file.path(SE_DIR, paste0(project_name, "_metadata.csv")))
+
+# Create unique condition and label for each sample. This will be used by CONTENTO for visualization.
+meta <- meta |>
+  mutate(
+    virus = factor(virus, levels = c("FALSE", "TRUE")),
+    exp = factor(exp),
+    label = interaction(virus, exp, sep = " | ") # unique label for each sample 
+  )
+```
+
+## Data Import
+
+The [**tximport**](https://www.bioconductor.org/packages/release/bioc/html/tximport.html) [@tximport] function reads in gene-level quantification results from RSEM and organizes them into a structured list for downstream analysis. It extracts estimated counts, transcript lengths, and abundance values, ensuring compatibility with DESeq2 and other Bioconductor workflows.
+Since some transcripts may have a reported length of 0, we update those to 1 to prevent issues ensuring valid calculations during analysis.
+
+```{r}
+# Import data using tximport
+rsem_folder <- file.path(SE_DIR, "rsem_counts")
+count_files <- file.path(rsem_folder, paste0(meta$file_base, ".genes.results"))
+names(count_files) <- meta$label
+txi <- tximport(count_files, type = "rsem", txIn = FALSE, txOut = FALSE)
+txi$length[txi$length == 0] <- 1
+```
+
+## Exploratory DESeq2 Analysis (Optional but Recommended)
+
+We run an initial DESeq model design to explore the data. 
+
+```{r}
+# DESeq design 
+dds <- DESeqDataSetFromTximport(txi,
+                                colData = meta,
+                                design = ~ virus + exp)
+
+# Run DESeq
+dds <- DESeq(dds)
+```
+
+### Principal Component Analysis (PCA)
+
+PCA calculated based on the VST normalized [@tibshirani1988; @huber2003; @Anders2010] data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data. 
+
+```{r, fig.width=8, fig.height=6, fig.align="center"}
+vsd <- vst(dds, blind = TRUE)
+pcaData <- plotPCA(vsd, intgroup = c("virus", "exp"), returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+Bac.Vir_colors = c("#CC9564", "#856141")
+Bac.Vir_fill <- c("white", "#856141")
+
+ggplot(pcaData, aes(PC1, PC2)) +
+  geom_point(aes(fill = virus, color = virus, 
+                 shape = exp), 
+             size = 4, stroke = 1) +  
+  scale_shape_manual(values = c(23, 25, 21)) + 
+  scale_color_manual(values = Bac.Vir_colors) + 
+  scale_fill_manual(values = Bac.Vir_fill) +
+  ggtitle("Principal Component Analysis (blind = TRUE)") +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  theme_bw(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+    guides(
+    color = guide_legend(title = "virus", override.aes = list(color = Bac.Vir_colors, shape = 22))
+  )
+```
+
+## Differential Expression Analysis
+
+The design captures all the variables of interest.
+
+```{r}
+# DESeq design 
+dds <- DESeqDataSetFromTximport(txi,
+                                colData = meta,
+                                design = ~ virus + exp)
+
+# Run DESeq
+dds <- DESeq(dds)
+```
+
+### Generate Contrast Results
+
+This function runs the DESeq2 `results()` and `lfcShrink()` functions for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.
+```{r}
+run_contrast_analysis <- function(dds, contrast_name, contrast = NULL, coef = NULL) {
+  if (!is.null(contrast)) {
+    res <- results(dds, contrast = contrast, alpha = 0.05)
+    resLFC <- lfcShrink(dds, contrast = contrast, type = "ashr")
+  } else if (!is.null(coef)) {
+    res <- results(dds, name = coef, alpha = 0.05)
+    resLFC <- lfcShrink(dds, coef = coef, type = "ashr")
+  } else {
+    stop("Please provide either a 'contrast' or a 'coef'.")
+  }
+
+  res_df <- as.data.frame(res)
+  res_df$Geneid <- rownames(res_df)
+  res_df$contrast <- contrast_name
+
+  res_df$log2FoldChange_shrunk <- as.data.frame(resLFC)$log2FoldChange[
+    match(res_df$Geneid, rownames(resLFC))
+  ]
+
+  return(res_df)
+}
+```
+
+```{r}
+contrasts_df <- run_contrast_analysis(dds, contrast_name = "VirusTvsF",
+                                      coef = "virus_TRUE_vs_FALSE")
+```
+
+
+### Create SummarizedExperiment (SE) Object
+
+```{r}
+convert_to_SE <- function(dds, contrasts_df, 
+                          organism = NULL, annotation = NULL, varpart = NULL) { 
+  
+  # Reshape to wide format
+  contrasts_wide <- contrasts_df %>%
+    pivot_wider(
+      id_cols = Geneid,
+      names_from = contrast,
+      values_from = -c(Geneid, contrast),
+      names_sep = "_"
+    )
+  
+  contrasts_found <- unique(contrasts_df$contrast)
+  cat("✓ Found", length(contrasts_found), "contrasts:", paste(contrasts_found, collapse = ", "), "\n")
+  
+  # Build assays from dds
+  assays_list <- list(
+    counts = counts(dds, normalized = FALSE),
+    normalized = counts(dds, normalized = TRUE)
+  )
+  
+  # Add VST with proper handling for small datasets
+  tryCatch({
+    if (nrow(dds) >= 1000) {
+      assays_list$vst <- assay(vst(dds, blind = FALSE))
+      cat("✓ VST computed using vst()\n")
+    } else {
+      cat("⚠ Small dataset (", nrow(dds), " genes), using varianceStabilizingTransformation\n")
+      vsd <- varianceStabilizingTransformation(dds, blind = FALSE)
+      assays_list$vst <- assay(vsd)
+      cat("✓ VST computed using varianceStabilizingTransformation()\n")
+    }
+  }, error = function(e) {
+    cat("⚠ VST failed with error:", e$message, "\n")
+    cat("  Trying varianceStabilizingTransformation as fallback...\n")
+    vsd <- varianceStabilizingTransformation(dds, blind = FALSE)
+    assays_list$vst <- assay(vsd)
+    cat("✓ VST computed using varianceStabilizingTransformation()\n")
+  })
+  
+  # Extract sample metadata
+  sample_metadata <- as.data.frame(colData(dds))
+  
+  # Create rowData with Geneid as rownames
+  rowdata_df <- contrasts_wide %>%
+    column_to_rownames("Geneid")
+  
+  # Add variance partition data if provided
+  if (!is.null(varpart)) {
+    cat("Loading variance partition data...\n")
+    
+    tryCatch({
+      # Extract only the variance partition matrix
+      varpart_matrix <- varPart$varPart
+      
+      # Get common genes between rowData and varPart
+      common_genes <- intersect(rownames(rowdata_df), rownames(varpart_matrix))
+      
+      if (length(common_genes) > 0) {
+        # Convert to dataframe and add varpart_ prefix
+        varpart_df <- as.data.frame(varpart_matrix[common_genes, , drop = FALSE])
+        colnames(varpart_df) <- paste0("varpart_", colnames(varpart_df))
+        
+        # Merge with rowdata_df (only for genes that exist in both)
+        rowdata_df[common_genes, colnames(varpart_df)] <- varpart_df
+        
+        cat("✓ Added variance partition for", length(common_genes), "genes\n")
+        cat("  Factors:", paste(gsub("varpart_", "", colnames(varpart_df)), collapse = ", "), "\n")
+      } else {
+        cat("⚠ No common genes between contrasts and variance partition\n")
+      }
+      
+    }, error = function(e) {
+      cat("⚠ Error loading variance partition:", e$message, "\n")
+    })
+  }
+  
+  # Ensure rowData order matches dds
+  rowdata_df <- rowdata_df[rownames(dds), ]
+  
+  # Verify dimensions match
+  stopifnot(identical(rownames(rowdata_df), rownames(dds)))
+  stopifnot(identical(rownames(sample_metadata), colnames(dds)))
+  
+  cat("✓ Gene order verified:", nrow(rowdata_df), "genes match\n")
+  
+  # Create SummarizedExperiment
+  se <- SummarizedExperiment(
+    assays = assays_list,
+    colData = DataFrame(sample_metadata),
+    rowData = DataFrame(rowdata_df)
+  )
+  
+  # Store metadata
+  metadata(se) <- list(
+    design = design(dds),
+    contrasts = contrasts_found,
+    organism = organism,
+    annotation = annotation, 
+    deseq2_version = as.character(packageVersion("DESeq2")),
+    date = Sys.Date()
+  )
+  
+  # Return the SummarizedExperiment object
+
+  cat("  Dimensions:", nrow(se), "genes x", ncol(se), "samples\n")
+  cat("  Assays:", paste(names(assays(se)), collapse = ", "), "\n")
+  cat("  Columns in rowData:", ncol(rowData(se)), "\n\n")
+  
+  return(se)
+}
+```
+
+```{r}
+SE = convert_to_SE(
+  dds = dds,
+  contrasts_df = contrasts_df,
+  organism = "Homo sapiens", 
+  annotation = "Homo_sapiens.GRCh38.113_annot"
+)
+saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
+```
+
+# Example 2: Multiple Contrasts
+
+More complex experiment with RSV infecting HNO-ALI N=3 experiments  (HNO control vs RSV infected). TRUE/FALSE for virus with 4 different bacteria conditions (NB, Spn, Hin, Dpi). This design allows us to explore the interaction between virus and bacteria species, as well as the main effects of each factor. 
+
+## Metadata Preparation
+
+```{r}
+# Read metadata file
+project_name <- "ExpMultContrast"
+meta <- read_csv(file.path(SE_DIR, paste0(project_name, "_metadata.csv")))
+
+# Create unique condition and label for each sample. This will be used by CONTENTO for visualization.
+meta <- meta |>
+  mutate(
+    bacteria = factor(bacteria, levels = c("NB", "Spn", "Hin", "Dpi")), 
+    virus = factor(virus, levels = c("FALSE", "TRUE")),
+    exp = factor(exp),
+    condition = interaction(bacteria, virus, sep = "_"), # unique condition for each sample
+    label = interaction(bacteria, virus, exp, sep = " | ") # unique label for each sample 
+  )
+```
+
+## Data Import
+
+
+```{r}
+# Import data using tximport
+rsem_folder <- file.path(SE_DIR, "rsem_counts")
+count_files <- file.path(rsem_folder, paste0(meta$file_base, ".genes.results"))
+names(count_files) <- meta$label
+txi <- tximport(count_files, type = "rsem", txIn = FALSE, txOut = FALSE)
+txi$length[txi$length == 0] <- 1
+```
+
+## Exploratory DESeq2 Analysis (Optional but Recommended)
+
+We run an initial DESeq model design to explore the data. It does not consider the interaction between variables. We only use it to explore the data and possible effects for the 5 independent experiments. The design formula is `~ bacteria + virus + exp`, which accounts for the main effects of bacteria, virus, and experiment without considering their interactions. This allows us to assess the individual contributions of each factor to gene expression changes.
+
+```{r}
+# DESeq design 
+dds <- DESeqDataSetFromTximport(txi,
+                                colData = meta,
+                                design = ~ virus + bacteria + exp)
+
+# Run DESeq
+dds <- DESeq(dds)
+```
+
+
+### Principal Component Analysis (PCA)
+
+PCA calculated based on the VST normalized [@tibshirani1988; @huber2003; @Anders2010] data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data. 
+
+```{r, fig.width=8, fig.height=6, fig.align="center"}
+vsd <- vst(dds, blind = TRUE)
+pcaData <- plotPCA(vsd, intgroup = c("bacteria", "virus", "exp"), returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+Bac.Vir_colors = c("#CC9564", "#a89de0", "#f54590", "#2e67f2", "#856141","#6855c9","#9f2d5e", "#1e439d")
+Bac.Vir_fill <- c("white", "white", "white", "white", "#856141","#6855c9","#9f2d5e", "#1e439d")
+
+ggplot(pcaData, aes(PC1, PC2)) +
+  geom_point(aes(fill = condition, color = condition, 
+                 shape = exp), 
+             size = 4, stroke = 1) +  
+  scale_shape_manual(values = c(23, 25, 21)) + 
+  scale_color_manual(values = Bac.Vir_colors) + 
+  scale_fill_manual(values = Bac.Vir_fill) +
+  ggtitle("Principal Component Analysis (blind = TRUE)") +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  theme_bw(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+    guides(
+    color = guide_legend(title = "condition", override.aes = list(color = Bac.Vir_colors, shape = 22))
+  )
+```
+
+### Variance Partitioning Analysis
+
+In this more complex design we are also interested in quantifying the contribution of each factor (virus, bacteria, and experiment) to the overall variance in gene expression. This is particularly important for understanding how much of the observed variability can be attributed to biological factors versus technical or experimental factors. CONTENTO allows users to visualize the variance partitioning results for each gene, providing insights into the relative importance of each factor in shaping gene expression patterns.
+
+Gene-level expression values were modeled using precision weights estimated with the `limma::voom()` transformation, which accounts for the mean–variance relationship in RNASeq data. Filtering of low 
+
+was performed using `edgeR::filterByExpr()`, which removes genes with insufficient counts for reliable statistical analysis.
+
+We use the [variancePartition](https://bioconductor.org/packages/release/bioc/html/variancePartition.html) [@hoffman2017] package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.
+
+```{r}
+run_varPart_analysis <- function(txi, meta, formula_vp, formula_fixed, filter_low_expr = TRUE) {
+  # Align meta to sample order
+  meta <- as.data.frame(meta)
+  meta <- meta[match(colnames(txi$counts), meta$label), ]
+  rownames(meta) <- meta$label
+  stopifnot(identical(rownames(meta), colnames(txi$counts)))
+
+  # Design matrix: only fixed effects (for voom & filterByExpr)
+  design <- model.matrix(formula_fixed, data = meta)
+
+  # Normalize counts
+  counts <- DGEList(txi$counts)
+  counts <- normLibSizes(counts)
+
+  # Filter low-expressed genes
+  if (filter_low_expr) {
+    keep <- filterByExpr(counts, design)
+    counts_used <- counts[keep, ]
+  } else {
+    counts_used <- counts
+  }
+
+  # logCPM values with voom
+  v <- voom(counts_used, design)
+
+  # Fit variance partition model (supports random effects)
+  varPart <- fitExtractVarPartModel(v, formula_vp, meta)
+
+  # Format results
+  varPart_df <- as.data.frame(varPart)
+  varPart_df$Geneid <- rownames(varPart_df)
+
+  # Return
+  return(list(v = v, varPart = varPart, varPart_df = varPart_df))
+}
+```
+
+Use formula_fixed with fixed effects (required for the design matrix step) while formula_vp is used to decompose variance across bacteria/virus/exp as random intercepts
+
+```{r, fig.width=8, fig.height=5, fig.align="center"}
+formula_fixed <- ~ virus + bacteria + exp          # for voom/filterByExpr design matrix
+formula_vp <- ~ (1|virus) + (1|bacteria) + (1|exp)   # for variance partitioning you can't mix fixed and random categorical variables in the same call 
+
+varPart <- run_varPart_analysis(txi, meta, formula_vp, formula_fixed, filter_low_expr = T)
+plotVarPart(varPart$varPart) 
+```
+
+## Differential Expression Analysis
+
+This design captures all the variables of interest. 
+-   **virus + bacteria + virus:bacteria** Includes main effects of virus and bacteria, as well as their interaction. This allows us to test whether the effect of virus depends on the species. This is equivalent to **virus \* bacteria**.
+-   **exp** To account for the batch effect of the 3 independent experiments, we include the experiment as a covariate in the model. This helps to control for any variability introduced by differences between experiments.
+
+```{r}
+# DESeq design 
+dds <- DESeqDataSetFromTximport(txi,
+                                colData = meta,
+                                design = ~ virus + bacteria + virus:bacteria + exp)
+
+# Run DESeq
+dds <- DESeq(dds)
+```
+
+### Generate Contrast Results
+
+#### Virus TRUE vs FALSE in each Species
+
+This section tests the effect of virus infection (TRUE vs FALSE) within each bacterial species specifically:
+
+-   For the reference bacteria condition (NB), the virus effect is captured by the main coefficient `virus_TRUE_vs_FALSE`.
+-   For other bacteria conditions (Spn, Hin, Dpi), the virus effect is a combination of the main virus effect plus the interaction term (e.g., `virusTRUE.bacteriaDpi`).
+
+```{r}
+contrast_list_Virus_TvsF <- list(
+  VirusTvsF_NB  = "virus_TRUE_vs_FALSE",                                   
+  VirusTvsF_Spn = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaSpn")), 
+  VirusTvsF_Hin = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaHin")), 
+  VirusTvsF_Dpi = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaDpi"))  
+)
+results_Virus_TvsF <- imap(contrast_list_Virus_TvsF, function(contrast_val, name) {
+  if (is.character(contrast_val)) {
+    run_contrast_analysis(dds, contrast_name = name, coef = contrast_val)
+  } else {
+    run_contrast_analysis(dds, contrast_name = name, contrast = contrast_val)
+  }
+})
+```
+
+#### Difference in Virus Effect Compared to NB
+
+Here we focus on whether the virus effect differs between each bacteria condition and relative to the reference NB. This highlights species-specific modulation of virus response by comparing the virus effect in each bacteria against the baseline virus effect in NB.
+
+-   We use the interaction terms alone (e.g., `virusTRUE.bacteriaDpi`), which quantify how much the virus effect in each species deviates from that in NB.
+
+```{r}
+contrast_list_VirusInteract_vsNB <- list(
+  VirusInteract_Dpi = "virusTRUE.bacteriaDpi",
+  VirusInteract_Spn = "virusTRUE.bacteriaSpn",
+  VirusInteract_Hin = "virusTRUE.bacteriaHin"
+)
+results_VirusInteract_vsNB <- imap(contrast_list_VirusInteract_vsNB, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x,))
+```
+
+#### Bacteria vs NB in Virus FALSE
+
+This comparison evaluates how each bacterial species differs from the reference NB when virus is absent (`virus = FALSE`). This reveals baseline species-specific gene expression differences without virus influence.
+
+-   Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., `bacteria_Dpi_vs_NB`).
+
+```{r}
+contrast_list_Bacteria_vsNB_VF <- list(
+  DpivsNB_VF = "bacteria_Dpi_vs_NB",
+  SpnvsNB_VF = "bacteria_Spn_vs_NB",
+  HinvsNB_VF = "bacteria_Hin_vs_NB"
+)
+results_Species_vsNB_VF <- imap(contrast_list_Bacteria_vsNB_VF, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x))
+```
+
+#### Bacteria vs NB in Virus TRUE
+
+Here we test the bacteria differences under virus infection (virus = TRUE). This reveals species-specific gene expression differences that happens under virus influence.
+
+-   These contrasts combine the main bacteria effect plus the interaction with virus (e.g., `bacteria_Dpi_vs_NB` + `virusTRUE.bacteriaDpi`).
+
+```{r}
+contrast_list_Bacteria_vsNB_VT <- list(
+  DpivsNB_VT = list(c("bacteria_Dpi_vs_NB", "virusTRUE.bacteriaDpi")),
+  SpnvsNB_VT = list(c("bacteria_Spn_vs_NB", "virusTRUE.bacteriaSpn")),
+  HinvsNB_VT = list(c("bacteria_Hin_vs_NB", "virusTRUE.bacteriaHin"))
+)
+results_Bacteria_vsNB_VT <- imap(contrast_list_Bacteria_vsNB_VT, ~ run_contrast_analysis(dds, contrast_name = .y, contrast = .x))
+```
+
+#### Combine All Contrast Results
+
+```{r}
+all_contrast_results <- list(
+  results_Virus_TvsF,
+  results_VirusInteract_vsNB,
+  results_Species_vsNB_VF,
+  results_Bacteria_vsNB_VT
+  ) %>% flatten() 
+
+all_contrast_df <- bind_rows(all_contrast_results)
+```
+
+
+### Create SummarizedExperiment (SE) Object
+
+```{r}
+SE = convert_to_SE(
+  dds = dds,
+  contrasts_df = all_contrast_df,
+  organism = "Homo sapiens", 
+  annotation = "Homo_sapiens.GRCh38.113_annot"
+)
+saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
+```
 
 
 
-PLACEHOLDER: This is a placeholder for the content of the "Create SE for CONTENTO" document.
+We apply a variance stabilizing transformation using `vst()` from the **DESeq2** package. This transformation makes the variance roughly independent of the mean, which is especially useful for PCA and clustering. It produces log2-like values that are more homoscedastic than raw or normalized counts.
+
+
