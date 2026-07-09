@@ -2,8 +2,10 @@
 title: "Create SE for CONTENTO"
 date: last-modified
 execute:
-  eval: true
+  eval: false
   echo: true
+  warning: false
+  message: false
 format:
   html:
     toc: true
@@ -12,8 +14,29 @@ format:
     theme: cosmo
 ---
 
+# Overview
+
+CONTENTO expects a single `SummarizedExperiment` (SE) object (`.rds`) containing your normalized expression data, differential expression results for every contrast, and descriptive metadata. This document walks through building that object from RSEM/tximport counts through DESeq2, using a helper function (`convert_to_SE()`) that assembles the final SE from a fitted `dds` and a long-format table of contrast results.
+
+A CONTENTO-compatible SE has four required components:
+
+- **assays**: `counts` (raw), `normalized` (size-factor normalized), and `vst` (variance-stabilized). The `vst` assay is required for the Expression Plot, Heatmap, and GESECA co-expression features.
+- **rowData**: one row per gene, with DE statistics for each contrast stored as columns prefixed by statistic name and suffixed by contrast name (e.g. `log2FoldChange_VirusTvsF`, `padj_VirusTvsF`). CONTENTO parses these prefixes (`baseMean_`, `log2FoldChange_`, `log2FoldChange_shrunk_`, `lfcSE_`, `stat_`, `pvalue_`, `padj_`) to reshape the data internally.
+- **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
+- **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of contrast names matching the rowData suffixes above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details).
+
+| Feature | Required SE component |
+|---|---|
+| DE tables & volcano plots | rowData contrast columns |
+| Expression Plot / Heatmap / GESECA | `vst` assay |
+| Variance Decomposition tab | optional `varpart_*` rowData columns |
+| MSigDB GSEA | `metadata(se)$organism` matching a valid `msigdbr` species |
+| Neighborhood Analysis (bacteria) | `metadata(se)$organism == "Bacteria"` + annotation with coordinates |
+
+The two examples below show this end-to-end for a simple two-group design and a more complex multi-factor design with interaction terms.
+
 ```{r}
-# Set up your R environment and read the metadata file. Adapt based on the metadata name and location
+# Set up your R environment
 library(tidyverse)
 library(here)
 library(tximport)
@@ -154,6 +177,8 @@ contrasts_df <- run_contrast_analysis(dds, contrast_name = "VirusTvsF",
 
 
 ### Create SummarizedExperiment (SE) Object
+
+The `convert_to_SE()` helper below builds the final SE object: it reshapes the long-format contrast results into wide rowData columns, pulls `counts`/`normalized`/`vst` assays from `dds`, attaches sample metadata as colData, optionally merges in variance-partition results, and records `contrasts`, `organism`, and `annotation` in `metadata(se)`. Reuse this same function for any design.
 
 ```{r}
 convert_to_SE <- function(dds, contrasts_df, 
@@ -530,7 +555,15 @@ saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
 ```
 
 
+# Verify Your SE Object
 
-We apply a variance stabilizing transformation using `vst()` from the **DESeq2** package. This transformation makes the variance roughly independent of the mean, which is especially useful for PCA and clustering. It produces log2-like values that are more homoscedastic than raw or normalized counts.
+Before uploading to CONTENTO, confirm:
 
+- [ ] `assays(se)` includes `vst` (required for expression/heatmap/GESECA features).
+- [ ] `rowData(se)` has `<stat>_<contrast>` columns for every entry in `metadata(se)$contrasts`, with matching suffixes.
+- [ ] `metadata(se)$contrasts` is a character vector, not a factor or list.
+- [ ] `metadata(se)$organism`, if set, exactly matches a valid `msigdbr` species name (or is `"Bacteria"` for neighborhood analysis).
+- [ ] `metadata(se)$annotation`, if set, matches the filename (without `.rds`) of a built-in or uploaded annotation file.
+- [ ] `rownames(se)` are consistent gene identifiers matching your annotation's `Geneid` column, if used.
 
+If a tab or control is missing/greyed out in CONTENTO, it's almost always one of the above.
