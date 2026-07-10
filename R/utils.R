@@ -331,13 +331,13 @@ build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
 #### SECTION 4: EXPRESSION MATRICES ####
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 
-#' Subset, optionally relabel, and scale VST assay values for a specified set of genes
+#' Subset, optionally relabel, and scale expression assay values for a specified set of genes
 #' @description
-#' Subsets a VST assay from a SummarizedExperiment object to a specified set of
+#' Subsets a expression assay from a SummarizedExperiment object to a specified set of
 #' Geneids, optionally replaces rownames with gene symbols, and returns a
 #' column-wise scaled expression matrix.
-#' @param se_obj A \code{SummarizedExperiment} object containing a \code{"vst"} assay.
-#' @param geneids Character vector of Geneids to subset from the VST matrix.
+#' @param se_obj A \code{SummarizedExperiment} object containing a \code{"expr_matrix"} assay.
+#' @param geneids Character vector of Geneids to subset from the expression matrix.
 #' @param de_df Optional data frame containing columns \code{Geneid} and
 #'   \code{symbol} used to relabel rows. If provided, rownames are replaced with
 #'   matching gene symbols.
@@ -346,14 +346,14 @@ build_compare_table <- function(df, contrasts, lfc_col = "log2FC") {
 #' provided, rownames are replaced using a match between \code{Geneid} and
 #' \code{symbol}. Unmatched Geneids may result in \code{NA} rownames, and duplicated
 #' symbols are not resolved.
-#' The resulting matrix is scaled using \code{scale()}, which centers and
-#' standardizes values across columns (i.e., per sample).
+#' The resulting matrix is centered and standardized per gene
+#' (across samples), producing row-wise Z-scores suitable for heatmaps or clustering.
 #' @return
-#' A numeric matrix of scaled VST values with rows corresponding to genes
+#' A numeric matrix of scaled expression values with rows corresponding to genes
 #' (Geneids or symbols, depending on \code{de_df}) and columns corresponding to samples.
 #' @export
-subset_scale_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
-  mat <- assay(se_obj, "vst")[geneids[geneids %in% rownames(se_obj)], , drop = FALSE]
+subset_scale_expr_matrix <- function(se_obj, geneids, de_df = NULL) {
+  mat <- assay(se_obj, "expr_matrix")[geneids[geneids %in% rownames(se_obj)], , drop = FALSE]
   
   if (!is.null(de_df) && "symbol" %in% colnames(de_df)) {
     sym_lookup <- de_df |>
@@ -361,7 +361,7 @@ subset_scale_vst_matrix <- function(se_obj, geneids, de_df = NULL) {
     rownames(mat) <- sym_lookup$symbol[match(rownames(mat), sym_lookup$Geneid)]
   }
   
-  scale(mat)
+  t(scale(t(mat)))
 }
 
 

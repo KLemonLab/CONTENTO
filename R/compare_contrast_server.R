@@ -23,7 +23,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                               tags$li("Adjust log2FC column, fold-change and p-value cutoffs in the sidebar"),
                               tags$li("UpSet plot shows overlap of significant DEGs between selected contrasts"),
                               tags$li("Table includes genes DE in at least one contrast; fold-change (FC) columns are color-coded (up/down-regulated)"),
-                              tags$li("Heatmap shows top DE genes across all samples using VST Z-scores")
+                              tags$li("Expression heatmap shows top DE genes across all samples using Z-scores per gene across samples")
                             )
                         )
                  ),
@@ -177,7 +177,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
                             tags$ul(
                               style = "margin: 5px 0 0 15px; padding:0;",
                               tags$li("Select a gene set collection to view its co-regulation profile across samples"),
-                              tags$li("GESECA uses the VST expression matrix directly (no contrast statistics required)"),
+                              tags$li("GESECA uses the the stored expression matrix directly (no contrast statistics required)"),
                               tags$li("Plot inlcudes top 20 significant gene sets (FDR < 0.05)"),
                               tags$li("Select a specific gene set to view its co-regulation profile across samples")
 
@@ -449,7 +449,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
              cex = 1.5)
       })
     }
-    mat <- subset_scale_vst_matrix(state$se_obj(), geneids, selected_contrast_data())
+    mat <- subset_scale_expr_matrix(state$se_obj(), geneids, selected_contrast_data())
     hm <- Heatmap(
       mat,
       col = viridis(100, option = input$viridis_palette),
@@ -720,9 +720,9 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     pathways_list <- genesets_geseca()$data 
     
     tryCatch({
-      vst_matrix <- assays(state$se_obj())[["vst"]]
-      if (is.null(vst_matrix)) {
-        showNotification("VST matrix not found in SummarizedExperiment object", type = "error")
+      expr_matrix <- assays(state$se_obj())[["expr_matrix"]]
+      if (is.null(expr_matrix)) {
+        showNotification("Expression matrix not found in SummarizedExperiment object", type = "error")
         return(NULL)
       }
       
@@ -730,13 +730,13 @@ compare_contrast_server <- function(input, output, session, state, organism) {
           !is.null(state$ensembl_col()) && !identical(state$ensembl_col(), "rownames")) {
         annot  <- state$annotation_df()
         lookup <- setNames(annot[[state$ensembl_col()]], annot$Geneid)
-        new_rn <- lookup[rownames(vst_matrix)]
+        new_rn <- lookup[rownames(expr_matrix)]
         keep   <- !is.na(new_rn)
-        vst_matrix <- vst_matrix[keep, , drop = FALSE]
-        rownames(vst_matrix) <- new_rn[keep]
+        expr_matrix <- expr_matrix[keep, , drop = FALSE]
+        rownames(expr_matrix) <- new_rn[keep]
       }
       
-      gesecaRes <- geseca(pathways = pathways_list, E = vst_matrix,
+      gesecaRes <- geseca(pathways = pathways_list, E = expr_matrix,
                           minSize = 15, maxSize = 500) |>
         arrange(padj, pval)
       
@@ -745,14 +745,14 @@ compare_contrast_server <- function(input, output, session, state, organism) {
       
       tableplot <- if (length(topPathways) > 0) {
         gridExtra::arrangeGrob(
-          plotGesecaTable(gesecaRes = gesecaRes, pathways = pathways_list[topPathways], E = vst_matrix),
+          plotGesecaTable(gesecaRes = gesecaRes, pathways = pathways_list[topPathways], E = expr_matrix),
           top = grid::textGrob(paste0("Gene Set Collection: ", genesets_geseca()$label),
                                gp = grid::gpar(fontsize = 14, fontface = "bold"))
         )
       } else { NULL }
       
       list(tableplot = tableplot, gesecaRes = gesecaRes,
-           vst_matrix = vst_matrix, pathways_list = pathways_list)
+           expr_matrix = expr_matrix, pathways_list = pathways_list)
     }, error = handle_geseca_error)
   })
   
@@ -791,10 +791,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     sort_cond  <- colData(state$se_obj())[[sort_var]]
     
     sample_order <- order(sort_cond)
-    vst_sorted   <- geseca_result()$vst_matrix[, sample_order]
+    expr_matrix_sorted   <- geseca_result()$expr_matrix[, sample_order]
     
     plotCoregulationProfile(
-      pathway_genes, vst_sorted,
+      pathway_genes, expr_matrix_sorted,
       conditions = color_cond[sample_order],
       scale = TRUE
     ) +

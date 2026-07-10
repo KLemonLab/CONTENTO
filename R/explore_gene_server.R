@@ -35,13 +35,13 @@ explore_gene_server <- function(input, output, session, state, organism) {
                fluidRow(
                  column(width = 7,
                         div(style = "padding: 15px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e3e6ea;",
-                            h4(strong("VST-Normalized Expression Across Conditions"),
+                            h4(strong("Expression Across Conditions"),
                                style = "margin-top: 0; margin-bottom: 8px;"),
                             tags$ul(
                               style = "margin: 5px 0 0 15px; padding:0;",
                               tags$li("Table shows DE results for the selected gene across all contrasts, colored by regulation direction (up/down)"),
                               tags$li("Adjust fold-change and p-value cutoffs in the sidebar to update DE calls in the table"),
-                              tags$li("Plot shows VST-normalized expression for the selected gene across all samples"),
+                              tags$li("Plot expression for the selected gene across all samples"),
                               tags$li("Use X-axis, Color, and Shape controls to group samples by any experimental variable from the SE metadata")
 
                             )
@@ -93,7 +93,6 @@ explore_gene_server <- function(input, output, session, state, organism) {
                             tags$ul(
                               style = "margin: 5px 0 0 15px; padding:0;",
                               tags$li("Bar chart shows the fraction of total expression variance attributed to each experimental factor"),
-                              tags$li("Variance partition is computed from the full VST expression matrix using variancePartition"),
                               tags$li("Factors with higher bars contribute more to explaining expression differences across samples")
                             )
                         )
@@ -317,10 +316,10 @@ explore_gene_server <- function(input, output, session, state, organism) {
   gene_plot <- reactive({
     req(input$geneSelect, input$x_col, state$se_obj())
     tryCatch({
-      vst_mat <- assay(state$se_obj(), "vst")
-      if (!input$geneSelect %in% rownames(vst_mat)) stop("Gene not found in dataset")
+      expr_mat <- assay(state$se_obj(), "expr_matrix")
+      if (!input$geneSelect %in% rownames(expr_mat)) stop("Gene not found in dataset")
       meta            <- as.data.frame(colData(state$se_obj()))
-      meta$expression <- vst_mat[input$geneSelect, ]
+      meta$expression <- expr_mat[input$geneSelect, ]
       n_colors        <- length(unique(meta[[input$color_col]]))
       palette_colors  <- colorRampPalette(brewer.pal(8, "Dark2"))(n_colors)
       ggplot(meta, aes(.data[[input$x_col]], expression)) +
@@ -329,7 +328,7 @@ explore_gene_server <- function(input, output, session, state, organism) {
         geom_jitter(aes(color = .data[[input$color_col]], shape = .data[[input$shape_col]]),
                     width = 0.2, size = 3, alpha = 0.9) +
         scale_color_manual(values = palette_colors) +
-        labs(title = gene_name(), y = "VST expression", x = input$x_col) +
+        labs(title = gene_name(), y = "Expression", x = input$x_col) +
         theme_bw(base_size = 20) +
         theme(axis.text = element_text(angle = 45, hjust = 1),
               panel.grid.major.x = element_blank(),
