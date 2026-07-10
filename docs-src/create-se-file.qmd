@@ -33,7 +33,17 @@ A CONTENTO-compatible SE has four required components:
 | MSigDB GSEA | `metadata(se)$organism` matching a valid `msigdbr` species |
 | Neighborhood Analysis (bacteria) | `metadata(se)$organism == "Bacteria"` + annotation with coordinates |
 
-The two examples below show this end-to-end for a simple two-group design and a more complex multi-factor design with interaction terms.
+## Workflow
+
+Both examples below follow the same sequence:
+
+1. **Metadata Preparation** — load sample metadata and set factor levels/labels.
+2. **Data Import** — pull RSEM quantifications into a `tximport` object.
+3. **Exploratory DESeq2 Analysis** — fit a simple model and inspect a PCA to sanity-check the data before committing to a final design.
+4. **Differential Expression Analysis** — fit the full design and extract one or more contrasts.
+5. **Create SummarizedExperiment (SE) Object** — assemble assays, rowData, colData, and metadata with `convert_to_SE()`.
+
+**Example 1** covers a single two-group comparison (one contrast). **Example 2** covers a multi-factor design with an interaction term, producing several related contrasts — use it as the template if your experiment has more than one categorical variable of interest (e.g. treatment × condition).
 
 ```{r}
 # Set up your R environment
@@ -55,6 +65,8 @@ SE_DIR <- here("../inst/extdata/SE")
 Simple experiment RSV infecting HNO-ALI N=3 experiments  (HNO control vs RSV infected). TRUE/FALSE for virus
 
 ## Metadata Preparation
+
+`meta` must contain one row per sample, a `file_base` column matching your RSEM output filenames, and the experimental factor columns used in the design formula below.
 
 ```{r}
 # Read metadata file
@@ -86,7 +98,7 @@ txi$length[txi$length == 0] <- 1
 
 ## Exploratory DESeq2 Analysis (Optional but Recommended)
 
-We run an initial DESeq model design to explore the data. 
+We run an initial DESeq model design to explore the data. This exploratory fit is only used for the PCA check below — it is not the design used for contrast extraction, which comes next.
 
 ```{r}
 # DESeq design 
@@ -306,9 +318,11 @@ saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
 
 # Example 2: Multiple Contrasts
 
-More complex experiment with RSV infecting HNO-ALI N=3 experiments  (HNO control vs RSV infected). TRUE/FALSE for virus with 4 different bacteria conditions (NB, Spn, Hin, Dpi). This design allows us to explore the interaction between virus and bacteria species, as well as the main effects of each factor. 
+More complex experiment with RSV infecting HNO-ALI N=3 experiments  (HNO control vs RSV infected). TRUE/FALSE for virus with 4 different bacteria conditions (NB, Spn, Hin, Dpi). This design allows us to explore the interaction between virus and bacteria species, as well as the main effects of each factor. Because this design defines several distinct comparisons, `metadata(se)$contrasts` will hold multiple contrast names, each with its own set of rowData columns.
 
 ## Metadata Preparation
+
+`meta` must contain one row per sample, a `file_base` column matching your RSEM output filenames, and the experimental factor columns used in the design formula below.
 
 ```{r}
 # Read metadata file
@@ -328,6 +342,7 @@ meta <- meta |>
 
 ## Data Import
 
+Same import procedure as Example 1, applied to this project's samples.
 
 ```{r}
 # Import data using tximport
@@ -340,7 +355,7 @@ txi$length[txi$length == 0] <- 1
 
 ## Exploratory DESeq2 Analysis (Optional but Recommended)
 
-We run an initial DESeq model design to explore the data. It does not consider the interaction between variables. We only use it to explore the data and possible effects for the 5 independent experiments. The design formula is `~ bacteria + virus + exp`, which accounts for the main effects of bacteria, virus, and experiment without considering their interactions. This allows us to assess the individual contributions of each factor to gene expression changes.
+We run an initial DESeq model design to explore the data. It does not consider the interaction between variables. We only use it to explore the data and possible effects for the 5 independent experiments. The design formula is `~ bacteria + virus + exp`, which accounts for the main effects of bacteria, virus, and experiment without considering their interactions. This allows us to assess the individual contributions of each factor to gene expression changes. This exploratory fit is only used for the PCA check below — it is not the design used for contrast extraction, which comes later.
 
 ```{r}
 # DESeq design 
