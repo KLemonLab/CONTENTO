@@ -2,7 +2,7 @@
 title: "Create SE for CONTENTO"
 date: last-modified
 execute:
-  eval: false
+  eval: true
   echo: true
   warning: false
   message: false
@@ -24,7 +24,7 @@ A CONTENTO-compatible SE has four required components:
 - **rowData**: one row per gene, with DE statistics for each contrast stored as columns prefixed by statistic name and suffixed by contrast name (e.g. `log2FoldChange_VirusTvsF`, `padj_VirusTvsF`). CONTENTO parses these prefixes (`baseMean_`, `log2FoldChange_`, `log2FoldChange_shrunk_`, `lfcSE_`, `stat_`, `pvalue_`, `padj_`) to reshape the data internally.
 - **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
 - **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `rowData` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
-  - `db_species`: character string, `"HS"` or `"MM"`. Overrides CONTENTO's automatic mapping from `organism` to an `msigdbr` database species. Use this if your organism isn't natively supported by `msigdbr` but you still want ortholog-mapped MSigDB gene sets (e.g. querying human Hallmark gene sets for a non-human, non-mouse organism).
+  - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping; `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
   - `dataset_name`: character string used as the base filename prefix for every file downloaded from CONTENTO (tables, plots, etc.). If omitted, CONTENTO falls back to the uploaded SE filename, or `"CONTENTO"` if that isn't available either.
 
 | Feature | Required SE component |
@@ -32,7 +32,7 @@ A CONTENTO-compatible SE has four required components:
 | DE tables & volcano plots | rowData contrast columns |
 | Expression Plot / Heatmap / GESECA | `expr_matrix` assay |
 | Variance Decomposition tab | optional `varpart_*` rowData columns |
-| MSigDB GSEA | `metadata(se)$organism` matching a valid `msigdbr` species (or `metadata(se)$db_species` override) |
+| MSigDB GSEA | `metadata(se)$organism` matching a valid `msigdbr` species (`metadata(se)$db_species` optionally overrides which source database — human or mouse — is queried) |
 | Neighborhood Analysis (bacteria) | `metadata(se)$organism == "Bacteria"` + annotation with coordinates |
 
 ## Workflow
@@ -281,7 +281,7 @@ convert_to_SE <- function(dds, contrasts_df, expr_matrix,
     annotation = annotation, 
     db_species = db_species,      # optional: "HS" or "MM", overrides automatic msigdbr routing
     dataset_name = dataset_name,  # optional: base filename prefix for CONTENTO downloads
-    date = Sys.Date() # records the date of SE creation for reproducibility
+    date = Sys.Date()             # recorded for reproducibility but not read by CONTENTO itself
   )
   
   # Return the SummarizedExperiment object
@@ -302,9 +302,9 @@ SE = convert_to_SE(
   organism = "Homo sapiens", 
   annotation = "Homo_sapiens.GRCh38.113_annot",
   dataset_name = "ExpSingleContrast"
-  # db_species is left NULL here because "Homo sapiens" already maps natively to "HS";
-  # set e.g. db_species = "HS" to force human MSigDB gene sets for an organism
-  # msigdbr doesn't natively support.
+  # db_species is left NULL here because "Homo sapiens" already defaults to "HS";
+  # set e.g. db_species = "MM" to instead query mouse-curated gene sets
+  # ortholog-mapped onto this organism, overriding the automatic "HS" default.
 )
 saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
 ```
@@ -577,7 +577,7 @@ Before uploading to CONTENTO, confirm:
 - [ ] `rowData(se)` has `<stat>_<contrast_name>` columns for every entry in `metadata(se)$contrasts`, with matching suffixes.
 - [ ] `metadata(se)$contrasts` is a character vector, not a factor or list.
 - [ ] `metadata(se)$organism`, if set, exactly matches a valid `msigdbr` species name (or is `"Bacteria"` for neighborhood analysis).
-- [ ] `metadata(se)$db_species`, if set, is exactly `"HS"` or `"MM"` — overrides automatic msigdbr species routing based on `organism`.
+- [ ] `metadata(se)$db_species`, if set, is exactly `"HS"` or `"MM"` — overrides which MSigDB source database (human- or mouse-curated) is queried, but `organism` must still be a valid `msigdbr` species.
 - [ ] `metadata(se)$annotation`, if set, matches the filename (without `.rds`) of a built-in or uploaded annotation file.
 - [ ] `metadata(se)$dataset_name`, if set, is a short descriptive string — it becomes the prefix for every file CONTENTO lets users download.
 - [ ] `rownames(se)` are consistent gene identifiers matching your annotation's `Geneid` column, if used.
