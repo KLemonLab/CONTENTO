@@ -189,44 +189,27 @@ explore_gene_server <- function(input, output, session, state, organism) {
   })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### UI: Gene Select #####
+  ##### UI: Gene Select (empty shell; choices filled server-side) #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneSelect <- renderUI({
     if (is.null(state$de_df())) return(empty_state_msg())
-    
-    gene_df <- state$de_df() |>
-      select(any_of(c("Geneid", "symbol"))) |>
-      distinct()
-    
-    if ("symbol" %in% colnames(gene_df)) {
-      choices_df <- gene_df |>
-        mutate(display = ifelse(
-          is.na(symbol) | symbol == "" | symbol == Geneid,
-          Geneid,
-          paste0(symbol, " [", Geneid, "]")
-        )) |>
-        arrange(display)
-      choice_vec <- setNames(choices_df$Geneid, choices_df$display)
-    } else {
-      choice_vec <- setNames(gene_df$Geneid, gene_df$Geneid)
-    }
     
     div(
       style = "margin-top: -10px;",
       selectizeInput(
         "geneSelect",
-        label   = NULL,
-        choices = c("", choice_vec),
+        label    = NULL,
+        choices  = NULL,
         selected = character(0),
-        options = list(
-          placeholder  = "Start typing gene name or ID...",
-          maxOptions   = 20,
-          loadThrottle = 200
+        options  = list(
+          placeholder = "Start typing gene name or ID...",
+          maxOptions  = 20
         ),
         width = "90%"
       )
     )
   })
+  outputOptions(output, "geneSelect", suspendWhenHidden = FALSE)  
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: Update Plot Variable Choices #####
@@ -284,6 +267,39 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 2: DATA PROCESSING & ANALYSIS ####
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: Gene Choice Vector (Geneid -> display label) #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  gene_choice_vec <- reactive({
+    req(state$de_df())
+    
+    gene_df <- state$de_df() |>
+      select(any_of(c("Geneid", "symbol"))) |>
+      distinct()
+    
+    if ("symbol" %in% colnames(gene_df)) {
+      choices_df <- gene_df |>
+        mutate(display = ifelse(
+          is.na(symbol) | symbol == "" | symbol == Geneid,
+          Geneid,
+          paste0(symbol, " [", Geneid, "]")
+        )) |>
+        arrange(display)
+      setNames(choices_df$Geneid, choices_df$display)
+    } else {
+      setNames(gene_df$Geneid, gene_df$Geneid)
+    }
+  })
+  
+  observeEvent(gene_choice_vec(), {
+    updateSelectizeInput(
+      session, "geneSelect",
+      choices  = c("", gene_choice_vec()),
+      selected = character(0),
+      server   = TRUE
+    )
+  })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### Reactive: DE Filtered by User-Defined Cutoffs #####
