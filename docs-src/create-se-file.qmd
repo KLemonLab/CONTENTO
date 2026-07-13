@@ -21,9 +21,9 @@ format:
 A CONTENTO-compatible SE has four required components:
 
 - **assays**: must contain an assay named `expr_matrix`, which provides the expression values used by CONTENTO visualizations and downstream analyses.
-- **rowData**: one row per gene, with DE statistics for each contrast stored as columns prefixed by statistic name and suffixed by contrast name (e.g. `log2FoldChange_VirusTvsF`, `padj_VirusTvsF`). CONTENTO parses these prefixes (`baseMean_`, `log2FoldChange_`, `log2FoldChange_shrunk_`, `lfcSE_`, `stat_`, `pvalue_`, `padj_`) to reshape the data internally.
+- **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF`, `padj__VirusTvsF`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see Step 4 below). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
 - **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
-- **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `rowData` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
+- **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
   - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping; `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
   - `dataset_name`: character string used as the base filename prefix for every file downloaded from CONTENTO (tables, plots, etc.). If omitted, CONTENTO falls back to the uploaded SE filename, or `"CONTENTO"` if that isn't available either.
 
@@ -42,7 +42,7 @@ Both examples below follow the same sequence:
 1.  **Metadata Preparation**: load sample metadata and set factor levels/labels.
 2.  **Data Import**: pull RSEM quantifications into a `tximport` object.
 3.  **Exploratory DESeq2 Analysis (Optional)**: fit a simple model and inspect a PCA to inspect the data before committing to a final design.
-4.  **Differential Expression Analysis**: fit the full design and extract one or more contrasts.
+4.  **Differential Expression Analysis**: fit the full design, extract one or more contrasts, and rename output columns to CONTENTO's generic vocabulary (`log2FC`, `stat`, `padj`).
 5.  **Create Expression Matrix**: extract the expression matrix for use in CONTENTO (normalization recommended).
 6.  **Create SummarizedExperiment (SE) Object**: assemble assays, rowData, colData, and metadata with `convert_to_SE()`.
 
@@ -189,6 +189,17 @@ run_contrast_analysis <- function(dds, contrast_name, contrast = NULL, coef = NU
 contrasts_df <- run_contrast_analysis(dds, contrast_name = "VirusTvsF", coef = "virus_TRUE_vs_FALSE")
 ```
 
+::: callout-important
+### IMPORTANT:
+
+CONTENTO requires generic column names so it works with any DE tool, not just DESeq2. **Required:** `log2FC`, `stat`, `padj`. **Optional:** `log2FC_shrunk`. DESeq2's `results()` already outputs `stat` and `padj` with the right names — only `log2FoldChange` (and `log2FoldChange_shrunk`) need renaming.
+:::
+
+```{r}
+contrasts_df <- contrasts_df |>
+  dplyr::rename(log2FC = log2FoldChange, log2FC_shrunk = log2FoldChange_shrunk)
+```
+
 ## Step 5. Create Expression Matrix
 
 The expression matrix stored in the SE can be generated using any normalization or transformation method appropriate for your dataset. CONTENTO treats this assay as a matrix of expression values used for visualization and downstream analyses such as expression plots, heatmaps, and GESECA. Common choices include VST-transformed counts from DESeq2, log-CPM values from edgeR, or log-transformed TPM values.
@@ -201,7 +212,7 @@ expr_matrix <- assay(vst(dds, blind = FALSE))
 
 ## Step 6. Create SummarizedExperiment (SE) Object
 
-The `convert_to_SE()` helper below builds the final SE object. It reshapes the long-format differential expression results into the wide-format `rowData` structure expected by CONTENTO, where each statistic is stored in a separate column with the pattern `<statistic>_<contrast_name>`. It attaches sample metadata as `colData`, stores the expression matrix in the `expr_matrix` assay, optionally merges variance-partition results as `varpart_*` columns, and records `contrasts`, `organism`, `annotation`, `db_species`, and `dataset_name` in `metadata(se)`. The same function can be reused regardless of experimental design or the number of contrasts being included.
+The `convert_to_SE()` helper below builds the final SE object. It reshapes the long-format differential expression results into the wide-format `rowData` structure expected by CONTENTO, where each statistic is stored in a separate column with the pattern `<statistic>__<contrast_name>`. It attaches sample metadata as `colData`, stores the expression matrix in the `expr_matrix` assay, optionally merges variance-partition results as `varpart_*` columns, and records `contrasts`, `organism`, `annotation`, `db_species`, and `dataset_name` in `metadata(se)`. The same function can be reused regardless of experimental design or the number of contrasts being included.
 
 ```{r}
 convert_to_SE <- function(dds, contrasts_df, expr_matrix,
@@ -214,7 +225,7 @@ convert_to_SE <- function(dds, contrasts_df, expr_matrix,
       id_cols = Geneid,
       names_from = contrast,
       values_from = -c(Geneid, contrast),
-      names_sep = "_"
+      names_sep = "__"
     )
   
   contrasts_found <- unique(contrasts_df$contrast)
@@ -544,6 +555,17 @@ all_contrast_results <- list(
 all_contrast_df <- bind_rows(all_contrast_results)
 ```
 
+::: callout-important
+### IMPORTANT:
+
+CONTENTO requires generic column names so it works with any DE tool, not just DESeq2. **Required:** `log2FC`, `stat`, `padj`. **Optional:** `log2FC_shrunk`. DESeq2's `results()` already outputs `stat` and `padj` with the right names — only `log2FoldChange` (and `log2FoldChange_shrunk`) need renaming.
+:::
+
+```{r}
+all_contrast_df <- all_contrast_df |>
+  dplyr::rename(log2FC = log2FoldChange, log2FC_shrunk = log2FoldChange_shrunk)
+```
+
 ## Step 5. Create Expression Matrix
 
 As in Example 1, the expression matrix can be generated using any normalization or transformation method suitable for downstream visualization and exploratory analysis. Here we use the DESeq2 variance stabilizing transformation (VST).
@@ -574,7 +596,7 @@ saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
 Before uploading to CONTENTO, confirm:
 
 - [ ] `assays(se)` includes `expr_matrix` (required for expression/heatmap/GESECA features).
-- [ ] `rowData(se)` has `<stat>_<contrast_name>` columns for every entry in `metadata(se)$contrasts`, with matching suffixes.
+- [ ] `rowData(se)` has `<stat>__<contrast_name>` columns for every entry in `metadata(se)$contrasts`, with matching suffixes. `log2FC__<contrast>`, `stat__<contrast>`, and `padj__<contrast>` columns (required); `log2FC_shrunk__<contrast>` is optional.
 - [ ] `metadata(se)$contrasts` is a character vector, not a factor or list.
 - [ ] `metadata(se)$organism`, if set, exactly matches a valid `msigdbr` species name (or is `"Bacteria"` for neighborhood analysis).
 - [ ] `metadata(se)$db_species`, if set, is exactly `"HS"` or `"MM"` — overrides which MSigDB source database (human- or mouse-curated) is queried, but `organism` must still be a valid `msigdbr` species.

@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-07-10">
+<meta name="dcterms.date" content="2026-07-13">
 
 <title>CONTENTO - Create SE for CONTENTO</title>
 <style>
@@ -236,7 +236,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 10, 2026</p>
+      <p class="date">July 13, 2026</p>
     </div>
   </div>
   
@@ -252,9 +252,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>A CONTENTO-compatible SE has four required components:</p>
 <ul>
 <li><strong>assays</strong>: must contain an assay named <code>expr_matrix</code>, which provides the expression values used by CONTENTO visualizations and downstream analyses.</li>
-<li><strong>rowData</strong>: one row per gene, with DE statistics for each contrast stored as columns prefixed by statistic name and suffixed by contrast name (e.g.&nbsp;<code>log2FoldChange_VirusTvsF</code>, <code>padj_VirusTvsF</code>). CONTENTO parses these prefixes (<code>baseMean_</code>, <code>log2FoldChange_</code>, <code>log2FoldChange_shrunk_</code>, <code>lfcSE_</code>, <code>stat_</code>, <code>pvalue_</code>, <code>padj_</code>) to reshape the data internally.</li>
+<li><strong>rowData</strong>: one row per gene, with DE statistics for each contrast stored as columns named <code>&lt;name&gt;__&lt;contrast_name&gt;</code> (double underscore separator, e.g.&nbsp;<code>log2FC__VirusTvsF</code>, <code>padj__VirusTvsF</code>). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: <code>log2FC</code>, <code>stat</code> and <code>padj</code> (required for every contrast), and <code>log2FC_shrunk</code> (optional). If your tool uses different names (e.g.&nbsp;DESeq2’s <code>log2FoldChange</code>, edgeR’s <code>logFC</code>), rename the columns to this vocabulary before building the SE (see Step 4 below). Any other columns you include (e.g.&nbsp;<code>baseMean</code>, <code>lfcSE</code>) are carried through but not used by CONTENTO.</li>
 <li><strong>colData</strong>: sample-level metadata (experimental factors used for grouping/coloring in plots).</li>
-<li><strong>metadata(se)</strong>: a list with, at minimum, <code>contrasts</code> (a character vector of unique contrast names matching the <code>rowData</code> suffixes described above). Optional fields <code>organism</code> and <code>annotation</code> unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
+<li><strong>metadata(se)</strong>: a list with, at minimum, <code>contrasts</code> (a character vector of unique contrast names matching the <code>__&lt;contrast_name&gt;</code> suffixes described above). Optional fields <code>organism</code> and <code>annotation</code> unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
 <ul>
 <li><code>db_species</code>: character string, <code>"HS"</code> or <code>"MM"</code>. By default, CONTENTO picks the MSigDB source database automatically: <code>"MM"</code> (mouse-curated) only when <code>organism</code> is exactly <code>"Mus musculus"</code>, and <code>"HS"</code> (human-curated) for every other <code>msigdbr</code>-supported organism. Set <code>db_species</code> to override that default — e.g.&nbsp;to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that <code>organism</code> must still be a species <code>msigdbr</code> recognizes for ortholog mapping; <code>db_species</code> does not extend MSigDB support to organisms <code>msigdbr</code> doesn’t already support.</li>
 <li><code>dataset_name</code>: character string used as the base filename prefix for every file downloaded from CONTENTO (tables, plots, etc.). If omitted, CONTENTO falls back to the uploaded SE filename, or <code>"CONTENTO"</code> if that isn’t available either.</li>
@@ -301,7 +301,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Metadata Preparation</strong>: load sample metadata and set factor levels/labels.</li>
 <li><strong>Data Import</strong>: pull RSEM quantifications into a <code>tximport</code> object.</li>
 <li><strong>Exploratory DESeq2 Analysis (Optional)</strong>: fit a simple model and inspect a PCA to inspect the data before committing to a final design.</li>
-<li><strong>Differential Expression Analysis</strong>: fit the full design and extract one or more contrasts.</li>
+<li><strong>Differential Expression Analysis</strong>: fit the full design, extract one or more contrasts, and rename output columns to CONTENTO’s generic vocabulary (<code>log2FC</code>, <code>stat</code>, <code>padj</code>).</li>
 <li><strong>Create Expression Matrix</strong>: extract the expression matrix for use in CONTENTO (normalization recommended).</li>
 <li><strong>Create SummarizedExperiment (SE) Object</strong>: assemble assays, rowData, colData, and metadata with <code>convert_to_SE()</code>.</li>
 </ol>
@@ -445,6 +445,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>contrasts_df <span class="ot">&lt;-</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> <span class="st">"VirusTvsF"</span>, <span class="at">coef =</span> <span class="st">"virus_TRUE_vs_FALSE"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+IMPORTANT:
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>CONTENTO requires generic column names so it works with any DE tool, not just DESeq2. <strong>Required:</strong> <code>log2FC</code>, <code>stat</code>, <code>padj</code>. <strong>Optional:</strong> <code>log2FC_shrunk</code>. DESeq2’s <code>results()</code> already outputs <code>stat</code> and <code>padj</code> with the right names — only <code>log2FoldChange</code> (and <code>log2FoldChange_shrunk</code>) need renaming.</p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>contrasts_df <span class="ot">&lt;-</span> contrasts_df <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(<span class="at">log2FC =</span> log2FoldChange, <span class="at">log2FC_shrunk =</span> log2FoldChange_shrunk)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 </section>
 </section>
 <section id="step-5.-create-expression-matrix" class="level2">
@@ -452,114 +469,114 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The expression matrix stored in the SE can be generated using any normalization or transformation method appropriate for your dataset. CONTENTO treats this assay as a matrix of expression values used for visualization and downstream analyses such as expression plots, heatmaps, and GESECA. Common choices include VST-transformed counts from DESeq2, log-CPM values from edgeR, or log-transformed TPM values.</p>
 <p>For RNA-seq workflows based on DESeq2, we recommend using the variance stabilizing transformation (VST), which reduces the dependence of variance on expression level while preserving biological signal. This generally produces expression values that are well suited for visualization and exploratory analyses in CONTENTO.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>expr_matrix <span class="ot">&lt;-</span> <span class="fu">assay</span>(<span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">FALSE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>expr_matrix <span class="ot">&lt;-</span> <span class="fu">assay</span>(<span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">FALSE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="step-6.-create-summarizedexperiment-se-object" class="level2">
 <h2 class="anchored" data-anchor-id="step-6.-create-summarizedexperiment-se-object">Step 6. Create SummarizedExperiment (SE) Object</h2>
-<p>The <code>convert_to_SE()</code> helper below builds the final SE object. It reshapes the long-format differential expression results into the wide-format <code>rowData</code> structure expected by CONTENTO, where each statistic is stored in a separate column with the pattern <code>&lt;statistic&gt;_&lt;contrast_name&gt;</code>. It attaches sample metadata as <code>colData</code>, stores the expression matrix in the <code>expr_matrix</code> assay, optionally merges variance-partition results as <code>varpart_*</code> columns, and records <code>contrasts</code>, <code>organism</code>, <code>annotation</code>, <code>db_species</code>, and <code>dataset_name</code> in <code>metadata(se)</code>. The same function can be reused regardless of experimental design or the number of contrasts being included.</p>
+<p>The <code>convert_to_SE()</code> helper below builds the final SE object. It reshapes the long-format differential expression results into the wide-format <code>rowData</code> structure expected by CONTENTO, where each statistic is stored in a separate column with the pattern <code>&lt;statistic&gt;__&lt;contrast_name&gt;</code>. It attaches sample metadata as <code>colData</code>, stores the expression matrix in the <code>expr_matrix</code> assay, optionally merges variance-partition results as <code>varpart_*</code> columns, and records <code>contrasts</code>, <code>organism</code>, <code>annotation</code>, <code>db_species</code>, and <code>dataset_name</code> in <code>metadata(se)</code>. The same function can be reused regardless of experimental design or the number of contrasts being included.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>convert_to_SE <span class="ot">&lt;-</span> <span class="cf">function</span>(dds, contrasts_df, expr_matrix,</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">organism =</span> <span class="cn">NULL</span>, <span class="at">annotation =</span> <span class="cn">NULL</span>, <span class="at">varpart =</span> <span class="cn">NULL</span>,</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">db_species =</span> <span class="cn">NULL</span>, <span class="at">dataset_name =</span> <span class="cn">NULL</span>) { </span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Reshape to wide format</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  contrasts_wide <span class="ot">&lt;-</span> contrasts_df <span class="sc">%&gt;%</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pivot_wider</span>(</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">id_cols =</span> Geneid,</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">names_from =</span> contrast,</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">values_from =</span> <span class="sc">-</span><span class="fu">c</span>(Geneid, contrast),</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">names_sep =</span> <span class="st">"_"</span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  contrasts_found <span class="ot">&lt;-</span> <span class="fu">unique</span>(contrasts_df<span class="sc">$</span>contrast)</span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"✓ Found"</span>, <span class="fu">length</span>(contrasts_found), <span class="st">"contrasts:"</span>, <span class="fu">paste</span>(contrasts_found, <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Extract sample metadata</span></span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>  sample_metadata <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">colData</span>(dds))</span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create rowData with Geneid as rownames</span></span>
-<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  rowdata_df <span class="ot">&lt;-</span> contrasts_wide <span class="sc">%&gt;%</span></span>
-<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">column_to_rownames</span>(<span class="st">"Geneid"</span>)</span>
-<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add variance partition data if provided</span></span>
-<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(varpart)) {</span>
-<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"Loading variance partition data...</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tryCatch</span>({</span>
-<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Extract only the variance partition matrix</span></span>
-<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>      varpart_matrix <span class="ot">&lt;-</span> varpart<span class="sc">$</span>varPart</span>
-<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Get common genes between rowData and varPart</span></span>
-<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>      common_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">rownames</span>(rowdata_df), <span class="fu">rownames</span>(varpart_matrix))</span>
-<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">length</span>(common_genes) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
-<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Convert to dataframe and add varpart_ prefix</span></span>
-<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>        varpart_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(varpart_matrix[common_genes, , <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
-<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>        <span class="fu">colnames</span>(varpart_df) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"varpart_"</span>, <span class="fu">colnames</span>(varpart_df))</span>
-<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Merge with rowdata_df (only for genes that exist in both)</span></span>
-<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>        rowdata_df[common_genes, <span class="fu">colnames</span>(varpart_df)] <span class="ot">&lt;-</span> varpart_df</span>
-<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a>        <span class="fu">cat</span>(<span class="st">"✓ Added variance partition for"</span>, <span class="fu">length</span>(common_genes), <span class="st">"genes</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>        <span class="fu">cat</span>(<span class="st">"  Factors:"</span>, <span class="fu">paste</span>(<span class="fu">gsub</span>(<span class="st">"varpart_"</span>, <span class="st">""</span>, <span class="fu">colnames</span>(varpart_df)), <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>      } <span class="cf">else</span> {</span>
-<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>        <span class="fu">cat</span>(<span class="st">"⚠ No common genes between contrasts and variance partition</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>      }</span>
-<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a>    }, <span class="at">error =</span> <span class="cf">function</span>(e) {</span>
-<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>      <span class="fu">cat</span>(<span class="st">"⚠ Error loading variance partition:"</span>, e<span class="sc">$</span>message, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>    })</span>
-<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Ensure rowData order matches dds</span></span>
-<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a>  rowdata_df <span class="ot">&lt;-</span> rowdata_df[<span class="fu">rownames</span>(dds), ]</span>
-<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Verify dimensions match</span></span>
-<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(rowdata_df), <span class="fu">rownames</span>(dds)))</span>
-<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(sample_metadata), <span class="fu">colnames</span>(dds)))</span>
-<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"✓ Gene order verified:"</span>, <span class="fu">nrow</span>(rowdata_df), <span class="st">"genes match</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create SummarizedExperiment</span></span>
-<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>  se <span class="ot">&lt;-</span> <span class="fu">SummarizedExperiment</span>(</span>
-<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>    <span class="at">assays =</span> <span class="fu">list</span>(<span class="at">expr_matrix =</span> expr_matrix),</span>
-<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">colData =</span> <span class="fu">DataFrame</span>(sample_metadata),</span>
-<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">rowData =</span> <span class="fu">DataFrame</span>(rowdata_df)</span>
-<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Store metadata</span></span>
-<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">metadata</span>(se) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a>    <span class="at">design =</span> <span class="fu">design</span>(dds),</span>
-<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrasts =</span> contrasts_found,</span>
-<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a>    <span class="at">organism =</span> organism,</span>
-<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">annotation =</span> annotation, </span>
-<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a>    <span class="at">db_species =</span> db_species,      <span class="co"># optional: "HS" or "MM", overrides automatic msigdbr routing</span></span>
-<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a>    <span class="at">dataset_name =</span> dataset_name,  <span class="co"># optional: base filename prefix for CONTENTO downloads</span></span>
-<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a>    <span class="at">date =</span> <span class="fu">Sys.Date</span>()             <span class="co"># recorded for reproducibility but not read by CONTENTO itself</span></span>
-<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb10-80"><a href="#cb10-80" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Return the SummarizedExperiment object</span></span>
-<span id="cb10-82"><a href="#cb10-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-83"><a href="#cb10-83" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"  Dimensions:"</span>, <span class="fu">nrow</span>(se), <span class="st">"genes x"</span>, <span class="fu">ncol</span>(se), <span class="st">"samples</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"  Assays:"</span>, <span class="fu">paste</span>(<span class="fu">names</span>(<span class="fu">assays</span>(se)), <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
-<span id="cb10-85"><a href="#cb10-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"  Columns in rowData:"</span>, <span class="fu">ncol</span>(<span class="fu">rowData</span>(se)), <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)</span>
-<span id="cb10-86"><a href="#cb10-86" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-87"><a href="#cb10-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(se)</span>
-<span id="cb10-88"><a href="#cb10-88" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>convert_to_SE <span class="ot">&lt;-</span> <span class="cf">function</span>(dds, contrasts_df, expr_matrix,</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">organism =</span> <span class="cn">NULL</span>, <span class="at">annotation =</span> <span class="cn">NULL</span>, <span class="at">varpart =</span> <span class="cn">NULL</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">db_species =</span> <span class="cn">NULL</span>, <span class="at">dataset_name =</span> <span class="cn">NULL</span>) { </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Reshape to wide format</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  contrasts_wide <span class="ot">&lt;-</span> contrasts_df <span class="sc">%&gt;%</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pivot_wider</span>(</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">id_cols =</span> Geneid,</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">names_from =</span> contrast,</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">values_from =</span> <span class="sc">-</span><span class="fu">c</span>(Geneid, contrast),</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">names_sep =</span> <span class="st">"__"</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  contrasts_found <span class="ot">&lt;-</span> <span class="fu">unique</span>(contrasts_df<span class="sc">$</span>contrast)</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"✓ Found"</span>, <span class="fu">length</span>(contrasts_found), <span class="st">"contrasts:"</span>, <span class="fu">paste</span>(contrasts_found, <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Extract sample metadata</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>  sample_metadata <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">colData</span>(dds))</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create rowData with Geneid as rownames</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>  rowdata_df <span class="ot">&lt;-</span> contrasts_wide <span class="sc">%&gt;%</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">column_to_rownames</span>(<span class="st">"Geneid"</span>)</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add variance partition data if provided</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(varpart)) {</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"Loading variance partition data...</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tryCatch</span>({</span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Extract only the variance partition matrix</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>      varpart_matrix <span class="ot">&lt;-</span> varpart<span class="sc">$</span>varPart</span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Get common genes between rowData and varPart</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>      common_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">rownames</span>(rowdata_df), <span class="fu">rownames</span>(varpart_matrix))</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">length</span>(common_genes) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Convert to dataframe and add varpart_ prefix</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>        varpart_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(varpart_matrix[common_genes, , <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>        <span class="fu">colnames</span>(varpart_df) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"varpart_"</span>, <span class="fu">colnames</span>(varpart_df))</span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Merge with rowdata_df (only for genes that exist in both)</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a>        rowdata_df[common_genes, <span class="fu">colnames</span>(varpart_df)] <span class="ot">&lt;-</span> varpart_df</span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a>        <span class="fu">cat</span>(<span class="st">"✓ Added variance partition for"</span>, <span class="fu">length</span>(common_genes), <span class="st">"genes</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>        <span class="fu">cat</span>(<span class="st">"  Factors:"</span>, <span class="fu">paste</span>(<span class="fu">gsub</span>(<span class="st">"varpart_"</span>, <span class="st">""</span>, <span class="fu">colnames</span>(varpart_df)), <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a>      } <span class="cf">else</span> {</span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a>        <span class="fu">cat</span>(<span class="st">"⚠ No common genes between contrasts and variance partition</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a>    }, <span class="at">error =</span> <span class="cf">function</span>(e) {</span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a>      <span class="fu">cat</span>(<span class="st">"⚠ Error loading variance partition:"</span>, e<span class="sc">$</span>message, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Ensure rowData order matches dds</span></span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a>  rowdata_df <span class="ot">&lt;-</span> rowdata_df[<span class="fu">rownames</span>(dds), ]</span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Verify dimensions match</span></span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(rowdata_df), <span class="fu">rownames</span>(dds)))</span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(sample_metadata), <span class="fu">colnames</span>(dds)))</span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"✓ Gene order verified:"</span>, <span class="fu">nrow</span>(rowdata_df), <span class="st">"genes match</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create SummarizedExperiment</span></span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a>  se <span class="ot">&lt;-</span> <span class="fu">SummarizedExperiment</span>(</span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a>    <span class="at">assays =</span> <span class="fu">list</span>(<span class="at">expr_matrix =</span> expr_matrix),</span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">colData =</span> <span class="fu">DataFrame</span>(sample_metadata),</span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">rowData =</span> <span class="fu">DataFrame</span>(rowdata_df)</span>
+<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Store metadata</span></span>
+<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">metadata</span>(se) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a>    <span class="at">design =</span> <span class="fu">design</span>(dds),</span>
+<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrasts =</span> contrasts_found,</span>
+<span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a>    <span class="at">organism =</span> organism,</span>
+<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">annotation =</span> annotation, </span>
+<span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a>    <span class="at">db_species =</span> db_species,      <span class="co"># optional: "HS" or "MM", overrides automatic msigdbr routing</span></span>
+<span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a>    <span class="at">dataset_name =</span> dataset_name,  <span class="co"># optional: base filename prefix for CONTENTO downloads</span></span>
+<span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a>    <span class="at">date =</span> <span class="fu">Sys.Date</span>()             <span class="co"># recorded for reproducibility but not read by CONTENTO itself</span></span>
+<span id="cb11-79"><a href="#cb11-79" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Return the SummarizedExperiment object</span></span>
+<span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-83"><a href="#cb11-83" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"  Dimensions:"</span>, <span class="fu">nrow</span>(se), <span class="st">"genes x"</span>, <span class="fu">ncol</span>(se), <span class="st">"samples</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-84"><a href="#cb11-84" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"  Assays:"</span>, <span class="fu">paste</span>(<span class="fu">names</span>(<span class="fu">assays</span>(se)), <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb11-85"><a href="#cb11-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"  Columns in rowData:"</span>, <span class="fu">ncol</span>(<span class="fu">rowData</span>(se)), <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)</span>
+<span id="cb11-86"><a href="#cb11-86" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-87"><a href="#cb11-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(se)</span>
+<span id="cb11-88"><a href="#cb11-88" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>SE <span class="ot">=</span> <span class="fu">convert_to_SE</span>(</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dds =</span> dds,</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">contrasts_df =</span> contrasts_df,</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">expr_matrix =</span> expr_matrix,</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">organism =</span> <span class="st">"Homo sapiens"</span>, </span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotation =</span> <span class="st">"Homo_sapiens.GRCh38.113_annot"</span>,</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">"ExpSingleContrast"</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># db_species is left NULL here because "Homo sapiens" already defaults to "HS";</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># set e.g. db_species = "MM" to instead query mouse-curated gene sets</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ortholog-mapped onto this organism, overriding the automatic "HS" default.</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>SE <span class="ot">=</span> <span class="fu">convert_to_SE</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dds =</span> dds,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">contrasts_df =</span> contrasts_df,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">expr_matrix =</span> expr_matrix,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">organism =</span> <span class="st">"Homo sapiens"</span>, </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotation =</span> <span class="st">"Homo_sapiens.GRCh38.113_annot"</span>,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">"ExpSingleContrast"</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># db_species is left NULL here because "Homo sapiens" already defaults to "HS";</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># set e.g. db_species = "MM" to instead query mouse-curated gene sets</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ortholog-mapped onto this organism, overriding the automatic "HS" default.</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>✓ Found 1 contrasts: VirusTvsF 
 ✓ Gene order verified: 78932 genes match
@@ -567,7 +584,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   Assays: expr_matrix 
   Columns in rowData: 7 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(SE, <span class="fu">file.path</span>(SE_DIR, <span class="fu">paste0</span>(project_name, <span class="st">"_SE.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(SE, <span class="fu">file.path</span>(SE_DIR, <span class="fu">paste0</span>(project_name, <span class="st">"_SE.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -578,77 +595,77 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="step-1.-metadata-preparation-1">Step 1. Metadata Preparation</h2>
 <p><code>meta</code> must contain one row per sample, a <code>file_base</code> column matching your RSEM output filenames, and the experimental factor columns used in the design formula below.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read metadata file</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>project_name <span class="ot">&lt;-</span> <span class="st">"ExpMultContrast"</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(SE_DIR, <span class="fu">paste0</span>(project_name, <span class="st">"_metadata.csv"</span>)))</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create unique condition and label for each sample. This will be used by CONTENTO for visualization.</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> meta <span class="sc">|&gt;</span></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">bacteria =</span> <span class="fu">factor</span>(bacteria, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"NB"</span>, <span class="st">"Spn"</span>, <span class="st">"Hin"</span>, <span class="st">"Dpi"</span>)), <span class="co"># NB (No-Bacteria) is the reference level</span></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">virus =</span> <span class="fu">factor</span>(virus, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"FALSE"</span>, <span class="st">"TRUE"</span>)),</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">exp =</span> <span class="fu">factor</span>(exp),</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">condition =</span> <span class="fu">interaction</span>(bacteria, virus, <span class="at">sep =</span> <span class="st">"_"</span>), <span class="co"># unique condition for each sample</span></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">interaction</span>(bacteria, virus, exp, <span class="at">sep =</span> <span class="st">" | "</span>) <span class="co"># unique label for each sample </span></span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read metadata file</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>project_name <span class="ot">&lt;-</span> <span class="st">"ExpMultContrast"</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(SE_DIR, <span class="fu">paste0</span>(project_name, <span class="st">"_metadata.csv"</span>)))</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create unique condition and label for each sample. This will be used by CONTENTO for visualization.</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> meta <span class="sc">|&gt;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">bacteria =</span> <span class="fu">factor</span>(bacteria, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"NB"</span>, <span class="st">"Spn"</span>, <span class="st">"Hin"</span>, <span class="st">"Dpi"</span>)), <span class="co"># NB (No-Bacteria) is the reference level</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">virus =</span> <span class="fu">factor</span>(virus, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"FALSE"</span>, <span class="st">"TRUE"</span>)),</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">exp =</span> <span class="fu">factor</span>(exp),</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">condition =</span> <span class="fu">interaction</span>(bacteria, virus, <span class="at">sep =</span> <span class="st">"_"</span>), <span class="co"># unique condition for each sample</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">interaction</span>(bacteria, virus, exp, <span class="at">sep =</span> <span class="st">" | "</span>) <span class="co"># unique label for each sample </span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="step-2.-data-import-1" class="level2">
 <h2 class="anchored" data-anchor-id="step-2.-data-import-1">Step 2. Data Import</h2>
 <p>Same import procedure as Example 1, applied to this project’s samples.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Import data using tximport</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>rsem_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(SE_DIR, <span class="st">"rsem_counts"</span>)</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>count_files <span class="ot">&lt;-</span> <span class="fu">file.path</span>(rsem_folder, <span class="fu">paste0</span>(meta<span class="sc">$</span>file_base, <span class="st">".genes.results"</span>))</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(count_files) <span class="ot">&lt;-</span> meta<span class="sc">$</span>label</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>txi <span class="ot">&lt;-</span> <span class="fu">tximport</span>(count_files, <span class="at">type =</span> <span class="st">"rsem"</span>, <span class="at">txIn =</span> <span class="cn">FALSE</span>, <span class="at">txOut =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>txi<span class="sc">$</span>length[txi<span class="sc">$</span>length <span class="sc">==</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Import data using tximport</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>rsem_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(SE_DIR, <span class="st">"rsem_counts"</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>count_files <span class="ot">&lt;-</span> <span class="fu">file.path</span>(rsem_folder, <span class="fu">paste0</span>(meta<span class="sc">$</span>file_base, <span class="st">".genes.results"</span>))</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(count_files) <span class="ot">&lt;-</span> meta<span class="sc">$</span>label</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>txi <span class="ot">&lt;-</span> <span class="fu">tximport</span>(count_files, <span class="at">type =</span> <span class="st">"rsem"</span>, <span class="at">txIn =</span> <span class="cn">FALSE</span>, <span class="at">txOut =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>txi<span class="sc">$</span>length[txi<span class="sc">$</span>length <span class="sc">==</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="step-3.-exploratory-deseq2-analysis-1" class="level2">
 <h2 class="anchored" data-anchor-id="step-3.-exploratory-deseq2-analysis-1">Step 3. Exploratory DESeq2 Analysis</h2>
 <p>We run an initial DESeq model design to explore the data. It does not consider the interaction between variables. We only use it to explore the data and possible effects for the 3 independent experiments. The design formula is <code>~ bacteria + virus + exp</code>, which accounts for the main effects of bacteria, virus, and experiment without considering their interactions. This allows us to assess the individual contributions of each factor to gene expression changes. This exploratory fit is only used for the PCA check below, it is not the design used for contrast extraction, which comes later.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DESeq design </span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromTximport</span>(txi,</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>                                <span class="at">colData =</span> meta,</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>                                <span class="at">design =</span> <span class="sc">~</span> virus <span class="sc">+</span> bacteria <span class="sc">+</span> exp)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Run DESeq</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DESeq design </span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromTximport</span>(txi,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>                                <span class="at">colData =</span> meta,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>                                <span class="at">design =</span> <span class="sc">~</span> virus <span class="sc">+</span> bacteria <span class="sc">+</span> exp)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Run DESeq</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="principal-component-analysis-pca-1" class="level3">
 <h3 class="anchored" data-anchor-id="principal-component-analysis-pca-1">Principal Component Analysis (PCA)</h3>
 <p>PCA calculated based on the VST normalized <span class="citation" data-cites="tibshirani1988 huber2003 Anders2010">[@tibshirani1988; @huber2003; @Anders2010]</span> data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>vsd <span class="ot">&lt;-</span> <span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>pcaData <span class="ot">&lt;-</span> <span class="fu">plotPCA</span>(vsd, <span class="at">intgroup =</span> <span class="fu">c</span>(<span class="st">"bacteria"</span>, <span class="st">"virus"</span>, <span class="st">"exp"</span>), <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>percentVar <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">attr</span>(pcaData, <span class="st">"percentVar"</span>))</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>Bac.Vir_colors <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"#CC9564"</span>, <span class="st">"#a89de0"</span>, <span class="st">"#f54590"</span>, <span class="st">"#2e67f2"</span>, <span class="st">"#856141"</span>,<span class="st">"#6855c9"</span>,<span class="st">"#9f2d5e"</span>, <span class="st">"#1e439d"</span>)</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>Bac.Vir_fill <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"#856141"</span>,<span class="st">"#6855c9"</span>,<span class="st">"#9f2d5e"</span>, <span class="st">"#1e439d"</span>)</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(pcaData, <span class="fu">aes</span>(PC1, PC2)) <span class="sc">+</span></span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">fill =</span> condition, <span class="at">color =</span> condition, </span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">shape =</span> exp), </span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>             <span class="at">size =</span> <span class="dv">4</span>, <span class="at">stroke =</span> <span class="dv">1</span>) <span class="sc">+</span>  </span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_shape_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="dv">23</span>, <span class="dv">25</span>, <span class="dv">21</span>)) <span class="sc">+</span> </span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> Bac.Vir_colors) <span class="sc">+</span> </span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> Bac.Vir_fill) <span class="sc">+</span></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Principal Component Analysis (blind = TRUE)"</span>) <span class="sc">+</span></span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="fu">paste0</span>(<span class="st">"PC1: "</span>, percentVar[<span class="dv">1</span>], <span class="st">"% variance"</span>)) <span class="sc">+</span></span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="fu">paste0</span>(<span class="st">"PC2: "</span>, percentVar[<span class="dv">2</span>], <span class="st">"% variance"</span>)) <span class="sc">+</span></span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">14</span>) <span class="sc">+</span></span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.major =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>()</span>
-<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">guides</span>(</span>
-<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"condition"</span>, <span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">color =</span> Bac.Vir_colors, <span class="at">shape =</span> <span class="dv">22</span>))</span>
-<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>vsd <span class="ot">&lt;-</span> <span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>pcaData <span class="ot">&lt;-</span> <span class="fu">plotPCA</span>(vsd, <span class="at">intgroup =</span> <span class="fu">c</span>(<span class="st">"bacteria"</span>, <span class="st">"virus"</span>, <span class="st">"exp"</span>), <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>percentVar <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">attr</span>(pcaData, <span class="st">"percentVar"</span>))</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>Bac.Vir_colors <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"#CC9564"</span>, <span class="st">"#a89de0"</span>, <span class="st">"#f54590"</span>, <span class="st">"#2e67f2"</span>, <span class="st">"#856141"</span>,<span class="st">"#6855c9"</span>,<span class="st">"#9f2d5e"</span>, <span class="st">"#1e439d"</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>Bac.Vir_fill <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"#856141"</span>,<span class="st">"#6855c9"</span>,<span class="st">"#9f2d5e"</span>, <span class="st">"#1e439d"</span>)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(pcaData, <span class="fu">aes</span>(PC1, PC2)) <span class="sc">+</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">fill =</span> condition, <span class="at">color =</span> condition, </span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">shape =</span> exp), </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>             <span class="at">size =</span> <span class="dv">4</span>, <span class="at">stroke =</span> <span class="dv">1</span>) <span class="sc">+</span>  </span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_shape_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="dv">23</span>, <span class="dv">25</span>, <span class="dv">21</span>)) <span class="sc">+</span> </span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> Bac.Vir_colors) <span class="sc">+</span> </span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> Bac.Vir_fill) <span class="sc">+</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Principal Component Analysis (blind = TRUE)"</span>) <span class="sc">+</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="fu">paste0</span>(<span class="st">"PC1: "</span>, percentVar[<span class="dv">1</span>], <span class="st">"% variance"</span>)) <span class="sc">+</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="fu">paste0</span>(<span class="st">"PC2: "</span>, percentVar[<span class="dv">2</span>], <span class="st">"% variance"</span>)) <span class="sc">+</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">14</span>) <span class="sc">+</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.major =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>()</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">guides</span>(</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"condition"</span>, <span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">color =</span> Bac.Vir_colors, <span class="at">shape =</span> <span class="dv">22</span>))</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="create-se-file_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="768"></p>
+<p><img src="create-se-file_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="768"></p>
 </figure>
 </div>
 </div>
@@ -660,53 +677,53 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Gene-level expression values were modeled using precision weights estimated with the <code>limma::voom()</code> transformation, which accounts for the mean–variance relationship in RNA-seq data. Lowly expressed genes can be filtered using <code>edgeR::filterByExpr()</code>, which removes genes with insufficient counts for reliable statistical analysis and improves the stability of downstream variance estimates.</p>
 <p>We use the <a href="https://bioconductor.org/packages/release/bioc/html/variancePartition.html">variancePartition</a> <span class="citation" data-cites="hoffman2017">[@hoffman2017]</span> package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>run_varPart_analysis <span class="ot">&lt;-</span> <span class="cf">function</span>(txi, meta, formula_vp, formula_fixed, <span class="at">filter_low_expr =</span> <span class="cn">TRUE</span>) {</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Align meta to sample order</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  meta <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(meta)</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  meta <span class="ot">&lt;-</span> meta[<span class="fu">match</span>(<span class="fu">colnames</span>(txi<span class="sc">$</span>counts), meta<span class="sc">$</span>label), ]</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(meta) <span class="ot">&lt;-</span> meta<span class="sc">$</span>label</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(meta), <span class="fu">colnames</span>(txi<span class="sc">$</span>counts)))</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Design matrix: only fixed effects (for voom &amp; filterByExpr)</span></span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(formula_fixed, <span class="at">data =</span> meta)</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Normalize counts</span></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  counts <span class="ot">&lt;-</span> <span class="fu">DGEList</span>(txi<span class="sc">$</span>counts)</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  counts <span class="ot">&lt;-</span> <span class="fu">normLibSizes</span>(counts)</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Filter low-expressed genes</span></span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (filter_low_expr) {</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    keep <span class="ot">&lt;-</span> <span class="fu">filterByExpr</span>(counts, design)</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    counts_used <span class="ot">&lt;-</span> counts[keep, ]</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    counts_used <span class="ot">&lt;-</span> counts</span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># logCPM values with voom</span></span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  v <span class="ot">&lt;-</span> <span class="fu">voom</span>(counts_used, design)</span>
-<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit variance partition model (supports random effects)</span></span>
-<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>  varPart <span class="ot">&lt;-</span> <span class="fu">fitExtractVarPartModel</span>(v, formula_vp, meta)</span>
-<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Format results</span></span>
-<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>  varPart_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(varPart)</span>
-<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>  varPart_df<span class="sc">$</span>Geneid <span class="ot">&lt;-</span> <span class="fu">rownames</span>(varPart_df)</span>
-<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Return</span></span>
-<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">v =</span> v, <span class="at">varPart =</span> varPart, <span class="at">varPart_df =</span> varPart_df))</span>
-<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>run_varPart_analysis <span class="ot">&lt;-</span> <span class="cf">function</span>(txi, meta, formula_vp, formula_fixed, <span class="at">filter_low_expr =</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Align meta to sample order</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  meta <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(meta)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  meta <span class="ot">&lt;-</span> meta[<span class="fu">match</span>(<span class="fu">colnames</span>(txi<span class="sc">$</span>counts), meta<span class="sc">$</span>label), ]</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(meta) <span class="ot">&lt;-</span> meta<span class="sc">$</span>label</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(meta), <span class="fu">colnames</span>(txi<span class="sc">$</span>counts)))</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Design matrix: only fixed effects (for voom &amp; filterByExpr)</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(formula_fixed, <span class="at">data =</span> meta)</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Normalize counts</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  counts <span class="ot">&lt;-</span> <span class="fu">DGEList</span>(txi<span class="sc">$</span>counts)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  counts <span class="ot">&lt;-</span> <span class="fu">normLibSizes</span>(counts)</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Filter low-expressed genes</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (filter_low_expr) {</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>    keep <span class="ot">&lt;-</span> <span class="fu">filterByExpr</span>(counts, design)</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    counts_used <span class="ot">&lt;-</span> counts[keep, ]</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>    counts_used <span class="ot">&lt;-</span> counts</span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># logCPM values with voom</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>  v <span class="ot">&lt;-</span> <span class="fu">voom</span>(counts_used, design)</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit variance partition model (supports random effects)</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>  varPart <span class="ot">&lt;-</span> <span class="fu">fitExtractVarPartModel</span>(v, formula_vp, meta)</span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Format results</span></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>  varPart_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(varPart)</span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a>  varPart_df<span class="sc">$</span>Geneid <span class="ot">&lt;-</span> <span class="fu">rownames</span>(varPart_df)</span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Return</span></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">v =</span> v, <span class="at">varPart =</span> varPart, <span class="at">varPart_df =</span> varPart_df))</span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Use formula_fixed with fixed effects (required for the design matrix step) while formula_vp is used to decompose variance across bacteria/virus/exp as random intercepts</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>formula_fixed <span class="ot">&lt;-</span> <span class="er">~</span> virus <span class="sc">+</span> bacteria <span class="sc">+</span> exp          <span class="co"># for voom/filterByExpr design matrix</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>formula_vp <span class="ot">&lt;-</span> <span class="er">~</span> (<span class="dv">1</span><span class="sc">|</span>virus) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>bacteria) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>exp)   <span class="co"># for variance partitioning you can't mix fixed and random categorical variables in the same call </span></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>varPart <span class="ot">&lt;-</span> <span class="fu">run_varPart_analysis</span>(txi, meta, formula_vp, formula_fixed, <span class="at">filter_low_expr =</span> T)</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="fu">plotVarPart</span>(varPart<span class="sc">$</span>varPart) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>formula_fixed <span class="ot">&lt;-</span> <span class="er">~</span> virus <span class="sc">+</span> bacteria <span class="sc">+</span> exp          <span class="co"># for voom/filterByExpr design matrix</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>formula_vp <span class="ot">&lt;-</span> <span class="er">~</span> (<span class="dv">1</span><span class="sc">|</span>virus) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>bacteria) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>exp)   <span class="co"># for variance partitioning you can't mix fixed and random categorical variables in the same call </span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>varPart <span class="ot">&lt;-</span> <span class="fu">run_varPart_analysis</span>(txi, meta, formula_vp, formula_fixed, <span class="at">filter_low_expr =</span> T)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="fu">plotVarPart</span>(varPart<span class="sc">$</span>varPart) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="create-se-file_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="768"></p>
+<p><img src="create-se-file_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="768"></p>
 </figure>
 </div>
 </div>
@@ -717,13 +734,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="step-4.-differential-expression-analysis-1">Step 4. Differential Expression Analysis</h2>
 <p>This design captures all the variables of interest. - <strong>virus + bacteria + virus:bacteria</strong> Includes main effects of virus and bacteria, as well as their interaction. This allows us to test whether the effect of virus depends on the species. This is equivalent to <strong>virus * bacteria</strong>. - <strong>exp</strong> To account for the batch effect of the 3 independent experiments, we include the experiment as a covariate in the model. This helps to control for any variability introduced by differences between experiments.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DESeq design </span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromTximport</span>(txi,</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>                                <span class="at">colData =</span> meta,</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>                                <span class="at">design =</span> <span class="sc">~</span> virus <span class="sc">+</span> bacteria <span class="sc">+</span> virus<span class="sc">:</span>bacteria <span class="sc">+</span> exp)</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Run DESeq</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DESeq design </span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromTximport</span>(txi,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>                                <span class="at">colData =</span> meta,</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>                                <span class="at">design =</span> <span class="sc">~</span> virus <span class="sc">+</span> bacteria <span class="sc">+</span> virus<span class="sc">:</span>bacteria <span class="sc">+</span> exp)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Run DESeq</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="generate-contrast-results-1" class="level3">
 <h3 class="anchored" data-anchor-id="generate-contrast-results-1">Generate Contrast Results</h3>
@@ -735,19 +752,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>For other bacteria conditions (Spn, Hin, Dpi), the virus effect is a combination of the main virus effect plus the interaction term (e.g., <code>virusTRUE.bacteriaDpi</code>).</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Virus_TvsF <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_NB  =</span> <span class="st">"virus_TRUE_vs_FALSE"</span>,                                   </span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Spn =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaSpn"</span>)), </span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Hin =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaHin"</span>)), </span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Dpi =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaDpi"</span>))  </span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>results_Virus_TvsF <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Virus_TvsF, <span class="cf">function</span>(contrast_val, name) {</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.character</span>(contrast_val)) {</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> name, <span class="at">coef =</span> contrast_val)</span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> name, <span class="at">contrast =</span> contrast_val)</span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Virus_TvsF <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_NB  =</span> <span class="st">"virus_TRUE_vs_FALSE"</span>,                                   </span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Spn =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaSpn"</span>)), </span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Hin =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaHin"</span>)), </span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Dpi =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaDpi"</span>))  </span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>results_Virus_TvsF <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Virus_TvsF, <span class="cf">function</span>(contrast_val, name) {</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.character</span>(contrast_val)) {</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> name, <span class="at">coef =</span> contrast_val)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> name, <span class="at">contrast =</span> contrast_val)</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="difference-in-virus-effect-compared-to-nb" class="level4">
@@ -757,12 +774,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>We use the interaction terms alone (e.g., <code>virusTRUE.bacteriaDpi</code>), which quantify how much the virus effect in each species deviates from that in NB.</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>contrast_list_VirusInteract_vsNB <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Dpi =</span> <span class="st">"virusTRUE.bacteriaDpi"</span>,</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Spn =</span> <span class="st">"virusTRUE.bacteriaSpn"</span>,</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Hin =</span> <span class="st">"virusTRUE.bacteriaHin"</span></span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>results_VirusInteract_vsNB <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_VirusInteract_vsNB, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x,))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>contrast_list_VirusInteract_vsNB <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Dpi =</span> <span class="st">"virusTRUE.bacteriaDpi"</span>,</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Spn =</span> <span class="st">"virusTRUE.bacteriaSpn"</span>,</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Hin =</span> <span class="st">"virusTRUE.bacteriaHin"</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>results_VirusInteract_vsNB <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_VirusInteract_vsNB, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x,))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="bacteria-vs-nb-in-virus-false" class="level4">
@@ -772,12 +789,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., <code>bacteria_Dpi_vs_NB</code>).</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNB_VF <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">DpivsNB_VF =</span> <span class="st">"bacteria_Dpi_vs_NB"</span>,</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">SpnvsNB_VF =</span> <span class="st">"bacteria_Spn_vs_NB"</span>,</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">HinvsNB_VF =</span> <span class="st">"bacteria_Hin_vs_NB"</span></span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>results_Species_vsNB_VF <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNB_VF, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNB_VF <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">DpivsNB_VF =</span> <span class="st">"bacteria_Dpi_vs_NB"</span>,</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">SpnvsNB_VF =</span> <span class="st">"bacteria_Spn_vs_NB"</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">HinvsNB_VF =</span> <span class="st">"bacteria_Hin_vs_NB"</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>results_Species_vsNB_VF <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNB_VF, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="bacteria-vs-nb-in-virus-true" class="level4">
@@ -787,25 +804,42 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>These contrasts combine the main bacteria effect plus the interaction with virus (e.g., <code>bacteria_Dpi_vs_NB</code> + <code>virusTRUE.bacteriaDpi</code>).</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNB_VT <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">DpivsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Dpi_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaDpi"</span>)),</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">SpnvsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Spn_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaSpn"</span>)),</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">HinvsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Hin_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaHin"</span>))</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>results_Bacteria_vsNB_VT <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNB_VT, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">contrast =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNB_VT <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">DpivsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Dpi_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaDpi"</span>)),</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">SpnvsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Spn_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaSpn"</span>)),</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">HinvsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Hin_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaHin"</span>))</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>results_Bacteria_vsNB_VT <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNB_VT, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">contrast =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="combine-all-contrast-results" class="level4">
 <h4 class="anchored" data-anchor-id="combine-all-contrast-results">Combine All Contrast Results</h4>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>all_contrast_results <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  results_Virus_TvsF,</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  results_VirusInteract_vsNB,</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  results_Species_vsNB_VF,</span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  results_Bacteria_vsNB_VT</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> <span class="fu">flatten</span>() </span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>all_contrast_df <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(all_contrast_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>all_contrast_results <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  results_Virus_TvsF,</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  results_VirusInteract_vsNB,</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  results_Species_vsNB_VF,</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  results_Bacteria_vsNB_VT</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> <span class="fu">flatten</span>() </span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>all_contrast_df <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(all_contrast_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+IMPORTANT:
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>CONTENTO requires generic column names so it works with any DE tool, not just DESeq2. <strong>Required:</strong> <code>log2FC</code>, <code>stat</code>, <code>padj</code>. <strong>Optional:</strong> <code>log2FC_shrunk</code>. DESeq2’s <code>results()</code> already outputs <code>stat</code> and <code>padj</code> with the right names — only <code>log2FoldChange</code> (and <code>log2FoldChange_shrunk</code>) need renaming.</p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>all_contrast_df <span class="ot">&lt;-</span> all_contrast_df <span class="sc">|&gt;</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(<span class="at">log2FC =</span> log2FoldChange, <span class="at">log2FC_shrunk =</span> log2FoldChange_shrunk)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -814,22 +848,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="step-5.-create-expression-matrix-1">Step 5. Create Expression Matrix</h2>
 <p>As in Example 1, the expression matrix can be generated using any normalization or transformation method suitable for downstream visualization and exploratory analysis. Here we use the DESeq2 variance stabilizing transformation (VST).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>expr_matrix <span class="ot">&lt;-</span> <span class="fu">assay</span>(<span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">FALSE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>expr_matrix <span class="ot">&lt;-</span> <span class="fu">assay</span>(<span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">FALSE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="step-6.-create-summarizedexperiment-se-object-1" class="level2">
 <h2 class="anchored" data-anchor-id="step-6.-create-summarizedexperiment-se-object-1">Step 6. Create SummarizedExperiment (SE) Object</h2>
 <p>We use the same <code>convert_to_SE()</code> function as in Example 1 to build the final SE object. In this case, we also include the variance partitioning results as additional columns in <code>rowData</code>, which can be visualized in CONTENTO’s Variance Decomposition tab.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>SE <span class="ot">=</span> <span class="fu">convert_to_SE</span>(</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dds =</span> dds,</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">contrasts_df =</span> all_contrast_df,</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">expr_matrix =</span> expr_matrix,</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">varpart =</span> varPart,</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">organism =</span> <span class="st">"Homo sapiens"</span>, </span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotation =</span> <span class="st">"Homo_sapiens.GRCh38.113_annot"</span>,</span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">"ExpMultContrast"</span></span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>SE <span class="ot">=</span> <span class="fu">convert_to_SE</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dds =</span> dds,</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">contrasts_df =</span> all_contrast_df,</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">expr_matrix =</span> expr_matrix,</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">varpart =</span> varPart,</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">organism =</span> <span class="st">"Homo sapiens"</span>, </span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">annotation =</span> <span class="st">"Homo_sapiens.GRCh38.113_annot"</span>,</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">"ExpMultContrast"</span></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>✓ Found 13 contrasts: VirusTvsF_NB, VirusTvsF_Spn, VirusTvsF_Hin, VirusTvsF_Dpi, VirusInteract_Dpi, VirusInteract_Spn, VirusInteract_Hin, DpivsNB_VF, SpnvsNB_VF, HinvsNB_VF, DpivsNB_VT, SpnvsNB_VT, HinvsNB_VT 
 Loading variance partition data...
@@ -840,7 +874,7 @@ Loading variance partition data...
   Assays: expr_matrix 
   Columns in rowData: 95 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(SE, <span class="fu">file.path</span>(SE_DIR, <span class="fu">paste0</span>(project_name, <span class="st">"_SE.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(SE, <span class="fu">file.path</span>(SE_DIR, <span class="fu">paste0</span>(project_name, <span class="st">"_SE.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -849,7 +883,7 @@ Loading variance partition data...
 <p>Before uploading to CONTENTO, confirm:</p>
 <ul class="task-list">
 <li><input type="checkbox"><code>assays(se)</code> includes <code>expr_matrix</code> (required for expression/heatmap/GESECA features).</li>
-<li><input type="checkbox"><code>rowData(se)</code> has <code>&lt;stat&gt;_&lt;contrast_name&gt;</code> columns for every entry in <code>metadata(se)$contrasts</code>, with matching suffixes.</li>
+<li><input type="checkbox"><code>rowData(se)</code> has <code>&lt;stat&gt;__&lt;contrast_name&gt;</code> columns for every entry in <code>metadata(se)$contrasts</code>, with matching suffixes. <code>log2FC__&lt;contrast&gt;</code>, <code>stat__&lt;contrast&gt;</code>, and <code>padj__&lt;contrast&gt;</code> columns (required); <code>log2FC_shrunk__&lt;contrast&gt;</code> is optional.</li>
 <li><input type="checkbox"><code>metadata(se)$contrasts</code> is a character vector, not a factor or list.</li>
 <li><input type="checkbox"><code>metadata(se)$organism</code>, if set, exactly matches a valid <code>msigdbr</code> species name (or is <code>"Bacteria"</code> for neighborhood analysis).</li>
 <li><input type="checkbox"><code>metadata(se)$db_species</code>, if set, is exactly <code>"HS"</code> or <code>"MM"</code> — overrides which MSigDB source database (human- or mouse-curated) is queried, but <code>organism</code> must still be a valid <code>msigdbr</code> species.</li>

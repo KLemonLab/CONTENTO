@@ -61,24 +61,41 @@ detect_ensembl_col <- function(annot_df) {
 
 #' Extract all contrasts from a SummarizedExperiment into long format
 #'
-#' Reads rowData column prefixes (baseMean_, log2FoldChange_, etc.) and
-#' metadata(se)$contrasts to build a tidy data frame with one row per
-#' gene-contrast combination.
+#' Reads rowData columns named `<name>__<contrast>` (double underscore
+#' separator) for every contrast listed in \code{metadata(se)$contrasts},
+#' and reshapes them into a tidy long-format data frame with one row per
+#' gene-contrast combination. This function makes no assumptions about
+#' which DE tool produced the results — it only requires that column names
+#' follow the `<name>__<contrast>` convention and that the required
+#' generic statistic names (\code{log2FC}, \code{stat}, \code{padj}) are
+#' present for each contrast.
 #'
 #' @param se A SummarizedExperiment object with contrast results stored in
-#'   rowData and contrast names in metadata(se)$contrasts
-#' @return A long-format data frame with columns: Geneid, contrast, baseMean,
-#'   log2FC, log2FC_shrunk, lfcSE, stat, pvalue, padj
+#'   rowData (columns named `<name>__<contrast>`) and contrast names in
+#'   \code{metadata(se)$contrasts}.
+#' @param sep Character; the separator between statistic name and contrast
+#'   name in rowData column names (default: \code{"__"}).
+#' @return A long-format data frame with one row per gene-contrast
+#'   combination, columns \code{Geneid}, \code{contrast}, and one column
+#'   per statistic found for that contrast (typically \code{log2FC},
+#'   \code{log2FC_shrunk}, \code{stat}, \code{padj}, plus any extra
+#'   statistic columns the user chose to include). Statistics not present
+#'   for a given contrast are \code{NA}.
+#' @details
+#' Required statistics (\code{log2FC}, \code{stat}, \code{padj}) must be
+#' present for at least one contrast or the function stops with an
+#' informative error. If a contrast has no matching columns at all, a
+#' warning is issued and that contrast is dropped rather than failing the
+#' whole extraction.
 #' @export
-extract_de_results <- function(se) {
+extract_de_results <- function(se, sep = "__") {
+  ...
+}
+extract_de_results <- function(se, sep = "__") {
   rd       <- as.data.frame(rowData(se))
   gene_ids <- rownames(se)
   
-  meta <- tryCatch(
-    metadata(se),
-    error = function(e) list()
-  )
-  
+  meta <- tryCatch(metadata(se), error = function(e) list())
   contrast_names <- meta$contrasts
   
   if (is.null(contrast_names) || length(contrast_names) == 0) {
@@ -87,25 +104,35 @@ extract_de_results <- function(se) {
   }
   
   de_list <- lapply(contrast_names, function(cname) {
-    get_col <- function(prefix) {
-      col <- paste0(prefix, cname)
-      if (col %in% colnames(rd)) rd[[col]] else rep(NA_real_, nrow(rd))
+    suffix  <- paste0(sep, cname)
+    matched <- colnames(rd)[endsWith(colnames(rd), suffix)]
+    if (length(matched) == 0) {
+      warning("No rowData columns found for contrast '", cname, "' (expected suffix '", suffix, "')")
+      return(NULL)
     }
-    data.frame(
-      Geneid        = gene_ids,
-      contrast      = cname,
-      baseMean      = get_col("baseMean_"),
-      log2FC        = get_col("log2FoldChange_"),
-      log2FC_shrunk = get_col("log2FoldChange_shrunk_"),
-      lfcSE         = get_col("lfcSE_"),
-      stat          = get_col("stat_"),
-      pvalue        = get_col("pvalue_"),
-      padj          = get_col("padj_"),
-      stringsAsFactors = FALSE
-    )
+    stat_names        <- substr(matched, 1, nchar(matched) - nchar(suffix))
+    df                 <- rd[, matched, drop = FALSE]
+    colnames(df)       <- stat_names
+    df$Geneid   <- gene_ids
+    df$contrast <- cname
+    df
   })
   
-  do.call(rbind, de_list)
+  de_list <- Filter(Negate(is.null), de_list)
+  if (length(de_list) == 0) {
+    stop("No rowData columns matched any contrast in metadata(se)$contrasts using separator '", sep, "'.")
+  }
+  
+  df <- dplyr::bind_rows(de_list)  # auto-fills NA if a stat is missing for some contrasts
+  
+  required <- c("log2FC", "stat", "padj")
+  missing_req <- setdiff(required, colnames(df))
+  if (length(missing_req) > 0) {
+    stop("Required column(s) missing from rowData: ", paste(missing_req, collapse = ", "), ". ",
+         "CONTENTO requires 'log2FC', 'stat', and 'padj' (optionally 'log2FC_shrunk') as the ",
+         "'<name>", sep, "<contrast>' suffix on rowData columns.")
+  }
+  df
 }
 
 #' Merge annotation data frame into a contrast data frame

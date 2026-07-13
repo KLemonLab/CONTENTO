@@ -69,7 +69,7 @@ For organisms distributed through Ensembl, download the same GTF and genome asse
 **Example:** Human GRCh38 (Ensembl Release 113)
 
 ```{bash, eval=FALSE}
-FILES_DIR="inst/extdata/Ensembl" 
+FILES_DIR="inst/extdata/genomes" 
 GENOME_NAME="Homo_sapiens.GRCh38" 
 VERSION=113
 
@@ -142,7 +142,7 @@ library(tidyverse)
 library(here)
 library(rtracklayer)
 
-GENOMES_DIR <- here("inst/extdata/Ensembl")
+GENOMES_DIR <- here("inst/extdata/genomes")
 GENOME_NAME <- "Homo_sapiens.GRCh38.113"
 
 # Import GTF file
