@@ -29,7 +29,6 @@ http://localhost:3838
 
 This approach provides a fully reproducible computational environment with all R, Bioconductor, and system dependencies pre-installed.
 
-```
 
 > **Rebuilding image from scratch**
 >

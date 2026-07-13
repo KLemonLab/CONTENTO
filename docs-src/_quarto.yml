@@ -22,7 +22,7 @@ website:
     collapse-level: 2
     contents:
       - href: index.qmd
-        text: Installation
+        text: Introduction
 
       - section: Input Files
         contents:
