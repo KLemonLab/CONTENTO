@@ -29,6 +29,8 @@ http://localhost:3838
 
 This approach provides a fully reproducible computational environment with all R, Bioconductor, and system dependencies pre-installed.
 
+```
+
 > **Rebuilding image from scratch**
 >
 > A Dockerfile is included in the repository so that users familiar with building container images
@@ -41,9 +43,19 @@ For users who prefer a persistent local setup and the convenience of a preconfig
 ```bash
 docker compose --help
 ```
-The helper string for the `compose` plugin should come up. To start the application, navigate to the working directory and simply run:
+The helper string for the `compose` plugin should come up. 
+
+
+Then, clone the CONTENTO repository:
 
 ```bash
+git clone https://github.com/klemonlab/contento.git
+```
+
+To start the application, navigate to the working directory and simply run:
+
+```bash
+cd contento
 docker compose up
 ```
 
@@ -63,7 +75,11 @@ http://localhost:3838
 
 Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop).
 
-#### Install required packages
+Clone the CONTENTO repository:
+
+```bash
+git clone https://github.com/klemonlab/contento.git
+```
 
 After opening the project (`CONTENTO.Rproj`) within Rstudio, install the dependencies by running:
 
@@ -98,7 +114,6 @@ BiocManager::install(c(
 ))
 ```
 
-#### Launch the application
 
 Open `app.R` in RStudio and click the interactive  **:arrow_forward: Run App** button, or execute:
 

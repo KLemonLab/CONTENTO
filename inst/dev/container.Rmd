@@ -1,0 +1,124 @@
+---
+title: "Building and Deploying the CONTENTO Docker Image"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+execute:
+  echo: true
+---
+
+# Overview
+
+This document describes how to build, test, publish, and run the **CONTENTO** Docker image.
+
+## Prerequisites
+
+Before starting, ensure that:
+
+- Docker Desktop is installed and running
+- You have a GitHub Personal Access Token (PAT) with permissions to publish packages
+- The project directory contains:
+  - `Dockerfile`
+  - application source code
+  - `inst/` data directory
+
+Verify that Docker is available:
+
+```bash
+docker --version
+```
+
+# Navigate to the Project Directory
+
+Docker builds from the current directory (`.`). Move into the directory containing the `Dockerfile`.
+
+```bash
+cd /path/to/contento
+```
+
+# Build a Local Test Image
+
+Build a local image for testing and debugging. Use the `--no-cache` option to ensure a fresh build. 
+Save the build logs to `build.log` for later inspection.
+
+```bash
+docker build --no-cache -t contento-test . 2>&1 | tee build.log
+```
+
+## Verify Local Image
+
+```bash
+docker run \
+    --rm \
+    -p 3838:3838 \
+    -v $(pwd)/inst:/srv/shiny-server/app/inst \
+    contento-test
+```
+
+Then open a web browser and navigate to `http://localhost:3838` to verify that the application is running correctly
+
+# Build the Production Image
+
+Build the image using the GitHub Container Registry tag.
+
+```bash
+docker build -t ghcr.io/klemonlab/contento:latest .
+```
+
+## Understanding the Image Name
+
+```text
+ghcr.io/klemonlab/contento:latest
+│       │         │        │
+│       │         │        └── Tag
+│       │         └──────── Repository
+│       └────────────────── Organization/User
+└────────────────────────── Registry
+```
+
+The `latest` tag is used as the default production release.
+
+## Authenticate with GitHub Container Registry
+
+Load the GitHub Personal Access Token stored in `.bash_env`.
+
+```bash
+source .bash_env
+```
+
+Login to GitHub Container Registry:
+
+```bash
+echo "$CR_PAT" | docker login ghcr.io -u IsabelFE --password-stdin
+```
+
+Successful authentication should produce: `Login Succeeded`
+
+
+## Push the Image
+
+Upload the image to GitHub Container Registry.
+
+```bash
+docker push ghcr.io/klemonlab/contento:latest
+```
+
+## Pull the Image
+
+```bash
+docker pull ghcr.io/klemonlab/contento:latest
+```
+
+# Run the Application
+
+Launch the Shiny application:
+
+```bash
+docker run \
+    --rm \
+    -p 3838:3838 \
+    -v $(pwd)/inst:/srv/shiny-server/app/inst \
+    ghcr.io/klemonlab/contento:latest
+```
+
