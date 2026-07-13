@@ -1,0 +1,9 @@
+.git
+.gitignore
+.Rproj.user
+*.Rproj
+.Renviron
+.env
+.bash_env
+inst/annotations/
+inst/dev/

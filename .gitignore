@@ -34,5 +34,5 @@ rsconnect/
 .DS_Store
 RNASeqApp.Rproj
 .lintr
-
 /.quarto/
+.bash_env
