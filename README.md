@@ -11,14 +11,14 @@ CONTENTO can be executed in three different ways depending on your computational
 
 ### _Option 1:_ Run using Docker (recommended)
 
-If Docker is not yet installed on your system, we recommend you install Docker Desktop for your operating from the [official website](https://www.docker.com/products/docker-desktop/), since it provides a friendly graphic interface to manage your images and keep your Docker Engine up-to-date. If you already have Docker installed, running CONTENTO requires a single command from your terminal _(make sure while Docker Desktop is running)_:
+If Docker is not yet installed on your system, we recommend you install Docker Desktop from the [official website](https://www.docker.com/products/docker-desktop/), since it provides a friendly graphic interface to manage your images and keep your Docker Engine up-to-date. If you already have Docker installed, running CONTENTO requires a single command from your terminal _(make sure your Docker Desktop is running)_:
 
 ```bash
 docker run \
     --rm \
     -p 3838:3838 \
     -v $(pwd)/inst:/srv/shiny-server/app/inst \
-    ghcr.io/KLemonLab/contento:latest
+    ghcr.io/klemonlab/contento:latest
 ```
 
 The terminal window will show the app startup and soon will start accepting connections. When you see the message that the app is listening, open your web browser (any browser) and navigate to:
@@ -29,14 +29,14 @@ http://localhost:3838
 
 This approach provides a fully reproducible computational environment with all R, Bioconductor, and system dependencies pre-installed.
 
-> [!NOTE] Rebuilding image from scratch
+> **Rebuilding image from scratch**
 >
-> A Dockerfile is included in the repository so taht users familiar with building container images
+> A Dockerfile is included in the repository so that users familiar with building container images
 > can self-build with `docker build -t contento .` if necessary.
 
 ### _Option 2:_ Run using Docker Compose
 
-For users who prefer a persistent local setup and he convenience of a preconfigured container mount, **CONTENTO** can also be launched using [Docker Compose](https://docs.docker.com/compose/). To do this, make sure you have the `compose` plugin installed (it is bundled with modern distributions of Docker Desktop by default) by running
+For users who prefer a persistent local setup and the convenience of a preconfigured container mount, **CONTENTO** can also be launched using [Docker Compose](https://docs.docker.com/compose/). To do this, make sure you have the `compose` plugin installed (it is bundled with modern distributions of Docker Desktop by default) by running
 
 ```bash
 docker compose --help
@@ -65,7 +65,7 @@ Some users may prefer to execute **CONTENTO** directly from an existing R instal
 
 #### Install required packages
 
-After opening the project (`ENASeqApp.Rptoj`) within Rstudio, install the dependencies by running:
+After opening the project (`CONTENTO.Rproj`) within Rstudio, install the dependencies by running:
 
 ```r
 install.packages(c(
@@ -80,7 +80,9 @@ install.packages(c(
     "RColorBrewer",
     "ComplexUpset",
     "scales",
-    "ggiraph"
+    "ggiraph",
+    "gridExtra",
+    "patchwork"
 ))
 
 if (!requireNamespace("BiocManager"))
@@ -120,15 +122,13 @@ The application will then become available in your web browser.
 
 If you use this application in scientific work, please cite:
 
-> _**[TODO: citation for manuscript/preprint]**_.
-
-and cite this software repository:
-
-> _**[TODO: citation for the github Repo]**_.
+Isabel FE, et al. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". 
+https://github.com/KLemonLab/CONTENTO
+DOI: [add Zenodo DOI once available].
 
 ## License
 
-MIT License. See LICENSE file for more details _**[TODO: add LICENSE file]**_.
+This project is covered under the GPL-3 license.
 
 ## Contact
 

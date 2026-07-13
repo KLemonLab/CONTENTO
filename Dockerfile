@@ -34,7 +34,9 @@ RUN R -e "install.packages(c( \
     'RColorBrewer', \
     'ComplexUpset', \
     'scales', \
-    'ggiraph' \
+    'ggiraph', \
+    'gridExtra', \
+    'patchwork' \
 ), repos = 'https://cloud.r-project.org')"
 
 # Bioconductor packages

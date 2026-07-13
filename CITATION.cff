@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: "CONTENTO: CONTrast ExploratioN Toolkit for Omics"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - family-names: "FE"
+    given-names: "Isabel"
+repository-code: "https://github.com/KLemonLab/CONTENTO"
+url: "https://github.com/KLemonLab/CONTENTO"
+license: "GPL-3.0-or-later"
+version: "0.1.0"
+date-released: 2026-07-17
+keywords:
+  - "RNA-seq"
+  - "omics"
+  - "bioinformatics"
+  - "shiny"
+  - "multiple contrasts"
+  - "differential expression"
+  - "functional analysis"

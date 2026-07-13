@@ -1,6 +1,6 @@
 services:
   shiny:
-    image: ghcr.io/KLemonLab/contento:latest
+    image: ghcr.io/klemonlab/contento:latest
     container_name: contento
     ports:
       - "3838:3838"

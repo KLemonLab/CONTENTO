@@ -1,0 +1,30 @@
+{
+  "title": "CONTENTO: CONTrast ExploratioN Toolkit for Omics",
+  "description": "CONTENTO is an R/Shiny toolkit for omics contrast exploration, visualization, and interpretation.",
+  "creators": [
+    {
+      "name": "FE, Isabel",
+      "affiliation": "Baylor College of Medicine",
+      "orcid": "0000-0002-1454-7205"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+  - "RNA-seq"
+  - "omics"
+  - "bioinformatics"
+  - "shiny"
+  - "multiple contrasts"
+  - "differential expression"
+  - "functional analysis"
+  ],
+  "upload_type": "software",
+  "access_right": "open",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/KLemonLab/CONTENTO",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
+  ]
+}
