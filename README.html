@@ -361,6 +361,11 @@ display: none;
 <h2>Intro</h2>
 <p>Shiny App for RNASeq Results Exploration.</p>
 </div>
+<div id="documentation" class="section level2">
+<h2>Documentation</h2>
+<p>Full documentation, including tutorials for creating SE and
+annotation files, is available at: <a href="https://klemonlab.github.io/CONTENTO/" class="uri">https://klemonlab.github.io/CONTENTO/</a></p>
+</div>
 <div id="running-contento" class="section level2">
 <h2>Running CONTENTO</h2>
 <p>CONTENTO can be executed in three different ways depending on your
@@ -380,7 +385,7 @@ terminal <em>(make sure your Docker Desktop is running)</em>:</p>
     --rm \
     -p 3838:3838 \
     -v $(pwd)/inst:/srv/shiny-server/app/inst \
-    ghcr.io/KLemonLab/contento:latest</code></pre>
+    ghcr.io/klemonlab/contento:latest</code></pre>
 <p>The terminal window will show the app startup and soon will start
 accepting connections. When you see the message that the app is
 listening, open your web browser (any browser) and navigate to:</p>
@@ -396,17 +401,21 @@ with building container images can self-build with
 </div>
 <div id="option-2-run-using-docker-compose" class="section level3">
 <h3><em>Option 2:</em> Run using Docker Compose</h3>
-<p>For users who prefer a persistent local setup and he convenience of a
-preconfigured container mount, <strong>CONTENTO</strong> can also be
+<p>For users who prefer a persistent local setup and the convenience of
+a preconfigured container mount, <strong>CONTENTO</strong> can also be
 launched using <a href="https://docs.docker.com/compose/">Docker
 Compose</a>. To do this, make sure you have the <code>compose</code>
 plugin installed (it is bundled with modern distributions of Docker
 Desktop by default) by running</p>
 <pre class="bash"><code>docker compose --help</code></pre>
-<p>The helper string for the <code>compose</code> plugin should come up.
-To start the application, navigate to the working directory and simply
-run:</p>
-<pre class="bash"><code>docker compose up</code></pre>
+<p>The helper string for the <code>compose</code> plugin should come
+up.</p>
+<p>Then, clone the CONTENTO repository:</p>
+<pre class="bash"><code>git clone https://github.com/klemonlab/contento.git</code></pre>
+<p>To start the application, navigate to the working directory and
+simply run:</p>
+<pre class="bash"><code>cd contento
+docker compose up</code></pre>
 <p>Or run it in the background:</p>
 <pre class="bash"><code>docker compose up -d</code></pre>
 <p>Once the container starts, access the application again at:</p>
@@ -417,9 +426,9 @@ run:</p>
 <p>Some users may prefer to execute <strong>CONTENTO</strong> directly
 from an existing R installation, usually used in conjunction with the
 popular IDE <a href="https://posit.co/download/rstudio-desktop">RStudio</a>.</p>
-<div id="install-required-packages" class="section level4">
-<h4>Install required packages</h4>
-<p>After opening the project (<code>ENASeqApp.Rptoj</code>) within
+<p>Clone the CONTENTO repository:</p>
+<pre class="bash"><code>git clone https://github.com/klemonlab/contento.git</code></pre>
+<p>After opening the project (<code>CONTENTO.Rproj</code>) within
 Rstudio, install the dependencies by running:</p>
 <pre class="r"><code>install.packages(c(
     &quot;shiny&quot;,
@@ -433,7 +442,9 @@ Rstudio, install the dependencies by running:</p>
     &quot;RColorBrewer&quot;,
     &quot;ComplexUpset&quot;,
     &quot;scales&quot;,
-    &quot;ggiraph&quot;
+    &quot;ggiraph&quot;,
+    &quot;gridExtra&quot;,
+    &quot;patchwork&quot;
 ))
 
 if (!requireNamespace(&quot;BiocManager&quot;))
@@ -447,15 +458,11 @@ BiocManager::install(c(
     &quot;circlize&quot;,
     &quot;SummarizedExperiment&quot;
 ))</code></pre>
-</div>
-<div id="launch-the-application" class="section level4">
-<h4>Launch the application</h4>
 <p>Open <code>app.R</code> in RStudio and click the interactive
 <strong>:arrow_forward: Run App</strong> button, or execute:</p>
 <pre class="r"><code>shiny::runApp(&quot;app.R&quot;)</code></pre>
 <p>The application will then become available in your web browser.</p>
 <hr />
-</div>
 </div>
 <div id="which-option-should-i-choose" class="section level3">
 <h3>Which option should I choose?</h3>
@@ -500,19 +507,13 @@ BiocManager::install(c(
 <div id="citation" class="section level2">
 <h2>Citation</h2>
 <p>If you use this application in scientific work, please cite:</p>
-<blockquote>
-<p><em><strong>[TODO: citation for
-manuscript/preprint]</strong></em>.</p>
-</blockquote>
-<p>and cite this software repository:</p>
-<blockquote>
-<p><em><strong>[TODO: citation for the github Repo]</strong></em>.</p>
-</blockquote>
+<p>Isabel FE, et al. “CONTENTO: CONTrast ExploratioN Toolkit for Omics”.
+<a href="https://github.com/KLemonLab/CONTENTO" class="uri">https://github.com/KLemonLab/CONTENTO</a> DOI: [add Zenodo
+DOI once available].</p>
 </div>
 <div id="license" class="section level2">
 <h2>License</h2>
-<p>MIT License. See LICENSE file for more details <em><strong>[TODO: add
-LICENSE file]</strong></em>.</p>
+<p>This project is covered under the GPL-3 license.</p>
 </div>
 <div id="contact" class="section level2">
 <h2>Contact</h2>

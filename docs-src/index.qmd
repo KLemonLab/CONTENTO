@@ -22,6 +22,11 @@ format:
 
 Shiny App for RNASeq Results Exploration.
 
+## Documentation
+
+Full documentation, including tutorials for creating SE and annotation files, is available at:
+https://klemonlab.github.io/CONTENTO/
+
 ## Running CONTENTO
 
 CONTENTO can be executed in three different ways depending on your computational environment and familiarity with containerized software. We strongly recommend the Docker-based workflows, as they guarantee complete reproducibility across operating systems and avoid dependency conflicts.
