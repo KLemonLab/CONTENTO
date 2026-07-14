@@ -89,9 +89,6 @@ detect_ensembl_col <- function(annot_df) {
 #' whole extraction.
 #' @export
 extract_de_results <- function(se, sep = "__") {
-  ...
-}
-extract_de_results <- function(se, sep = "__") {
   rd       <- as.data.frame(rowData(se))
   gene_ids <- rownames(se)
   

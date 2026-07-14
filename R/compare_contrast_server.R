@@ -781,25 +781,27 @@ compare_contrast_server <- function(input, output, session, state, organism) {
   coregulation_plot <- reactive({
     req(geseca_result(), input$selected_pathway_geseca)
     
-    pathway_genes <- geseca_result()$pathways_list[[input$selected_pathway_geseca]]
-    req(!is.null(pathway_genes), length(pathway_genes) > 0)
-    
-    color_var <- input$geseca_color_var %||% colnames(colData(state$se_obj()))[1]
-    sort_var  <- input$geseca_sort_var  %||% colnames(colData(state$se_obj()))[1]
-    
-    color_cond <- colData(state$se_obj())[[color_var]]
-    sort_cond  <- colData(state$se_obj())[[sort_var]]
-    
-    sample_order <- order(sort_cond)
-    expr_matrix_sorted   <- geseca_result()$expr_matrix[, sample_order]
-    
-    plotCoregulationProfile(
-      pathway_genes, expr_matrix_sorted,
-      conditions = color_cond[sample_order],
-      scale = TRUE
-    ) +
-      labs(title = paste0("Gene Set: ", input$selected_pathway_geseca, " — ", genesets_geseca()$label)) +
-      theme_minimal()
+    tryCatch({
+      pathway_genes <- geseca_result()$pathways_list[[input$selected_pathway_geseca]]
+      req(!is.null(pathway_genes), length(pathway_genes) > 0)
+      
+      color_var <- input$geseca_color_var %||% colnames(colData(state$se_obj()))[1]
+      sort_var  <- input$geseca_sort_var  %||% colnames(colData(state$se_obj()))[1]
+      
+      color_cond <- colData(state$se_obj())[[color_var]]
+      sort_cond  <- colData(state$se_obj())[[sort_var]]
+      
+      sample_order <- order(sort_cond)
+      expr_matrix_sorted <- geseca_result()$expr_matrix[, sample_order]
+      
+      plotCoregulationProfile(
+        pathway_genes, expr_matrix_sorted,
+        conditions = color_cond[sample_order],
+        scale = TRUE
+      ) +
+        labs(title = paste0("Gene Set: ", input$selected_pathway_geseca, " — ", genesets_geseca()$label)) +
+        theme_minimal()
+    }, error = handle_coregulation_plot_error)
   })
   
 

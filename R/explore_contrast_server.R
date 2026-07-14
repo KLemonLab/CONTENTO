@@ -553,13 +553,17 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     function() build_download_filename(input, state, ext = "png",
                                        type = "GSEA", contrast = input$contrast,
                                        suffix = genesets()$label),
+    
     function(file) {
       req(gsea_result())
       png(file, width = 1800, height = 900, res = 150)
-      grid::grid.draw(gsea_result()$tableplot) 
+      if (is.null(gsea_result()$tableplot)) {
+        plot.new(); text(0.5, 0.5, "No significant gene sets found (FDR < 0.05)", cex = 1.5)
+      } else {
+        grid::grid.draw(gsea_result()$tableplot)
+      }
       dev.off()
     })
-  
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 5: ERROR HANDLERS ####
