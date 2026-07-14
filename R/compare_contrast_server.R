@@ -400,16 +400,10 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     req(compare_data())
     df <- compare_data()
     
-    x_col <- if (input$global_lfc_col %in% colnames(compare_data())) {
-      input$global_lfc_col
-    } else {
-      "log2FC"
-    }
-    
     fc_label <- case_when(
-      x_col == "log2FC_shrunk" ~ "log2FC (shrunken)",
-      x_col == "log2FC"        ~ "log2FC",
-      TRUE                     ~ x_col
+      input$global_lfc_col == "log2FC_shrunk" ~ "log2FC (shrunken)",
+      input$global_lfc_col == "log2FC"        ~ "log2FC",
+      TRUE                                     ~ input$global_lfc_col
     )
     
     set_cols <- names(df)[sapply(df, is.logical)]
