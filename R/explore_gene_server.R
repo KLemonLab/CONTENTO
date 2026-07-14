@@ -193,22 +193,13 @@ explore_gene_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$geneSelect <- renderUI({
     if (is.null(state$de_df())) return(empty_state_msg())
-    
-    div(
-      style = "margin-top: -10px;",
-      selectizeInput(
-        "geneSelect",
-        label    = NULL,
-        choices  = NULL,
-        selected = character(0),
-        options  = list(
-          placeholder = "Start typing gene name or ID...",
-          maxOptions  = 20
-        ),
-        width = "90%"
-      )
-    )
-  })
+    div(style = "margin-top: -10px;",
+        selectizeInput("geneSelect", label = NULL, choices = NULL,
+                       selected = character(0),
+                       options = list(placeholder = "Start typing gene name or ID...", maxOptions = 20),
+                       width = "90%"))
+  }) |> bindEvent(state$se_obj(), ignoreNULL = FALSE)
+  
   outputOptions(output, "geneSelect", suspendWhenHidden = FALSE)  
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

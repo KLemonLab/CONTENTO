@@ -104,16 +104,9 @@ explore_contrast_server <- function(input, output, session, state, organism) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$contrastSelect <- renderUI({
     if (is.null(state$de_df())) return(empty_state_msg())
-    div(
-      style = "margin-top: -10px;",  
-      selectInput(
-        "contrast",
-        label   = NULL,
-        choices = unique(state$de_df()$contrast),
-        width   = "90%"
-      )
-    )
-  })
+    div(style = "margin-top: -10px;",
+        selectInput("contrast", label = NULL, choices = unique(state$de_df()$contrast), width = "90%"))
+  }) |> bindEvent(state$se_obj(), ignoreNULL = FALSE)
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##### UI: GSEA Selectors #####

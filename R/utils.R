@@ -11,7 +11,7 @@
 #' @return Character path to the .rds file, or NULL if not found
 #' @export
 find_annotation_path <- function(annotation) {
-  path <- system.file("annotations", paste0(annotation, ".rds"), package = "RNASeqApp")
+  path <- system.file("annotations", paste0(annotation, ".rds"), package = "CONTENTO")
   if (nzchar(path)) {
     path
   } else {

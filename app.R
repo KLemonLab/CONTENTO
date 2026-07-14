@@ -105,13 +105,13 @@ ui <- dashboardPage(
                              "all tabs and update DE calls, tables, and plots in real time."),
                            tags$div(style = "display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;",
                                     tags$a(icon("file-alt"), "How to install CONTENTO",
-                                           href = "articles/install.html", target = "_blank",
+                                           href = "https://klemonlab.github.io/CONTENTO/", target = "_blank",
                                            class = "btn btn-outline-secondary"),
                                     tags$a(icon("file-alt"), " How to create your SE file",
-                                           href = "articles/create-se-file.html", target = "_blank",
+                                           href = "https://klemonlab.github.io/CONTENTO/create-se-file.html", target = "_blank",
                                            class = "btn btn-outline-secondary"),
                                     tags$a(icon("file-alt"), " How to create annotation files",
-                                           href = "articles/create-genome-annotations.html", target = "_blank",
+                                           href = "https://klemonlab.github.io/CONTENTO/create-genome-annotations.html", target = "_blank",
                                            class = "btn btn-outline-secondary")
                            )
                        ))
