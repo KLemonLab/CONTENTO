@@ -9,7 +9,7 @@ repository-code: "https://github.com/KLemonLab/CONTENTO"
 url: "https://github.com/KLemonLab/CONTENTO"
 license: "GPL-3.0-or-later"
 version: "0.1.0"
-date-released: 2026-07-17
+date-released: 2026-07-20
 keywords:
   - "RNA-seq"
   - "omics"

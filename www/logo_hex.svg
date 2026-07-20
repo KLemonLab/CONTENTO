@@ -4,77 +4,66 @@
   <defs>
     <style>
       .st0 {
+        fill: none;
         stroke: #fff;
         stroke-linecap: round;
         stroke-width: 4px;
       }
 
-      .st0, .st1 {
-        fill: none;
-      }
-
-      .st2 {
+      .st1 {
         fill: #c4d4e0;
         stroke: #c4d4e0;
       }
 
-      .st2, .st3, .st4, .st5, .st6 {
+      .st1, .st2, .st3, .st4, .st5 {
         isolation: isolate;
       }
 
-      .st2, .st4, .st5 {
+      .st1, .st3, .st4 {
         opacity: .9;
       }
 
-      .st7 {
+      .st6 {
         stroke: #3c8dbc;
         stroke-width: 5px;
       }
 
-      .st7, .st8 {
+      .st6, .st7 {
         fill: #1b2733;
       }
 
-      .st9, .st6 {
+      .st8, .st5 {
         fill: #fff;
       }
 
-      .st1 {
-        stroke: #1b2733;
-      }
-
-      .st4 {
+      .st3 {
         fill: #2c7fb8;
       }
 
-      .st5 {
+      .st4 {
         fill: #04a6cf;
       }
 
-      .st6 {
+      .st5 {
         font-family: Helvetica-Bold, Helvetica;
         font-size: 28px;
         font-weight: 700;
       }
     </style>
   </defs>
-  <polygon class="st7" points="96.5 2.9 190.5 56.9 190.5 170.9 96.5 224.9 2.5 170.9 2.5 56.9 96.5 2.9"/>
-  <g class="st3">
-    <text class="st6" transform="translate(18.2 173.4)"><tspan x="0" y="0">CONTENTO</tspan></text>
+  <polygon class="st6" points="96.5 2.9 190.5 56.9 190.5 170.9 96.5 224.9 2.5 170.9 2.5 56.9 96.5 2.9"/>
+  <g class="st2">
+    <text class="st5" transform="translate(18.2 173.4)"><tspan x="0" y="0">CONTENTO</tspan></text>
   </g>
-  <circle class="st9" cx="52" cy="166.1" r="4.5"/>
-  <circle class="st9" cx="166.1" cy="166.1" r="4.5"/>
-  <circle class="st8" cx="52" cy="166.1" r="2"/>
-  <circle class="st8" cx="166.1" cy="166.1" r="2"/>
+  <circle class="st7" cx="52" cy="166.1" r="2"/>
   <g>
-    <ellipse class="st2" cx="96.6" cy="75.1" rx="39" ry="38.6"/>
-    <ellipse class="st5" cx="116" cy="108.1" rx="39" ry="38.6"/>
-    <ellipse class="st4" cx="77" cy="108.1" rx="39" ry="38.6"/>
-    <path class="st0" d="M77,108.1c9.8,11.9,29.8,11.9,39,0"/>
-    <ellipse class="st9" cx="71.5" cy="85.3" rx="4.1" ry="4.1"/>
-    <ellipse class="st9" cx="121.3" cy="85.3" rx="4.1" ry="4.1"/>
-    <ellipse class="st8" cx="71.5" cy="85.3" rx="2.4" ry="2.3"/>
-    <ellipse class="st8" cx="121.3" cy="85.3" rx="2.4" ry="2.3"/>
-    <path class="st1" d="M76.6,108.1c9.8,11.9,29.8,11.9,39,0"/>
+    <path class="st0" d="M83.8,100.1c6.7,8.2,20.5,8.2,26.8,0"/>
+    <circle class="st8" cx="80" cy="84.4" r="2.8"/>
+    <circle class="st8" cx="114.3" cy="84.4" r="2.8"/>
+  </g>
+  <g>
+    <path class="st3" d="M61.2,93.4c4.8-20,23-33.3,42.7-32.7-2.7-1.3-5.6-2.4-8.6-3.1-23-5.7-46.2,8.4-51.8,31.5-5.6,23.1,8.6,46.4,31.6,52.1,3,.7,6.1,1.1,9,1.2-17.8-8.7-27.9-28.9-23-49Z"/>
+    <path class="st4" d="M144.6,75.4c-1.6-2.7-3.4-5.2-5.5-7.4,6.3,19-.9,40.4-18.4,50.9-17.5,10.5-39.6,6.7-53-8,1,2.9,2.2,5.7,3.8,8.4,12.1,20.6,38.3,27.5,58.5,15.4,20.2-12.1,26.7-38.7,14.6-59.3Z"/>
+    <path class="st1" d="M56,55.2c-1.5,2.8-2.6,5.6-3.5,8.5,12.8-15.2,34.7-20,52.6-10.2,17.9,9.8,26,30.9,20.4,50.1,1.9-2.3,3.7-4.8,5.2-7.6,11.3-21.1,3.7-47.4-17-58.7-20.6-11.3-46.5-3.3-57.8,17.8Z"/>
   </g>
 </svg>
