@@ -71,7 +71,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                                       tags$b("Annotation: "), 
                                       "Gene sets from your annotation columns (e.g. KEGG, COG)."),
                               tags$li("Gene sets are ranked by NES (Normalized Enrichment Score) and Leading-edge genes indicate core contributors to enrichment"),
-                              tags$li("Plot shows top 20 enriched gene sets (FDR < 0.05) based on selected gene set source and collection"),
+                              tags$li("Plots show top 20 enriched gene sets (FDR < 0.05) based on selected gene set source and collection"),
                               tags$li("Volcano plot highlights DEGs colored by gene set (annotation-based only); hover over points to view gene details, and download the plot in the interactive viewer")
                             )
                         )
@@ -82,7 +82,8 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                             tags$div(
                               style = "margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;",
                               downloadButton("downloadGseaResults", "Download GSEA Table", class = "btn btn-info"),
-                              downloadButton("downloadGseaPlot",    "Download GSEA Plot",  class = "btn btn-info")
+                              downloadButton("downloadGseaPlot",    "Download TablePlot",  class = "btn btn-info"),
+                              downloadButton("downloadGseaLollipopPlot", "Download Lollipop Plot", class = "btn btn-info")
                             )
                         )
                  )
@@ -92,6 +93,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
                hr(),
                h4(strong("Top 20 Enriched Gene Sets (FDR < 0.05)")),
                withSpinner(plotOutput("gseaTablePlot", height = "600px"), type = 5),
+               withSpinner(plotOutput("gseaLollipopPlot", height = "450px"), type = 5),
                uiOutput("volcanoGeneSetPlotUI")
 
       )
@@ -304,6 +306,35 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     error = handle_gsea_error)
   })
   
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Reactive: GSEA Lollipop Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  gsea_lollipop <- reactive({
+    req(gsea_result(), genesets())
+    
+    df <- gsea_result()$fgseaRes |>
+      filter(padj < 0.05) |>
+      arrange(padj) |>
+      slice_head(n = 20) |>
+      arrange(NES) |>
+      mutate(pathway = factor(pathway, levels = pathway))
+    
+    validate(need(nrow(df) > 0, "No significant gene sets found (FDR < 0.05)"))
+    
+    ggplot(df, aes(x = NES, y = pathway)) +
+      geom_segment(aes(x = 0, xend = NES, y = pathway, yend = pathway),
+                   color = "grey60", linewidth = 0.7) +
+      geom_point(aes(size = size, color = -log10(padj))) +
+      scale_color_gradient(low = "#009ad1", high = "#AD1457", name = "-log10(FDR)") +
+      scale_size_continuous(name = "Set size", range = c(2, 8)) +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+      labs(x = "Normalized Enrichment Score (NES)", y = NULL,
+           title = paste0("Contrast: ", input$contrast, " | Gene Set Collection: ", genesets()$label)) +
+      theme_minimal(base_size = 18) +
+      theme(panel.grid.major.y = element_blank(),
+            plot.title = element_text(face = "bold", size = 18))
+  })
+  
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
   #### SECTION 3: OUTPUT RENDERING ####
@@ -489,6 +520,11 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       ggplotly(gg, tooltip = "text") |> layout(showlegend = FALSE)
     }, error = handle_volcano_plot_error)
   })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Output: Plots from Reactives #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$gseaLollipopPlot <- renderPlot({ gsea_lollipop() })
 
   
   # == == == == == == == == == == == == == == == == == == == == == == == == ==
@@ -540,7 +576,7 @@ explore_contrast_server <- function(input, output, session, state, organism) {
     })
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##### Download: GSEA Plot Results #####
+  ##### Download: GSEA TablePlot #####
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   output$downloadGseaPlot <- downloadHandler(
     function() build_download_filename(input, state, ext = "png",
@@ -555,6 +591,20 @@ explore_contrast_server <- function(input, output, session, state, organism) {
       } else {
         grid::grid.draw(gsea_result()$tableplot)
       }
+      dev.off()
+    })
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##### Download: GSEA Lollipop Plot #####
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  output$downloadGseaLollipopPlot <- downloadHandler(
+    function() build_download_filename(input, state, ext = "png",
+                                       type = "GSEA-Lollipop", contrast = input$contrast,
+                                       suffix = genesets()$label),
+    function(file) {
+      req(gsea_lollipop())
+      png(file, width = 1800, height = 1200, res = 150)
+      print(gsea_lollipop())
       dev.off()
     })
   
