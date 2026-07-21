@@ -594,7 +594,7 @@ compare_contrast_server <- function(input, output, session, state, organism) {
     sig_text[padj_mat < 0.05] <- "*"
     
     col_fun <- circlize::colorRamp2(c(-3, 0, 3),
-                                    c("#009ad1", "#fefbea", "#AD1457"))
+                                    c("#AD1457", "#fefbea", "#009ad1"))
     
     n_pathways   <- nrow(nes_mat)
     row_fontsize <- max(9, min(12, 400 / n_pathways))
