@@ -1,0 +1,44 @@
+---
+title: "CONTENTO TESTING AND VALIDATION"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+execute:
+  echo: true
+---
+
+## Setup
+
+```{r}
+# Load required libraries
+library(here)
+library(tidyverse)
+
+# Source 
+source(here("R/utils.R"))
+```
+
+Use this code to set up your project-specific .Renviron file. It requires the `usethis` package.
+
+```{r, eval=FALSE}
+install.packages("usethis") # Install if not already installed
+usethis::edit_r_environ(scope = "project")
+```
+
+Add the path to your Box folder in the .Renviron file. For example: `BOX_PATH="/Users/isabelfe/Library/CloudStorage/Box-Box/KLEMONLAB_Projects/Shared_CONTENTO/testing_data"`
+
+We will use data located in two locations:
+
+- inst/extdata: Data included in the package for running of the vignettes. This data is included in the package and will be available to users who install the package.
+- Shared_CONTENTO/testing_data: Data not included in the package. This data is used for testing and validation of the app.
+
+
+```{r}
+testdata_path <- Sys.getenv("BOX_PATH") 
+extdata_path <- file.path(here("inst/extdata/"))
+
+
+Human_annot <- readRDS(file.path(extdata_path, "genomes/Homo_sapiens.GRCh38.113_annot.rds"))
+ExpSingleContrast_SE <- readRDS(file.path(extdata_path, "SE/ExpSingleContrast_SE.rds"))
+```

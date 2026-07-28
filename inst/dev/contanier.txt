@@ -1,9 +1,0 @@
-# 1) Build image locally
-docker build -t ghcr.io/klemonlab/contento:latest .
-
-# 2) Login to GHCR. GitHub PAT saved in .bash_env
-source .bash_env
-echo "$CR_PAT" | docker login ghcr.io -u IsabelFE --password-stdin
-
-# 3) Push image
-docker push ghcr.io/klemonlab/contento:latest
