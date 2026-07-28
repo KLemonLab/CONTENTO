@@ -1,10 +1,14 @@
 # CONTENTO
 
-> *CONTrast ExploratioN Toolkit for Omics*
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21629493.svg)](https://doi.org/10.5281/zenodo.21629493)
+
+> *CONTrast ExploratioN Toolkit for Omics* 
 
 ## Intro
 
-Shiny App for RNASeq Results Exploration.
+Modern omics experiments in microbial research rarely conform to simple two-group comparisons. Experimental designs frequently involve multiple variables tested simultaneously (microbial species, growth conditions, treatments, and their interaction effects) generating multiple pairwise contrasts that are difficult to navigate with standard tools. Identifying which genes or pathways are uniquely regulated in one condition, shared across several, or driven by interaction effects requires an analytical framework that scales with experimental complexity. We present CONTENTO (CONTrast ExploratioN Toolkit for Omics), an interactive R Shiny dashboard designed to help researchers explore, visualize, and compare results across any number of contrasts, with the broader vision of supporting multiple omics data types. CONTENTO currently focuses on DESeq2-processed RNAseq data, supporting both microbial and host transcriptomes within a unified interface, making it well-suited for experimental systems ranging from in vitro microbial cultures to complex in vivo and coculture host-microbe models.
+
+CONTENTO integrates per-contrast visualization of differential expression results, interactive volcano plots, expression heatmaps, and gene set enrichment analysis. Gene sets are drawn from MSigDB collections for host transcriptomes, while microbial transcriptomes are supported through COG and KEGG functional annotations, enabling pathway-level enrichment analysis across both organisms in dual-host-microbe experimental systems. CONTENTO’s multi-contrast comparison framework allows users to identify differentially expressed genes and pathway overlap across any combination of conditions, revealing shared and condition-specific transcriptional responses. Single-gene expression visualization across user-defined experimental metadata enables detailed interrogation of individual genes simultaneously across contrasts. CONTENTO provides an accessible and scalable platform for extracting biological insight from experimentally complex omics datasets.
 
 ## Documentation
 
@@ -138,7 +142,9 @@ The application will then become available in your web browser.
 
 If you use this application in scientific work, please cite:
 
-Isabel FE, et al. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO> DOI: [add Zenodo DOI once available].
+Isabel FE, et al. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO> 
+
+DOI: https://doi.org/10.5281/zenodo.21629493
 
 ## License
 
