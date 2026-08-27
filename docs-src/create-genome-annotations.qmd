@@ -395,7 +395,7 @@ anvio_annot <- read_delim(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.txt
   mutate(source = as.factor(source)) |>
   mutate(across(where(is.character), trimws)) |>
   select(-e_value) |> # Exclude e-values to keep dataframe simple
-  rename("acc" = "accession", "func" = "function") |> # Shorter names
+  dplyr::rename("acc" = "accession", "func" = "function") |> # Shorter names
   mutate(across(c(acc, func), trimws))
 
 # Convert from long format (multiple rows per gene) to wide format (one row per gene)
