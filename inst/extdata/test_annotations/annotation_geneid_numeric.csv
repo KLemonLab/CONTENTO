@@ -1,0 +1,11 @@
+Geneid,gene,symbol,Regulator,tiny_group,go_function
+1,dnaA,DnaA,CcpA,uniq1,replication
+2,dnaN,DnaN,CodY,uniq2,DNA polymerase
+3,yaaA,YaaA,ArgR,uniq3,RNA-binding
+4,recF,RecF,CcpA,uniq4,DNA repair
+5,gyrB,GyrB,CcpA,uniq5,topoisomerase
+6,gyrA,GyrA,,uniq6,gyrase activity
+7,naC,NaC,CymR,uniq7,metabolism
+8,hutH,HutH,CcpA,uniq8,amino acid metabolism
+9,serS,SerS,CodY,uniq9,translation
+10,azlC,AzlC,CodY,uniq10,transport
