@@ -1,0 +1,11 @@
+Geneid,gene,symbol,Regulator,tiny_group,go_function
+SAUSA300_RS00010,dnaA,DnaA,CcpA,unique_1,replication
+SAUSA300_RS00015,dnaN,DnaN,CodY,unique_2,DNA polymerase
+SAUSA300_RS00020,yaaA,YaaA,ArgR,unique_3,RNA-binding
+SAUSA300_RS00025,recF,RecF,CcpA,unique_4,DNA repair
+SAUSA300_RS00030,gyrB,GyrB,CcpA,unique_5,topoisomerase
+SAUSA300_RS00035,gyrA,GyrA,,unique_6,gyrase activity
+SAUSA300_RS00040,naC,NaC,CymR,unique_7,metabolism
+SAUSA300_RS00045,hutH,HutH,CcpA,unique_8,amino acid metabolism
+SAUSA300_RS00050,serS,SerS,CodY,unique_9,translation
+SAUSA300_RS00055,azlC,AzlC,CodY,unique_10,transport

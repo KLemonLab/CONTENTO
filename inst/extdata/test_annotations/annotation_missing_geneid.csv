@@ -1,0 +1,13 @@
+# Annotation file intentionally missing the required Geneid column
+# Used to test CONTENTO's validation when 'Geneid' is absent
+gene,symbol,Regulator,tiny_group,go_function
+dnaA,DnaA,CcpA,grpA,replication
+dnaN,DnaN,CodY,grpA,DNA polymerase
+yaaA,YaaA,ArgR,grpB,RNA-binding
+recF,RecF,CcpA,grpB,DNA repair
+gyrB,GyrB,CcpC,grpC,topoisomerase
+gyrA,GyrA,,grpC,gyrase activity
+naC,NaC,CymR,grpD,metabolism
+hutH,HutH,CcpA,grpD,amino acid metabolism
+serS,SerS,CodY,grpE,translation
+azlC,AzlC,CodY,grpE,transport
