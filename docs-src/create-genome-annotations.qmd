@@ -217,7 +217,7 @@ annotations <- gff_cds |>
   ungroup() |>
   unnest_wider(attr_list, names_repair = "universal") |> # Unnest all key=value pairs as columns
   select(-attributes) |>
-  rename(Geneid = locus_tag) # Required column for CONTENTO
+  dplyr::rename(Geneid = locus_tag) # Required column for CONTENTO
 
 # Replace commas in GO-related annotation fields with "!!!" to be used in multiple groupings in functional analysis
 annotations <- annotations |>
@@ -324,7 +324,7 @@ saveRDS(annotations_merged, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_R
 
 ### Run Anvi'o Annotation Pipeline
 
-For more details on how to run anvi'o see the [Anvi'o documentation](https://anvio.org/learn/).
+For more details on how to run anvi'o see the [Anvi'o documentation](https://anvio.org/learn/). If running on Windows, we recommend utilizing Ubuntu. 
 
 ```{bash, eval = FALSE}
 # Install Anvio if you haven't already. This should be run in your terminal.
