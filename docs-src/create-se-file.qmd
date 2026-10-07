@@ -600,7 +600,7 @@ Before uploading to CONTENTO, confirm:
 - [ ] `metadata(se)$contrasts` is a character vector, not a factor or list.
 - [ ] `metadata(se)$organism`, if set, exactly matches a valid `msigdbr` species name (or is `"Bacteria"` for neighborhood analysis).
 - [ ] `metadata(se)$db_species`, if set, is exactly `"HS"` or `"MM"` — overrides which MSigDB source database (human- or mouse-curated) is queried, but `organism` must still be a valid `msigdbr` species.
-- [ ] `metadata(se)$annotation`, if set, matches the filename (without `.rds`) of a built-in or uploaded annotation file.
+- [ ] `metadata(se)$annotation`, if set, matches the filename (without `.rds`) of a built-in or uploaded annotation file (or of a file in the folder set by `CONTENTO_ANNOTATION_DIR`; see [Running CONTENTO](index.qmd#running-contento)).
 - [ ] `metadata(se)$dataset_name`, if set, is a short descriptive string — it becomes the prefix for every file CONTENTO lets users download.
 - [ ] `rownames(se)` are consistent gene identifiers matching your annotation's `Geneid` column, if used.
 

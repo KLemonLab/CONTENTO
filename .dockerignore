@@ -5,5 +5,7 @@
 .Renviron
 .env
 .bash_env
-inst/annotations/
-inst/dev/
+inst/extdata/
+docs/
+docs-src/
+README.html

@@ -50,9 +50,6 @@ WORKDIR /srv/shiny-server/app
 # Copy app
 COPY . .
 
-# Avoid running as root
-VOLUME ["inst"]
-
 EXPOSE 3838
 
 HEALTHCHECK CMD curl -f http://localhost:3838 || exit 1

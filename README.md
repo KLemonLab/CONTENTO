@@ -1,8 +1,8 @@
 # CONTENTO
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21629493.svg)](https://doi.org/10.5281/zenodo.21629493)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21629492.svg)](https://doi.org/10.5281/zenodo.21629492)
 
-> *CONTrast ExploratioN Toolkit for Omics* 
+> *CONTrast ExploratioN Toolkit for Omics*
 
 ## Intro
 
@@ -16,68 +16,54 @@ Full documentation, including tutorials for creating SE and annotation files, is
 
 ## Running CONTENTO
 
-CONTENTO can be executed in three different ways depending on your computational environment and familiarity with containerized software. We strongly recommend the Docker-based workflows, as they guarantee complete reproducibility across operating systems and avoid dependency conflicts.
+CONTENTO can be run in two ways. We recommend the container, since it ships with R, Bioconductor, and every dependency pre-installed, and behaves identically on any operating system.
 
-### *Option 1:* Run using Docker (recommended)
+### *Option 1:* Run the container (recommended)
 
-If Docker is not yet installed on your system, we recommend you install Docker Desktop from the [official website](https://www.docker.com/products/docker-desktop/), since it provides a friendly graphic interface to manage your images and keep your Docker Engine up-to-date. If you already have Docker installed, running CONTENTO requires a single command from your terminal *(make sure your Docker Desktop is running)*:
+A container bundles the app together with everything it needs to run. You only need to install a container runtime once:
+
+- **macOS and Windows:** [Podman Desktop](https://podman-desktop.io/), free and open source. Docker Desktop also works, but requires a paid subscription at larger organizations (more than 250 employees or more than \$10 million in annual revenue), which usually includes universities and hospitals.
+- **Linux:** [Docker Engine](https://docs.docker.com/engine/install/) or Podman, both free and available from your distribution's package manager.
+
+Then start CONTENTO from a terminal *(with Podman Desktop running)*:
 
 ``` bash
-docker run \
-    --rm \
-    -p 3838:3838 \
-    -v $(pwd)/inst:/srv/shiny-server/app/inst \
+podman run --rm -p 3838:3838 ghcr.io/klemonlab/contento:latest
+```
+
+If you use Docker, replace `podman` with `docker`; the rest of the command is identical. The first run downloads the image, which takes a few minutes. When the terminal shows `Listening on http://0.0.0.0:3838`, open your web browser and navigate to:
+
+```         
+http://localhost:3838
+```
+
+Press `Ctrl+C` in the terminal to stop the app.
+
+**Loading your data.** Upload your SE file in the app's sidebar, and an annotation file from the load panel if needed. Built-in annotations are included in the container and load automatically when `metadata(se)$annotation` names one of them. Uploaded files are only kept for the current session.
+
+**Using your own annotation files.** To load your own annotation files automatically instead of uploading them each session, mount the folder that contains them and point `CONTENTO_ANNOTATION_DIR` to it:
+
+``` bash
+podman run --rm -p 3838:3838 \
+    -v /path/to/annotations:/annotations:ro \
+    -e CONTENTO_ANNOTATION_DIR=/annotations \
     ghcr.io/klemonlab/contento:latest
 ```
 
-The terminal window will show the app startup and soon will start accepting connections. When you see the message that the app is listening, open your web browser (any browser) and navigate to:
-
-```         
-http://localhost:3838
-```
-
-This approach provides a fully reproducible computational environment with all R, Bioconductor, and system dependencies pre-installed.
-
-> **Rebuilding image from scratch**
->
-> A Dockerfile is included in the repository so that users familiar with building container images can self-build with `docker build -t contento .` if necessary.
-
-### *Option 2:* Run using Docker Compose
-
-For users who prefer a persistent local setup and the convenience of a preconfigured container mount, **CONTENTO** can also be launched using [Docker Compose](https://docs.docker.com/compose/). To do this, make sure you have the `compose` plugin installed (it is bundled with modern distributions of Docker Desktop by default) by running
+**Pinning a version.** `latest` always points to the newest release. For analyses you intend to publish, replace `latest` with a specific release version (see [Releases](https://github.com/KLemonLab/CONTENTO/releases)) and report that version in your methods:
 
 ``` bash
-docker compose --help
+podman run --rm -p 3838:3838 ghcr.io/klemonlab/contento:0.2.0
 ```
 
-The helper string for the `compose` plugin should come up.
-
-Then, clone the CONTENTO repository:
+**Building the image yourself.** A Dockerfile is included in the repository, so you can build and run the image locally from the cloned repository:
 
 ``` bash
-git clone https://github.com/klemonlab/contento.git
+podman build -t contento .
+podman run --rm -p 3838:3838 contento
 ```
 
-To start the application, navigate to the working directory and simply run:
-
-``` bash
-cd contento
-docker compose up
-```
-
-Or run it in the background:
-
-``` bash
-docker compose up -d
-```
-
-Once the container starts, access the application again at:
-
-```         
-http://localhost:3838
-```
-
-### *Option 3:* Run locally within R/RStudio
+### *Option 2:* Run locally within R/RStudio
 
 Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop).
 
@@ -130,21 +116,15 @@ The application will then become available in your web browser.
 
 ------------------------------------------------------------------------
 
-### Which option should I choose?
-
-| Method | Recommended for | Widely Reproducible | Requires installation |
-|----|----|----|----|
-| Docker | Most users | ✓ | Docker |
-| Docker Compose | Persistent local deployments | ✓ | Docker + Compose |
-| R/RStudio | RStudio users and developers | Depends on environment | R + package installation |
-
 ## Citation
 
 If you use this application in scientific work, please cite:
 
-Isabel FE, et al. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO> 
+Isabel FE, et al. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO>
 
-DOI: https://doi.org/10.5281/zenodo.21629493
+DOI: <https://doi.org/10.5281/zenodo.21629492>
+
+This DOI always resolves to the latest release; the DOI for each specific version is listed on the Zenodo page.
 
 ## License
 

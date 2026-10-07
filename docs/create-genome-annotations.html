@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-07-13">
+<meta name="dcterms.date" content="2026-10-05">
 
 <title>CONTENTO - Create Genome Annotations for CONTENTO</title>
 <style>
@@ -236,7 +236,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 13, 2026</p>
+      <p class="date">October 5, 2026</p>
     </div>
   </div>
   
@@ -491,7 +491,7 @@ IMPORTANT:
 <span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
 <span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest_wider</span>(attr_list, <span class="at">names_repair =</span> <span class="st">"universal"</span>) <span class="sc">|&gt;</span> <span class="co"># Unnest all key=value pairs as columns</span></span>
 <span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>attributes) <span class="sc">|&gt;</span></span>
-<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Geneid =</span> locus_tag) <span class="co"># Required column for CONTENTO</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(<span class="at">Geneid =</span> locus_tag) <span class="co"># Required column for CONTENTO</span></span>
 <span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Replace commas in GO-related annotation fields with "!!!" to be used in multiple groupings in functional analysis</span></span>
 <span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
@@ -601,7 +601,7 @@ Found a Useful Annotation Source?
 </ul>
 <section id="run-anvio-annotation-pipeline" class="level3">
 <h3 class="anchored" data-anchor-id="run-anvio-annotation-pipeline">Run Anvi’o Annotation Pipeline</h3>
-<p>For more details on how to run anvi’o see the <a href="https://anvio.org/learn/">Anvi’o documentation</a>.</p>
+<p>For more details on how to run anvi’o see the <a href="https://anvio.org/learn/">Anvi’o documentation</a>. If running on Windows, we recommend utilizing Ubuntu.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Anvio if you haven't already. This should be run in your terminal.</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate anvio-9</span>
@@ -670,7 +670,7 @@ Found a Useful Annotation Source?
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">source =</span> <span class="fu">as.factor</span>(source)) <span class="sc">|&gt;</span></span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.character), trimws)) <span class="sc">|&gt;</span></span>
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>e_value) <span class="sc">|&gt;</span> <span class="co"># Exclude e-values to keep dataframe simple</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="st">"acc"</span> <span class="ot">=</span> <span class="st">"accession"</span>, <span class="st">"func"</span> <span class="ot">=</span> <span class="st">"function"</span>) <span class="sc">|&gt;</span> <span class="co"># Shorter names</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(<span class="st">"acc"</span> <span class="ot">=</span> <span class="st">"accession"</span>, <span class="st">"func"</span> <span class="ot">=</span> <span class="st">"function"</span>) <span class="sc">|&gt;</span> <span class="co"># Shorter names</span></span>
 <span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(acc, func), trimws))</span>
 <span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert from long format (multiple rows per gene) to wide format (one row per gene)</span></span>

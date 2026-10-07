@@ -8,6 +8,7 @@ authors:
 repository-code: "https://github.com/KLemonLab/CONTENTO"
 url: "https://github.com/KLemonLab/CONTENTO"
 license: "GPL-3.0-or-later"
+doi: "10.5281/zenodo.21629492"
 version: "0.1.0"
 date-released: 2026-07-20
 keywords:

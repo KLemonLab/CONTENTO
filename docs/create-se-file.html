@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-07-13">
+<meta name="dcterms.date" content="2026-10-07">
 
 <title>CONTENTO - Create SE for CONTENTO</title>
 <style>
@@ -236,7 +236,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 13, 2026</p>
+      <p class="date">October 7, 2026</p>
     </div>
   </div>
   
@@ -887,7 +887,7 @@ Loading variance partition data...
 <li><input type="checkbox"><code>metadata(se)$contrasts</code> is a character vector, not a factor or list.</li>
 <li><input type="checkbox"><code>metadata(se)$organism</code>, if set, exactly matches a valid <code>msigdbr</code> species name (or is <code>"Bacteria"</code> for neighborhood analysis).</li>
 <li><input type="checkbox"><code>metadata(se)$db_species</code>, if set, is exactly <code>"HS"</code> or <code>"MM"</code> — overrides which MSigDB source database (human- or mouse-curated) is queried, but <code>organism</code> must still be a valid <code>msigdbr</code> species.</li>
-<li><input type="checkbox"><code>metadata(se)$annotation</code>, if set, matches the filename (without <code>.rds</code>) of a built-in or uploaded annotation file.</li>
+<li><input type="checkbox"><code>metadata(se)$annotation</code>, if set, matches the filename (without <code>.rds</code>) of a built-in or uploaded annotation file (or of a file in the folder set by <code>CONTENTO_ANNOTATION_DIR</code>; see <a href="./index.html#running-contento">Running CONTENTO</a>).</li>
 <li><input type="checkbox"><code>metadata(se)$dataset_name</code>, if set, is a short descriptive string — it becomes the prefix for every file CONTENTO lets users download.</li>
 <li><input type="checkbox"><code>rownames(se)</code> are consistent gene identifiers matching your annotation’s <code>Geneid</code> column, if used.</li>
 </ul>

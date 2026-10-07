@@ -2,15 +2,23 @@
 #### SECTION 1: FILE / SE LOADING ####
 # == == == == == == == == == == == == == == == == == == == == == == == == ==
 
-#' Find built-in annotation file path for a given annotation name
+#' Find annotation file path for a given annotation name
 #'
-#' Searches first in the installed package, then falls back to the local
-#' inst/annotations directory (useful during development).
+#' Searches first in the directory named by the optional CONTENTO_ANNOTATION_DIR
+#' environment variable (e.g. a folder mounted into the container), then in the
+#' installed package, then falls back to the local inst/annotations directory
+#' (useful during development).
 #'
 #' @param annotation Character string with the annotation name (without extension)
 #' @return Character path to the .rds file, or NULL if not found
 #' @export
 find_annotation_path <- function(annotation) {
+  custom_dir <- Sys.getenv("CONTENTO_ANNOTATION_DIR")
+  if (nzchar(custom_dir)) {
+    custom_path <- file.path(custom_dir, paste0(annotation, ".rds"))
+    if (file.exists(custom_path)) return(custom_path)
+  }
+
   path <- system.file("annotations", paste0(annotation, ".rds"), package = "CONTENTO")
   if (nzchar(path)) {
     path
