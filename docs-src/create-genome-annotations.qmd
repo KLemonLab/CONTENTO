@@ -26,8 +26,8 @@ CONTENTO can perform functional enrichment analysis using gene sets from two sou
 
 1.  **Annotation-Based Gene Sets:** Available for any organism through a user-provided annotation data frame (`.rds` format). Required elements:
 
-    - A `Geneid` column matching the `rownames()` of the SE object.
-    - One or more functional annotation columns containing gene set assignments (e.g. COG categories, KEGG pathways, GO terms, regulons, custom categories). Multiple values per gene should be separated by `!!!` (e.g., `"GO:0006415!!!GO:0016149"`). CONTENTO will parse them by counting the gene as belonging to each category for functional enrichment analysis.
+    - A `Geneid` column matching the `rownames()` of the SE object, with **exactly one row per `Geneid`**. CONTENTO rejects annotation files with duplicated `Geneid` values.
+    - One or more functional annotation columns containing gene set assignments (e.g. COG categories, KEGG pathways, GO terms, regulons, custom categories). Multiple values per gene **must** be collapsed into a single string separated by `!!!` (e.g., `"GO:0006415!!!GO:0016149"`). Do not use any other separator (`,`, `;`, `|`, ...): CONTENTO only splits on `!!!`, so `"GO:0006415,GO:0016149"` would be treated as one single category. CONTENTO counts the gene as belonging to each `!!!`-separated category for functional enrichment analysis. See [Multiple annotations per gene](#multiple-annotations-per-gene) for how to build these strings.
 
 2.  [**MSigDB**](https://www.gsea-msigdb.org/gsea/msigdb) **Gene Sets:** Available only for human, mouse, and other species supported by [msigdbr](https://igordot.github.io/msigdbr/reference/msigdbr_species.html) R package. It requires:
 
@@ -38,8 +38,8 @@ CONTENTO can perform functional enrichment analysis using gene sets from two sou
 
 Annotation files also improve the general CONTENTO experience.
 
-- **Gene symbols/labels** can be displayed throughout tables and visualizations instead of raw gene identifiers. This is especially useful for bacteria, where `Geneid` is often a locus tag (e.g. `SAUSA300_0001`) and not not an informative label like the associated gene name or product description.
-- **Genomic neighborhood analysis**, which additionally requires `start`, `end`, `strand` columns in the annotation file. This is a beta feature available only when `metadata(se)$organism` is exactly "Bacteria")
+- **Gene symbols/labels** can be displayed throughout tables and visualizations instead of raw gene identifiers. This is especially useful for bacteria, where `Geneid` is often a locus tag (e.g. `SAUSA300_0001`) and not an informative label like the associated gene name or product description.
+- **Genomic neighborhood analysis**, which additionally requires `start`, `end`, `strand` columns in the annotation file. This is a beta feature available only when `metadata(se)$organism` is exactly "Bacteria"
 
 ## Examples: Do I need an annotation file?
 
@@ -78,7 +78,7 @@ wget -P "$FILES_DIR" \
   "https://ftp.ensembl.org/pub/release-${VERSION}/gtf/homo_sapiens/${GENOME_NAME}.${VERSION}.gtf.gz"
 
 # Reference genome used in the downstream analysis (alignment/quantification)
-wget -P "$FILES_DIR" \ 
+wget -P "$FILES_DIR" \
   "https://ftp.ensembl.org/pub/release-${VERSION}/fasta/homo_sapiens/dna/${GENOME_NAME}.dna_sm.primary_assembly.fa.gz"
 ```
 
@@ -164,7 +164,7 @@ saveRDS(annotations, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.rds")))
 
 ## 2.2 From a GFF3 (NCBI/Prokka)
 
-The GFF3 file contains the `Geneid` info information as `locus_tag`, which we can parse along with other useful information from the `attributes` column.
+The GFF3 file contains the `Geneid` information as `locus_tag`, which we can parse along with other useful information from the `attributes` column.
 
 ```{r}
 # Set up your R environment and read the GFF3 file. Adapt based on the GFF3 name and location
@@ -238,7 +238,7 @@ annotations <- annotations |>
   )
 
 # Sanity check: Ensure there are no duplicated Gene IDs
-sum(duplicated(annotations$Geneid))
+stopifnot(!anyDuplicated(annotations$Geneid))
 
 # Save the annotations to a CSV/RDS file
 write_csv(annotations, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv")))
@@ -264,8 +264,6 @@ You can merge annotations from any source that contains gene identifiers (Gene I
 - Your own experimental data (e.g., Tn-seq, RNA-seq, proteomics)
 - Manually curated annotations from literature searches
 
-**In this example**, we demonstrate using RegPrecise regulon annotations, but the same approach works for any custom annotation file.
-
 ::: callout-tip
 ### Found a Useful Annotation Source?
 
@@ -282,10 +280,54 @@ Open an [issue on GitHub](https://github.com/KLemonLab/RNASeqApp/issues) to shar
 
 - **Gene coverage:** No requirement for the same number of genes as in the GTF/GFF3 derived annotations, as long as there is a common key (`Geneid`) for merging. Genes in GTF/GFF3 derived annotations without a corresponding custom annotation entry will be included in the final dataframe with `NA` values for the custom columns.
 
-- **Multiple annotations per gene:** There should be only **one entry per gene** in the custom annotation file. If a gene has multiple annotations, concatenate them into a single string separated by !!! (e.g., `"regulon1!!!regulon2"`). See the anvi'o example below for how to concatenate multiple values. CONTENTO will parse these and count the gene as belonging to each category for functional enrichment analysis.
+- **Multiple annotations per gene:** See the dedicated section below. In short: **one row per gene**, multiple values joined with `!!!`.
+
+### Multiple annotations per gene {#multiple-annotations-per-gene}
+
+The final annotation file must have **exactly one row per `Geneid`**. If a `Geneid` appears in more than one row, CONTENTO **refuses to load the file** and shows an error listing some of the duplicated IDs (otherwise each duplicate would silently duplicate that gene's differential expression results).
+
+If a gene has several values in a column (several KEGG pathways, GO terms, COG categories, ...), concatenate them into a single string separated by `!!!` (e.g., `"Glycolysis / Gluconeogenesis!!!Carbon fixation"`). `!!!` is the **only** separator CONTENTO recognises; values joined by commas, semicolons or pipes are treated as one single category. CONTENTO splits on `!!!` and counts the gene as belonging to each category for functional enrichment analysis.
+
+Duplicates usually appear when a source file is in "long" format (one row per gene–annotation pair) or when a `left_join()` matches several rows per gene. Collapse such a table **before** merging it with your other annotations:
+
+```{r, eval = FALSE}
+# Long format: one row per gene-pathway pair
+#   locus_tag   KEGG_Pathway
+#   gene_0001   Glycolysis / Gluconeogenesis
+#   gene_0001   Carbon fixation
+#   gene_0001   Carbon metabolism
+#   gene_0002   Glycolysis / Gluconeogenesis
+
+custom_annot <- custom_annot |>
+  group_by(locus_tag) |>
+  summarise(across(everything(),
+                   ~ paste(unique(na.omit(.x)), collapse = "!!!")),
+            .groups = "drop") |>
+  mutate(across(everything(), ~ na_if(.x, "")))
+#   locus_tag   KEGG_Pathway
+#   gene_0001   Glycolysis / Gluconeogenesis!!!Carbon fixation!!!Carbon metabolism
+#   gene_0002   Glycolysis / Gluconeogenesis
+
+# If a column already uses another separator (e.g. commas), convert it to "!!!"
+annotations <- annotations |>
+  mutate(across(c(go_process, go_function), ~ gsub("\\s*,\\s*", "!!!", .x)))
+```
+
+Before saving the `.rds`, check that no `Geneid` is duplicated:
+
+```{r, eval = FALSE}
+# Should return 0 rows. If not, collapse those genes as shown above.
+annotations |> count(Geneid) |> filter(n > 1)
+
+stopifnot(!anyDuplicated(annotations$Geneid))
+```
+
+## 3.2 Example: Merging RegPrecise Regulons
+
+In this example, we demonstrate how to merge the RegPrecise regulon annotations with the GFF3-derived annotations. The RegPrecise file is tab-delimited and contains a `locus_tag` column that matches the `Geneid` column in the GFF3-derived annotations.
 
 ```{r}
-# Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location
+# Set up your R environment and read the RegPrecise file. Adapt based on the file name and location
 library(tidyverse)
 library(here)
 
@@ -298,13 +340,21 @@ annotations <- read_csv(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot.csv")
 # Load custom annotation file tab delimited
 custom_annot <- read_delim(file.path(GENOMES_DIR, "USA300_FPR3757_RegPrecise.txt"))
 
+# Collapse to one row per gene: genes controlled by several regulators become "Reg1!!!Reg2"
+custom_annot <- custom_annot |>
+  group_by(locus_tag) |>
+  summarise(Regulator = paste(unique(na.omit(Regulator)), collapse = "!!!"), .groups = "drop")
+
 # Merge the custom annotations with the GFF3-derived annotations using locus_tag as the key
 annotations_merged <- annotations |>
   left_join(custom_annot, by = c("Geneid" = "locus_tag")) |> # Adjust to the "Geneid" column name in your custom annotation file
   rename_with(
     ~ paste0("RegPrecise_", .), # Prefix custom annotation columns to avoid name clashes with GFF3-derived annotations
-    -all_of(colnames(annotations))  
-  ) 
+    -all_of(colnames(annotations))
+  )
+
+# Sanity check: Ensure there are no duplicated Gene IDs (CONTENTO rejects files with duplicates)
+stopifnot(!anyDuplicated(annotations_merged$Geneid))
 
 # Save the annotations to a CSV/RDS file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise.csv"))
@@ -312,7 +362,7 @@ write_csv(annotations_merged, output_file)
 saveRDS(annotations_merged, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise.rds"))) 
 ```
 
-## 3.2 Enhance Annotations with Anvi'o (Bacterial Genomes)
+## 3.3 Example: Enhance Annotations with Anvi'o
 
 **Anvi'o** is a comprehensive platform that integrates multiple annotation sources and can be used to generate a rich annotation file for bacterial genomes. It can be run on any genome in GenBank format and will produce a single annotation file with multiple functional annotations for each gene.
 
@@ -457,7 +507,7 @@ anvio_annot <- anvio_annot |>
 Finally, you should merge the anvi'o annotations with the GFF3-derived annotations and the custom annotations from RegPrecise to create a comprehensive annotation CSV file for CONTENTO.
 
 ```{r}
-# Load GFF3-derived annotations (with RegPrecise already merged, or use original if skipping section 3.1)
+# Load GFF3-derived annotations (with RegPrecise already merged, or use original if skipping section 3.2)
 annotations <- read_csv(file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise.csv")))
 
 # Merge anvi'o annotations using GENBANK_LOCUS_TAG (the column added by anvi'o) as a key for merging, which should match the Geneid column in the GFF3-derived annotations. 
@@ -466,7 +516,10 @@ annotations_merged <- annotations |>
   rename_with(
     ~ paste0("anvio_", .), # Prefix anvio annotation columns 
     -all_of(colnames(annotations))  
-  ) 
+  )
+
+# Sanity check: Ensure there are no duplicated Gene IDs (CONTENTO rejects files with duplicates)
+stopifnot(!anyDuplicated(annotations_merged$Geneid))
 
 # Save the annotations to a CSV/RDS file
 output_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_RegPrecise_Anvio.csv"))
@@ -481,9 +534,10 @@ saveRDS(annotations_merged, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_R
 Before uploading, confirm:
 
 - [ ] `Geneid` column exists, is character type, and matches `rownames(SE)` exactly (same values, same case).
-- [ ] Functional columns (if any) use `!!!` to separate multiple values per gene — required for GSEA/GESECA to parse multi-membership correctly.
+- [ ] Exactly **one row per `Geneid`** (`!anyDuplicated(annot$Geneid)` is `TRUE`). Files with duplicated `Geneid`s are rejected by CONTENTO.
+- [ ] Functional columns (if any) use `!!!` — and only `!!!` — to separate multiple values per gene. Other separators (`,`, `;`, `|`) are not split and the whole string becomes one category.
 - [ ] If you want MSigDB and your rownames aren't Ensembl-style, at least one column contains Ensembl-style IDs (`ENSG...`, `ENSMUSG...`, etc.) — CONTENTO auto-detects this column.
 - [ ] For genomic neighborhood analysis (bacteria), `start`, `end`, and `strand` columns are present and numeric/character as appropriate.
-- [ ] File is saved as `.rds` containing a data frame (not a tibble-only object issue, not a list).
+- [ ] File is saved as `.rds` containing a data frame or tibble (not a list).
 
-If a feature is greyed out or missing in the app (e.g. MSigDB radio button absent, neighborhood tab missing), it's almost always one of the above checks failing silently.
+If a feature is greyed out or missing in the app (e.g. MSigDB radio button absent, neighborhood tab missing), it's almost always one of the above checks failing silently. Problems with the `Geneid` column (missing, not character, or duplicated) are the exception: CONTENTO shows an error and does not load the file.

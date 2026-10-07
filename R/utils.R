@@ -142,7 +142,9 @@ extract_de_results <- function(se, sep = "__") {
 
 #' Merge annotation data frame into a contrast data frame
 #'
-#' Performs a left join on Geneid with input validation. Returns a named list
+#' Performs a left join on Geneid with input validation. Annotations with
+#' duplicated Geneids are rejected, since multiple values per gene must be
+#' collapsed into one row with \code{!!!}. Returns a named list
 #' so callers can distinguish success from failure without try/catch.
 #'
 #' @param de_df Data frame of DE results containing a Geneid column
@@ -179,7 +181,25 @@ merge_annotation <- function(de_df, annot) {
                        class(annot[["Geneid"]])[1], ". Cannot join.")
     ))
   }
-  
+
+  # One row per Geneid is required: duplicates would silently multiply DE rows
+  # in the join. Multiple values per gene must be collapsed with "!!!".
+  ids      <- annot[["Geneid"]]
+  dup_ids  <- unique(ids[!is.na(ids) & duplicated(ids)])
+  if (length(dup_ids) > 0) {
+    shown <- head(dup_ids, 5)
+    return(list(
+      result = NULL,
+      message = paste0(
+        "Annotation file rejected: ", length(dup_ids), " Geneid(s) appear in more than one row (e.g. ",
+        paste(shown, collapse = ", "), if (length(dup_ids) > length(shown)) ", ..." else "", "). ",
+        "Each Geneid must have exactly one row. Collapse multiple values per gene into a single ",
+        "string separated by '!!!' (e.g. \"GO:0006415!!!GO:0016149\") before saving the .rds. ",
+        "See the 'Create Genome Annotations' guide for details."
+      )
+    ))
+  }
+
   merged <- tryCatch(
     dplyr::left_join(de_df, annot, by = "Geneid"),
     error = function(e) NULL

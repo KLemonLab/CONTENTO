@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-10-05">
+<meta name="dcterms.date" content="2026-10-07">
 
 <title>CONTENTO - Create Genome Annotations for CONTENTO</title>
 <style>
@@ -214,7 +214,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#step-3-enhance-your-annotation-file-optional" id="toc-step-3-enhance-your-annotation-file-optional" class="nav-link" data-scroll-target="#step-3-enhance-your-annotation-file-optional">Step 3: Enhance Your Annotation File (Optional)</a>
   <ul class="collapse">
   <li><a href="#merge-custom-annotations" id="toc-merge-custom-annotations" class="nav-link" data-scroll-target="#merge-custom-annotations">3.1 Merge Custom Annotations</a></li>
-  <li><a href="#enhance-annotations-with-anvio-bacterial-genomes" id="toc-enhance-annotations-with-anvio-bacterial-genomes" class="nav-link" data-scroll-target="#enhance-annotations-with-anvio-bacterial-genomes">3.2 Enhance Annotations with Anvi’o (Bacterial Genomes)</a></li>
+  <li><a href="#example-merging-regprecise-regulons" id="toc-example-merging-regprecise-regulons" class="nav-link" data-scroll-target="#example-merging-regprecise-regulons">3.2 Example: Merging RegPrecise Regulons</a></li>
+  <li><a href="#example-enhance-annotations-with-anvio" id="toc-example-enhance-annotations-with-anvio" class="nav-link" data-scroll-target="#example-enhance-annotations-with-anvio">3.3 Example: Enhance Annotations with Anvi’o</a></li>
   </ul></li>
   <li><a href="#step-4-verify-your-annotation-file" id="toc-step-4-verify-your-annotation-file" class="nav-link" data-scroll-target="#step-4-verify-your-annotation-file">Step 4: Verify Your Annotation File</a></li>
   </ul>
@@ -236,7 +237,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 5, 2026</p>
+      <p class="date">October 7, 2026</p>
     </div>
   </div>
   
@@ -260,8 +261,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ol type="1">
 <li><p><strong>Annotation-Based Gene Sets:</strong> Available for any organism through a user-provided annotation data frame (<code>.rds</code> format). Required elements:</p>
 <ul>
-<li>A <code>Geneid</code> column matching the <code>rownames()</code> of the SE object.</li>
-<li>One or more functional annotation columns containing gene set assignments (e.g.&nbsp;COG categories, KEGG pathways, GO terms, regulons, custom categories). Multiple values per gene should be separated by <code>!!!</code> (e.g., <code>"GO:0006415!!!GO:0016149"</code>). CONTENTO will parse them by counting the gene as belonging to each category for functional enrichment analysis.</li>
+<li>A <code>Geneid</code> column matching the <code>rownames()</code> of the SE object, with <strong>exactly one row per <code>Geneid</code></strong>. CONTENTO rejects annotation files with duplicated <code>Geneid</code> values.</li>
+<li>One or more functional annotation columns containing gene set assignments (e.g.&nbsp;COG categories, KEGG pathways, GO terms, regulons, custom categories). Multiple values per gene <strong>must</strong> be collapsed into a single string separated by <code>!!!</code> (e.g., <code>"GO:0006415!!!GO:0016149"</code>). Do not use any other separator (<code>,</code>, <code>;</code>, <code>|</code>, …): CONTENTO only splits on <code>!!!</code>, so <code>"GO:0006415,GO:0016149"</code> would be treated as one single category. CONTENTO counts the gene as belonging to each <code>!!!</code>-separated category for functional enrichment analysis. See <a href="#multiple-annotations-per-gene">Multiple annotations per gene</a> for how to build these strings.</li>
 </ul></li>
 <li><p><a href="https://www.gsea-msigdb.org/gsea/msigdb"><strong>MSigDB</strong></a> <strong>Gene Sets:</strong> Available only for human, mouse, and other species supported by <a href="https://igordot.github.io/msigdbr/reference/msigdbr_species.html">msigdbr</a> R package. It requires:</p>
 <ul>
@@ -274,8 +275,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="additional-benefits-of-annotation-files">Additional Benefits of Annotation Files</h2>
 <p>Annotation files also improve the general CONTENTO experience.</p>
 <ul>
-<li><strong>Gene symbols/labels</strong> can be displayed throughout tables and visualizations instead of raw gene identifiers. This is especially useful for bacteria, where <code>Geneid</code> is often a locus tag (e.g.&nbsp;<code>SAUSA300_0001</code>) and not not an informative label like the associated gene name or product description.</li>
-<li><strong>Genomic neighborhood analysis</strong>, which additionally requires <code>start</code>, <code>end</code>, <code>strand</code> columns in the annotation file. This is a beta feature available only when <code>metadata(se)$organism</code> is exactly “Bacteria”)</li>
+<li><strong>Gene symbols/labels</strong> can be displayed throughout tables and visualizations instead of raw gene identifiers. This is especially useful for bacteria, where <code>Geneid</code> is often a locus tag (e.g.&nbsp;<code>SAUSA300_0001</code>) and not an informative label like the associated gene name or product description.</li>
+<li><strong>Genomic neighborhood analysis</strong>, which additionally requires <code>start</code>, <code>end</code>, <code>strand</code> columns in the annotation file. This is a beta feature available only when <code>metadata(se)$organism</code> is exactly “Bacteria”</li>
 </ul>
 </section>
 <section id="examples-do-i-need-an-annotation-file" class="level2">
@@ -348,7 +349,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"https://ftp.ensembl.org/pub/release-</span><span class="va">${VERSION}</span><span class="st">/gtf/homo_sapiens/</span><span class="va">${GENOME_NAME}</span><span class="st">.</span><span class="va">${VERSION}</span><span class="st">.gtf.gz"</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Reference genome used in the downstream analysis (alignment/quantification)</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-P</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">"</span> <span class="dt">\ </span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-P</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">"</span> <span class="dt">\</span></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"https://ftp.ensembl.org/pub/release-</span><span class="va">${VERSION}</span><span class="st">/fasta/homo_sapiens/dna/</span><span class="va">${GENOME_NAME}</span><span class="st">.dna_sm.primary_assembly.fa.gz"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
@@ -439,7 +440,7 @@ IMPORTANT:
 </section>
 <section id="from-a-gff3-ncbiprokka" class="level2">
 <h2 class="anchored" data-anchor-id="from-a-gff3-ncbiprokka">2.2 From a GFF3 (NCBI/Prokka)</h2>
-<p>The GFF3 file contains the <code>Geneid</code> info information as <code>locus_tag</code>, which we can parse along with other useful information from the <code>attributes</code> column.</p>
+<p>The GFF3 file contains the <code>Geneid</code> information as <code>locus_tag</code>, which we can parse along with other useful information from the <code>attributes</code> column.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the GFF3 file. Adapt based on the GFF3 name and location</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
@@ -512,7 +513,7 @@ IMPORTANT:
 <span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Sanity check: Ensure there are no duplicated Gene IDs</span></span>
-<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">duplicated</span>(annotations<span class="sc">$</span>Geneid))</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(annotations<span class="sc">$</span>Geneid))</span>
 <span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
 <span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.csv"</span>)))</span>
@@ -537,7 +538,6 @@ IMPORTANT:
 <li>Your own experimental data (e.g., Tn-seq, RNA-seq, proteomics)</li>
 <li>Manually curated annotations from literature searches</li>
 </ul>
-<p><strong>In this example</strong>, we demonstrate using RegPrecise regulon annotations, but the same approach works for any custom annotation file.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -558,39 +558,86 @@ Found a Useful Annotation Source?
 <ul>
 <li><p><strong>Columns:</strong> Your custom annotation file can have as many additional columns as you want. All columns will be merged into the final dataframe, or you can select only a subset of columns before merging. In the merging step, you can <strong>add a prefix</strong> to custom annotation columns (e.g., <code>RegPrecise_</code>, <code>reg_</code>) to avoid name clashes and easily identify annotation sources.</p></li>
 <li><p><strong>Gene coverage:</strong> No requirement for the same number of genes as in the GTF/GFF3 derived annotations, as long as there is a common key (<code>Geneid</code>) for merging. Genes in GTF/GFF3 derived annotations without a corresponding custom annotation entry will be included in the final dataframe with <code>NA</code> values for the custom columns.</p></li>
-<li><p><strong>Multiple annotations per gene:</strong> There should be only <strong>one entry per gene</strong> in the custom annotation file. If a gene has multiple annotations, concatenate them into a single string separated by !!! (e.g., <code>"regulon1!!!regulon2"</code>). See the anvi’o example below for how to concatenate multiple values. CONTENTO will parse these and count the gene as belonging to each category for functional enrichment analysis.</p></li>
+<li><p><strong>Multiple annotations per gene:</strong> See the dedicated section below. In short: <strong>one row per gene</strong>, multiple values joined with <code>!!!</code>.</p></li>
 </ul>
+</section>
+<section id="multiple-annotations-per-gene" class="level3">
+<h3 class="anchored" data-anchor-id="multiple-annotations-per-gene">Multiple annotations per gene</h3>
+<p>The final annotation file must have <strong>exactly one row per <code>Geneid</code></strong>. If a <code>Geneid</code> appears in more than one row, CONTENTO <strong>refuses to load the file</strong> and shows an error listing some of the duplicated IDs (otherwise each duplicate would silently duplicate that gene’s differential expression results).</p>
+<p>If a gene has several values in a column (several KEGG pathways, GO terms, COG categories, …), concatenate them into a single string separated by <code>!!!</code> (e.g., <code>"Glycolysis / Gluconeogenesis!!!Carbon fixation"</code>). <code>!!!</code> is the <strong>only</strong> separator CONTENTO recognises; values joined by commas, semicolons or pipes are treated as one single category. CONTENTO splits on <code>!!!</code> and counts the gene as belonging to each category for functional enrichment analysis.</p>
+<p>Duplicates usually appear when a source file is in “long” format (one row per gene–annotation pair) or when a <code>left_join()</code> matches several rows per gene. Collapse such a table <strong>before</strong> merging it with your other annotations:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Long format: one row per gene-pathway pair</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   locus_tag   KEGG_Pathway</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   gene_0001   Glycolysis / Gluconeogenesis</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   gene_0001   Carbon fixation</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   gene_0001   Carbon metabolism</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   gene_0002   Glycolysis / Gluconeogenesis</span></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Load your GFF3-derived annotations</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.csv"</span>)))</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Load custom annotation file tab delimited</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>custom_annot <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="st">"USA300_FPR3757_RegPrecise.txt"</span>))</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge the custom annotations with the GFF3-derived annotations using locus_tag as the key</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>annotations_merged <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(custom_annot, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"Geneid"</span> <span class="ot">=</span> <span class="st">"locus_tag"</span>)) <span class="sc">|&gt;</span> <span class="co"># Adjust to the "Geneid" column name in your custom annotation file</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"RegPrecise_"</span>, .), <span class="co"># Prefix custom annotation columns to avoid name clashes with GFF3-derived annotations</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">all_of</span>(<span class="fu">colnames</span>(annotations))  </span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  ) </span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>output_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.csv"</span>))</span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations_merged, output_file)</span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations_merged, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.rds"</span>))) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>custom_annot <span class="ot">&lt;-</span> custom_annot <span class="sc">|&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(locus_tag) <span class="sc">|&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="fu">everything</span>(),</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>                   <span class="sc">~</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(.x)), <span class="at">collapse =</span> <span class="st">"!!!"</span>)),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">everything</span>(), <span class="sc">~</span> <span class="fu">na_if</span>(.x, <span class="st">""</span>)))</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   locus_tag   KEGG_Pathway</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   gene_0001   Glycolysis / Gluconeogenesis!!!Carbon fixation!!!Carbon metabolism</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   gene_0002   Glycolysis / Gluconeogenesis</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co"># If a column already uses another separator (e.g. commas), convert it to "!!!"</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(go_process, go_function), <span class="sc">~</span> <span class="fu">gsub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">s*,</span><span class="sc">\\</span><span class="st">s*"</span>, <span class="st">"!!!"</span>, .x)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Before saving the <code>.rds</code>, check that no <code>Geneid</code> is duplicated:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Should return 0 rows. If not, collapse those genes as shown above.</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>annotations <span class="sc">|&gt;</span> <span class="fu">count</span>(Geneid) <span class="sc">|&gt;</span> <span class="fu">filter</span>(n <span class="sc">&gt;</span> <span class="dv">1</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(annotations<span class="sc">$</span>Geneid))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
-<section id="enhance-annotations-with-anvio-bacterial-genomes" class="level2">
-<h2 class="anchored" data-anchor-id="enhance-annotations-with-anvio-bacterial-genomes">3.2 Enhance Annotations with Anvi’o (Bacterial Genomes)</h2>
+<section id="example-merging-regprecise-regulons" class="level2">
+<h2 class="anchored" data-anchor-id="example-merging-regprecise-regulons">3.2 Example: Merging RegPrecise Regulons</h2>
+<p>In this example, we demonstrate how to merge the RegPrecise regulon annotations with the GFF3-derived annotations. The RegPrecise file is tab-delimited and contains a <code>locus_tag</code> column that matches the <code>Geneid</code> column in the GFF3-derived annotations.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the RegPrecise file. Adapt based on the file name and location</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Load your GFF3-derived annotations</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.csv"</span>)))</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Load custom annotation file tab delimited</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>custom_annot <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="st">"USA300_FPR3757_RegPrecise.txt"</span>))</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Collapse to one row per gene: genes controlled by several regulators become "Reg1!!!Reg2"</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>custom_annot <span class="ot">&lt;-</span> custom_annot <span class="sc">|&gt;</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(locus_tag) <span class="sc">|&gt;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Regulator =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(Regulator)), <span class="at">collapse =</span> <span class="st">"!!!"</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge the custom annotations with the GFF3-derived annotations using locus_tag as the key</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>annotations_merged <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(custom_annot, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"Geneid"</span> <span class="ot">=</span> <span class="st">"locus_tag"</span>)) <span class="sc">|&gt;</span> <span class="co"># Adjust to the "Geneid" column name in your custom annotation file</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"RegPrecise_"</span>, .), <span class="co"># Prefix custom annotation columns to avoid name clashes with GFF3-derived annotations</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">all_of</span>(<span class="fu">colnames</span>(annotations))</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Sanity check: Ensure there are no duplicated Gene IDs (CONTENTO rejects files with duplicates)</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(annotations_merged<span class="sc">$</span>Geneid))</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>output_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.csv"</span>))</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations_merged, output_file)</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations_merged, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.rds"</span>))) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="example-enhance-annotations-with-anvio" class="level2">
+<h2 class="anchored" data-anchor-id="example-enhance-annotations-with-anvio">3.3 Example: Enhance Annotations with Anvi’o</h2>
 <p><strong>Anvi’o</strong> is a comprehensive platform that integrates multiple annotation sources and can be used to generate a rich annotation file for bacterial genomes. It can be run on any genome in GenBank format and will produce a single annotation file with multiple functional annotations for each gene.</p>
 <ul>
 <li><strong>HMMs</strong> - Generic protein domain detection</li>
@@ -603,147 +650,150 @@ Found a Useful Annotation Source?
 <h3 class="anchored" data-anchor-id="run-anvio-annotation-pipeline">Run Anvi’o Annotation Pipeline</h3>
 <p>For more details on how to run anvi’o see the <a href="https://anvio.org/learn/">Anvi’o documentation</a>. If running on Windows, we recommend utilizing Ubuntu.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Anvio if you haven't already. This should be run in your terminal.</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate anvio-9</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Update the genome accession and directory as needed</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="va">FILES_DIR</span><span class="op">=</span><span class="st">"inst/extdata/genomes"</span> </span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="va">GENOME_NAME</span><span class="op">=</span><span class="st">"GCF_000013465.1"</span> </span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Process the GenBank file to extract gene calls, functions, and fasta sequences </span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-script-process-genbank</span> <span class="at">-i</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">$GENOME_NAME</span><span class="st">.gbff"</span> <span class="dt">\</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>--output-gene-calls <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_calls.txt"</span> <span class="dt">\</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>--output-functions <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_prodigal.txt"</span> <span class="dt">\</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>--output-fasta <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">.fa"</span> <span class="dt">\</span></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>--annotation-source prodigal <span class="dt">\</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>--include-locus-tags-as-functions</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Create anvi'o contigs database from the fasta file and gene calls</span></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-gen-contigs-database</span> <span class="at">-f</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">.fa"</span> <span class="dt">\</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>-o <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>--external-gene-calls <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_calls.txt"</span> <span class="dt">\</span></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>-n <span class="st">"</span><span class="va">$GENOME_NAME</span><span class="st">"</span></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Import functions from prodigal output</span></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-import-functions</span> <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>-i <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_prodigal.txt"</span></span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Run HMM annotations </span></span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-hmms</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Run NCBI COG annotations with DIAMOND</span></span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-ncbi-cogs</span> <span class="at">-T</span> 8 <span class="at">--search-with</span> diamond <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Run KEGG KOfam annotations</span></span>
-<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-kegg-kofams</span> <span class="at">-T</span> 8 <span class="at">-E</span> 1e-15 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Run Pfam domain annotations</span></span>
-<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-pfams</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
-<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Run CAZyme annotations</span></span>
-<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-cazymes</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
-<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Export all functions to text file</span></span>
-<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-export-functions</span> <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
-<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>-o <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_annot.txt"</span></span>
-<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Export contigs stats and database info</span></span>
-<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-display-contigs-stats</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
-<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>--report-as-text <span class="at">-o</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_stats.txt"</span></span>
-<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-db-info</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="op">&amp;&gt;&gt;</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_log.txt"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Anvio if you haven't already. This should be run in your terminal.</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate anvio-9</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Update the genome accession and directory as needed</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="va">FILES_DIR</span><span class="op">=</span><span class="st">"inst/extdata/genomes"</span> </span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="va">GENOME_NAME</span><span class="op">=</span><span class="st">"GCF_000013465.1"</span> </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Process the GenBank file to extract gene calls, functions, and fasta sequences </span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-script-process-genbank</span> <span class="at">-i</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">$GENOME_NAME</span><span class="st">.gbff"</span> <span class="dt">\</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>--output-gene-calls <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_calls.txt"</span> <span class="dt">\</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>--output-functions <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_prodigal.txt"</span> <span class="dt">\</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>--output-fasta <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">.fa"</span> <span class="dt">\</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>--annotation-source prodigal <span class="dt">\</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>--include-locus-tags-as-functions</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Create anvi'o contigs database from the fasta file and gene calls</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-gen-contigs-database</span> <span class="at">-f</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">.fa"</span> <span class="dt">\</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>-o <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>--external-gene-calls <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_calls.txt"</span> <span class="dt">\</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>-n <span class="st">"</span><span class="va">$GENOME_NAME</span><span class="st">"</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Import functions from prodigal output</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-import-functions</span> <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>-i <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_prodigal.txt"</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Run HMM annotations </span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-hmms</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Run NCBI COG annotations with DIAMOND</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-ncbi-cogs</span> <span class="at">-T</span> 8 <span class="at">--search-with</span> diamond <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Run KEGG KOfam annotations</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-kegg-kofams</span> <span class="at">-T</span> 8 <span class="at">-E</span> 1e-15 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Run Pfam domain annotations</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-pfams</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Run CAZyme annotations</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-run-cazymes</span> <span class="at">-T</span> 8 <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Export all functions to text file</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-export-functions</span> <span class="at">-c</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>-o <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_annot.txt"</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Export contigs stats and database info</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-display-contigs-stats</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="dt">\</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>--report-as-text <span class="at">-o</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_stats.txt"</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="ex">anvi-db-info</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_anvio.db"</span> <span class="op">&amp;&gt;&gt;</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">${GENOME_NAME}</span><span class="st">_log.txt"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="parse-anvio-annotations-into-csv" class="level3">
 <h3 class="anchored" data-anchor-id="parse-anvio-annotations-into-csv">Parse Anvi’o Annotations into CSV</h3>
 <p>The resulting anvi’o annotation file contains comprehensive functional annotations for each gene, which can be parsed into a CSV format with the following R code.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the anvi'o annotation </span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.txt"</span>)), <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">source =</span> <span class="fu">as.factor</span>(source)) <span class="sc">|&gt;</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.character), trimws)) <span class="sc">|&gt;</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>e_value) <span class="sc">|&gt;</span> <span class="co"># Exclude e-values to keep dataframe simple</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(<span class="st">"acc"</span> <span class="ot">=</span> <span class="st">"accession"</span>, <span class="st">"func"</span> <span class="ot">=</span> <span class="st">"function"</span>) <span class="sc">|&gt;</span> <span class="co"># Shorter names</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(acc, func), trimws))</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert from long format (multiple rows per gene) to wide format (one row per gene)</span></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_from =</span> source,</span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_from =</span> <span class="fu">c</span>(acc, func),</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_fn =</span> <span class="fu">list</span>(</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">acc =</span> <span class="sc">~</span> <span class="fu">paste</span>(<span class="fu">unique</span>(.), <span class="at">collapse =</span> <span class="st">"!!!"</span>), </span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">func =</span> <span class="sc">~</span> <span class="fu">paste</span>(<span class="fu">unique</span>(.), <span class="at">collapse =</span> <span class="st">"!!!"</span>))</span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  ) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the anvi'o annotation file. Adapt based on the file name and location</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the anvi'o annotation </span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot.txt"</span>)), <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">source =</span> <span class="fu">as.factor</span>(source)) <span class="sc">|&gt;</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.character), trimws)) <span class="sc">|&gt;</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>e_value) <span class="sc">|&gt;</span> <span class="co"># Exclude e-values to keep dataframe simple</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">rename</span>(<span class="st">"acc"</span> <span class="ot">=</span> <span class="st">"accession"</span>, <span class="st">"func"</span> <span class="ot">=</span> <span class="st">"function"</span>) <span class="sc">|&gt;</span> <span class="co"># Shorter names</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(acc, func), trimws))</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert from long format (multiple rows per gene) to wide format (one row per gene)</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_from =</span> source,</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_from =</span> <span class="fu">c</span>(acc, func),</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_fn =</span> <span class="fu">list</span>(</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">acc =</span> <span class="sc">~</span> <span class="fu">paste</span>(<span class="fu">unique</span>(.), <span class="at">collapse =</span> <span class="st">"!!!"</span>), </span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">func =</span> <span class="sc">~</span> <span class="fu">paste</span>(<span class="fu">unique</span>(.), <span class="at">collapse =</span> <span class="st">"!!!"</span>))</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>  ) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="parse-kegg-hierarchical-annotations" class="level3">
 <h3 class="anchored" data-anchor-id="parse-kegg-hierarchical-annotations">Parse KEGG Hierarchical Annotations</h3>
 <p>The KEGG annotations from anvi’o come as hierarchical levels separated by semicolons (e.g., “Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis”). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it’s useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split multiple KEGG annotations into separate rows (one row per KEGG annotation) </span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_rows</span>(func_KEGG_Class, <span class="at">sep =</span> <span class="st">","</span>)</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Split into hierarchy levels (separated by ;)</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(func_KEGG_Class, </span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">into =</span> <span class="fu">c</span>(<span class="st">"func_KEGG_Class"</span>, <span class="st">"func_KEGG_Subclass"</span>, <span class="st">"func_KEGG_Pathway"</span>),</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep =</span> <span class="st">";"</span>,</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>           <span class="at">extra =</span> <span class="st">"drop"</span>,</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">fill =</span> <span class="st">"right"</span>)</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Collapse back to one row per gene</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="fu">starts_with</span>(<span class="st">"func_KEGG_"</span>))) <span class="sc">|&gt;</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Class =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Class)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Subclass =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Subclass)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Pathway =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Pathway)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">"func_KEGG_"</span>), <span class="sc">~</span> <span class="fu">na_if</span>(., <span class="st">""</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split multiple KEGG annotations into separate rows (one row per KEGG annotation) </span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_rows</span>(func_KEGG_Class, <span class="at">sep =</span> <span class="st">","</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Split into hierarchy levels (separated by ;)</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(func_KEGG_Class, </span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">into =</span> <span class="fu">c</span>(<span class="st">"func_KEGG_Class"</span>, <span class="st">"func_KEGG_Subclass"</span>, <span class="st">"func_KEGG_Pathway"</span>),</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep =</span> <span class="st">";"</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>           <span class="at">extra =</span> <span class="st">"drop"</span>,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">fill =</span> <span class="st">"right"</span>)</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Collapse back to one row per gene</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="fu">starts_with</span>(<span class="st">"func_KEGG_"</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Class =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Class)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Subclass =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Subclass)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">func_KEGG_Pathway =</span> <span class="fu">paste</span>(<span class="fu">unique</span>(<span class="fu">na.omit</span>(func_KEGG_Pathway)), <span class="at">collapse =</span> <span class="st">"!!!"</span>),</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">"func_KEGG_"</span>), <span class="sc">~</span> <span class="fu">na_if</span>(., <span class="st">""</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="add-aa-sequences-to-annotations-optional" class="level3">
 <h3 class="anchored" data-anchor-id="add-aa-sequences-to-annotations-optional">Add AA Sequences to Annotations (Optional)</h3>
 <p>You can also merge the anvi’o annotations with the aa sequences from the calls file to have a comprehensive annotation dataframe with all the information for each gene. This can be useful for gene exploration in CONTENTO, where you can display the sequence along with the functional annotations for each gene.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read calls file to get aa sequences</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>anvio_calls <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_calls.txt"</span>)), <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gene_callers_id, aa_sequence)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge with anvio_annot by gene_callers_id</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(anvio_calls, <span class="at">by =</span> <span class="st">"gene_callers_id"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read calls file to get aa sequences</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>anvio_calls <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_calls.txt"</span>)), <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gene_callers_id, aa_sequence)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge with anvio_annot by gene_callers_id</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(anvio_calls, <span class="at">by =</span> <span class="st">"gene_callers_id"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="merge-anvio-annotations" class="level3">
 <h3 class="anchored" data-anchor-id="merge-anvio-annotations">Merge Anvi’o Annotations</h3>
 <p>Finally, you should merge the anvi’o annotations with the GFF3-derived annotations and the custom annotations from RegPrecise to create a comprehensive annotation CSV file for CONTENTO.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load GFF3-derived annotations (with RegPrecise already merged, or use original if skipping section 3.1)</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.csv"</span>)))</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge anvi'o annotations using GENBANK_LOCUS_TAG (the column added by anvi'o) as a key for merging, which should match the Geneid column in the GFF3-derived annotations. </span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>annotations_merged <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(anvio_annot, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"Geneid"</span> <span class="ot">=</span> <span class="st">"func_GENBANK_LOCUS_TAG"</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"anvio_"</span>, .), <span class="co"># Prefix anvio annotation columns </span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">all_of</span>(<span class="fu">colnames</span>(annotations))  </span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  ) </span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>output_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise_Anvio.csv"</span>))</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations_merged, output_file)</span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations_merged, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise_Anvio.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load GFF3-derived annotations (with RegPrecise already merged, or use original if skipping section 3.2)</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise.csv"</span>)))</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge anvi'o annotations using GENBANK_LOCUS_TAG (the column added by anvi'o) as a key for merging, which should match the Geneid column in the GFF3-derived annotations. </span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>annotations_merged <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(anvio_annot, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"Geneid"</span> <span class="ot">=</span> <span class="st">"func_GENBANK_LOCUS_TAG"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span> <span class="fu">paste0</span>(<span class="st">"anvio_"</span>, .), <span class="co"># Prefix anvio annotation columns </span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">all_of</span>(<span class="fu">colnames</span>(annotations))  </span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Sanity check: Ensure there are no duplicated Gene IDs (CONTENTO rejects files with duplicates)</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(annotations_merged<span class="sc">$</span>Geneid))</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotations to a CSV/RDS file</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>output_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise_Anvio.csv"</span>))</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(annotations_merged, output_file)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(annotations_merged, <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">"_annot_RegPrecise_Anvio.rds"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <hr>
 </section>
@@ -754,12 +804,13 @@ Found a Useful Annotation Source?
 <p>Before uploading, confirm:</p>
 <ul class="task-list">
 <li><input type="checkbox"><code>Geneid</code> column exists, is character type, and matches <code>rownames(SE)</code> exactly (same values, same case).</li>
-<li><input type="checkbox">Functional columns (if any) use <code>!!!</code> to separate multiple values per gene — required for GSEA/GESECA to parse multi-membership correctly.</li>
+<li><input type="checkbox">Exactly <strong>one row per <code>Geneid</code></strong> (<code>!anyDuplicated(annot$Geneid)</code> is <code>TRUE</code>). Files with duplicated <code>Geneid</code>s are rejected by CONTENTO.</li>
+<li><input type="checkbox">Functional columns (if any) use <code>!!!</code> — and only <code>!!!</code> — to separate multiple values per gene. Other separators (<code>,</code>, <code>;</code>, <code>|</code>) are not split and the whole string becomes one category.</li>
 <li><input type="checkbox">If you want MSigDB and your rownames aren’t Ensembl-style, at least one column contains Ensembl-style IDs (<code>ENSG...</code>, <code>ENSMUSG...</code>, etc.) — CONTENTO auto-detects this column.</li>
 <li><input type="checkbox">For genomic neighborhood analysis (bacteria), <code>start</code>, <code>end</code>, and <code>strand</code> columns are present and numeric/character as appropriate.</li>
-<li><input type="checkbox">File is saved as <code>.rds</code> containing a data frame (not a tibble-only object issue, not a list).</li>
+<li><input type="checkbox">File is saved as <code>.rds</code> containing a data frame or tibble (not a list).</li>
 </ul>
-<p>If a feature is greyed out or missing in the app (e.g.&nbsp;MSigDB radio button absent, neighborhood tab missing), it’s almost always one of the above checks failing silently.</p>
+<p>If a feature is greyed out or missing in the app (e.g.&nbsp;MSigDB radio button absent, neighborhood tab missing), it’s almost always one of the above checks failing silently. Problems with the <code>Geneid</code> column (missing, not character, or duplicated) are the exception: CONTENTO shows an error and does not load the file.</p>
 
 
 </section>
