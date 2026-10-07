@@ -100,10 +100,10 @@ read_anvio_annotations <- function(annot_path, calls_path = NULL) {
   
   if ("func_KEGG_Class" %in% colnames(anvio_annot)) {
     anvio_annot <- anvio_annot |>
-      separate_rows(func_KEGG_Class, sep = ",") |>
+      separate_rows(func_KEGG_Class, sep = "!!!") |>   # anvi'o joins multiple entries with "!!!"
       separate(func_KEGG_Class,
                into = c("func_KEGG_Class", "func_KEGG_Subclass", "func_KEGG_Pathway"),
-               sep = ";", extra = "drop", fill = "right") |>
+               sep = ";\\s*", extra = "drop", fill = "right") |>
       group_by(across(-starts_with("func_KEGG_"))) |>
       summarise(
         func_KEGG_Class    = paste(unique(na.omit(func_KEGG_Class)),    collapse = "!!!"),

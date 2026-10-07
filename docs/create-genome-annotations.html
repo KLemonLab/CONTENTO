@@ -418,7 +418,7 @@ IMPORTANT:
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rtracklayer)</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"../inst/extdata/genomes"</span>)</span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"Homo_sapiens.GRCh38.113"</span></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Import GTF file</span></span>
@@ -446,7 +446,7 @@ IMPORTANT:
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"../inst/extdata/genomes"</span>)</span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>gff_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(GENOMES_DIR, <span class="fu">paste0</span>(GENOME_NAME, <span class="st">".gff"</span>))</span>
@@ -501,13 +501,13 @@ IMPORTANT:
 <span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a><span class="co"># Aggregate CDS fragments into gene-level annotations (handles programmed frameshifts)</span></span>
 <span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>annotations <span class="ot">&lt;-</span> annotations <span class="sc">|&gt;</span></span>
 <span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Geneid) <span class="sc">|&gt;</span></span>
-<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">summarise</span>(</span>
 <span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">start  =</span> <span class="fu">min</span>(start),</span>
 <span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>    <span class="at">end    =</span> <span class="fu">max</span>(end),</span>
 <span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="at">strand =</span> <span class="fu">unique</span>(strand),   <span class="co"># should be invariant per gene</span></span>
 <span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(</span>
 <span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span><span class="fu">c</span>(start, end, strand, frame),</span>
-<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>      first</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>      dplyr<span class="sc">::</span>first <span class="co"># explicit: rtracklayer (section 2.1) masks first()</span></span>
 <span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>    ),</span>
 <span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
 <span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>  )</span>
@@ -709,7 +709,7 @@ Found a Useful Annotation Source?
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"inst/extdata/genomes"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>GENOMES_DIR <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"../inst/extdata/genomes"</span>)</span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>GENOME_NAME <span class="ot">&lt;-</span> <span class="st">"GCF_000013465.1"</span></span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the anvi'o annotation </span></span>
@@ -733,17 +733,17 @@ Found a Useful Annotation Source?
 </section>
 <section id="parse-kegg-hierarchical-annotations" class="level3">
 <h3 class="anchored" data-anchor-id="parse-kegg-hierarchical-annotations">Parse KEGG Hierarchical Annotations</h3>
-<p>The KEGG annotations from anvi’o come as hierarchical levels separated by semicolons (e.g., “Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis”). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it’s useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway).</p>
+<p>The KEGG annotations from anvi’o come as hierarchical levels separated by semicolons (e.g., “Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis”). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it’s useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway). When a gene has several KEGG entries, anvi’o joins them with <code>!!!</code> (e.g., <code>"Pathway modules; Amino acid metabolism; Lysine metabolism!!!Pathway modules; Amino acid metabolism; Arginine and proline metabolism"</code>), so the entries are first split on <code>!!!</code> and only then on <code>;</code>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split multiple KEGG annotations into separate rows (one row per KEGG annotation) </span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_rows</span>(func_KEGG_Class, <span class="at">sep =</span> <span class="st">","</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_rows</span>(func_KEGG_Class, <span class="at">sep =</span> <span class="st">"!!!"</span>)</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Split into hierarchy levels (separated by ;)</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Split into hierarchy levels (separated by ";", dropping the space after it)</span></span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>anvio_annot <span class="ot">&lt;-</span> anvio_annot <span class="sc">|&gt;</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(func_KEGG_Class, </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(func_KEGG_Class,</span>
 <span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">into =</span> <span class="fu">c</span>(<span class="st">"func_KEGG_Class"</span>, <span class="st">"func_KEGG_Subclass"</span>, <span class="st">"func_KEGG_Pathway"</span>),</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep =</span> <span class="st">";"</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep =</span> <span class="st">";</span><span class="sc">\\</span><span class="st">s*"</span>,</span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>           <span class="at">extra =</span> <span class="st">"drop"</span>,</span>
 <span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">fill =</span> <span class="st">"right"</span>)</span>
 <span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>

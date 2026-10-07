@@ -142,7 +142,7 @@ library(tidyverse)
 library(here)
 library(rtracklayer)
 
-GENOMES_DIR <- here("inst/extdata/genomes")
+GENOMES_DIR <- here("../inst/extdata/genomes")
 GENOME_NAME <- "Homo_sapiens.GRCh38.113"
 
 # Import GTF file
@@ -171,7 +171,7 @@ The GFF3 file contains the `Geneid` information as `locus_tag`, which we can par
 library(tidyverse)
 library(here)
 
-GENOMES_DIR <- here("inst/extdata/genomes")
+GENOMES_DIR <- here("../inst/extdata/genomes")
 GENOME_NAME <- "GCF_000013465.1"
 
 gff_file <- file.path(GENOMES_DIR, paste0(GENOME_NAME, ".gff"))
@@ -226,13 +226,13 @@ annotations <- annotations |>
 # Aggregate CDS fragments into gene-level annotations (handles programmed frameshifts)
 annotations <- annotations |>
   group_by(Geneid) |>
-  summarise(
+  dplyr::summarise(
     start  = min(start),
     end    = max(end),
     strand = unique(strand),   # should be invariant per gene
     across(
       -c(start, end, strand, frame),
-      first
+      dplyr::first # explicit: rtracklayer (section 2.1) masks first()
     ),
     .groups = "drop"
   )
@@ -437,7 +437,7 @@ The resulting anvi'o annotation file contains comprehensive functional annotatio
 library(tidyverse)
 library(here)
 
-GENOMES_DIR <- here("inst/extdata/genomes")
+GENOMES_DIR <- here("../inst/extdata/genomes")
 GENOME_NAME <- "GCF_000013465.1"
 
 # Read the anvi'o annotation 
@@ -461,18 +461,18 @@ anvio_annot <- anvio_annot |>
 
 ### Parse KEGG Hierarchical Annotations
 
-The KEGG annotations from anvi'o come as hierarchical levels separated by semicolons (e.g., "Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis"). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it's useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway).
+The KEGG annotations from anvi'o come as hierarchical levels separated by semicolons (e.g., "Metabolism; Carbohydrate metabolism; Glycolysis / Gluconeogenesis"). To facilitate functional enrichment analysis and gene exploration in CONTENTO, it's useful to split these into separate columns for each level of the KEGG hierarchy (e.g., KEGG Group, KEGG Pathway). When a gene has several KEGG entries, anvi'o joins them with `!!!` (e.g., `"Pathway modules; Amino acid metabolism; Lysine metabolism!!!Pathway modules; Amino acid metabolism; Arginine and proline metabolism"`), so the entries are first split on `!!!` and only then on `;`.
 
 ```{r}
 # Split multiple KEGG annotations into separate rows (one row per KEGG annotation) 
 anvio_annot <- anvio_annot |>
-  separate_rows(func_KEGG_Class, sep = ",")
+  separate_rows(func_KEGG_Class, sep = "!!!")
 
-# Split into hierarchy levels (separated by ;)
+# Split into hierarchy levels (separated by ";", dropping the space after it)
 anvio_annot <- anvio_annot |>
-  separate(func_KEGG_Class, 
+  separate(func_KEGG_Class,
            into = c("func_KEGG_Class", "func_KEGG_Subclass", "func_KEGG_Pathway"),
-           sep = ";",
+           sep = ";\\s*",
            extra = "drop",
            fill = "right")
 
