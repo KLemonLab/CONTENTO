@@ -331,7 +331,7 @@ In this example, we demonstrate how to merge the RegPrecise regulon annotations 
 library(tidyverse)
 library(here)
 
-GENOMES_DIR <- here("inst/extdata/genomes")
+GENOMES_DIR <- here("../inst/extdata/genomes")
 GENOME_NAME <- "GCF_000013465.1"
 
 # Load your GFF3-derived annotations
