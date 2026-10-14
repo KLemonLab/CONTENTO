@@ -60,6 +60,8 @@ The annotation file used by CONTENTO should be derived from the same genome anno
 - Functional annotations can be merged without identifier conversion.
 - Gene coordinates used in the genomic neighborhood analyses are consistent with the reference genome used for alignment.
 
+In practice, use the annotation files downloaded together with the genome used to build the alignment index. NCBI re-annotates RefSeq genomes periodically, so a new download of the same accession can have a slightly different set of genes than the one used for quantification.
+
 The following sections describe how to obtain the source annotation files required to build a CONTENTO annotation data frame.
 
 ## 1.1 Ensembl-Based Organisms (Human, Mouse, other msigdbr Species)
@@ -185,9 +187,10 @@ gff_df <- read_delim(
   show_col_types = FALSE
 )
 
-# Filter for CDS (protein-coding genes)
-gff_cds <- gff_df |>
-  filter(feature == "CDS")
+# Keep the features with one row per gene: CDS (protein-coding genes and pseudogenes) and
+# non-coding RNAs, so that every gene counted by featureCounts (-t gene) is annotated
+gff_genes <- gff_df |>
+  filter(feature %in% c("CDS", "tRNA", "rRNA", "tmRNA", "ncRNA", "SRP_RNA", "RNase_P_RNA"))
 
 # Function to parse the attributes column of GFF3
 parse_gff3_attributes <- function(attributes_string) {
@@ -211,7 +214,7 @@ parse_gff3_attributes <- function(attributes_string) {
 }
 
 # Apply the parsing function to the attributes column and create new columns for each key
-annotations <- gff_cds |>
+annotations <- gff_genes |>
   rowwise() |>
   mutate(attr_list = list(parse_gff3_attributes(attributes)))  |>
   ungroup() |>
@@ -223,7 +226,7 @@ annotations <- gff_cds |>
 annotations <- annotations |>
   mutate(across(c(Ontology_term, go_function, go_process, go_component), ~ gsub(",", "!!!", .x)))
 
-# Aggregate CDS fragments into gene-level annotations (handles programmed frameshifts)
+# Aggregate fragments into gene-level annotations (e.g. CDS with programmed frameshifts)
 annotations <- annotations |>
   group_by(Geneid) |>
   dplyr::summarise(
@@ -476,9 +479,9 @@ anvio_annot <- anvio_annot |>
            extra = "drop",
            fill = "right")
 
-# Collapse back to one row per gene
+# Collapse back to one row per gene (the other columns, including func_KEGG_Module and func_KEGG_BRITE, are kept as they are)
 anvio_annot <- anvio_annot |>
-  group_by(across(-starts_with("func_KEGG_"))) |>
+  group_by(across(-c(func_KEGG_Class, func_KEGG_Subclass, func_KEGG_Pathway))) |>
   summarise(
     func_KEGG_Class = paste(unique(na.omit(func_KEGG_Class)), collapse = "!!!"),
     func_KEGG_Subclass = paste(unique(na.omit(func_KEGG_Subclass)), collapse = "!!!"),
