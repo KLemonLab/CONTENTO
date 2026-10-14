@@ -16,12 +16,12 @@ format:
 
 # Overview
 
-**CONTENTO** expects a single `SummarizedExperiment` (SE) object (`.rds`) containing expression data, differential expression results for every contrast, and descriptive metadata. This document walks through building that object using RSEM/tximport counts and DESeq2, but CONTENTO itself is agnostic to how the downstream analysis was performed. If you have a different quantification method (e.g. Salmon, STAR + featureCounts) or a different DE tool (e.g. edgeR, limma-voom), you can still build a compatible SE as long as you reproduce the following structure.
+**CONTENTO** expects a single `SummarizedExperiment` (SE) object (`.rds`) containing expression data, differential expression results for every contrast, and descriptive metadata. This document walks through building that object with DESeq2 from two common quantification outputs: per-sample featureCounts files ([Example 1](#example-1)) and RSEM gene-level results imported with tximport ([Example 2](#example-2)). CONTENTO itself is agnostic to how the downstream analysis was performed. If you have a different quantification method (e.g. Salmon) or a different DE tool (e.g. edgeR, limma-voom), you can still build a compatible SE as long as you reproduce the following structure.
 
 A CONTENTO-compatible SE has four required components:
 
 - **assays**: must contain an assay named `expr_matrix`, which provides the expression values used by CONTENTO visualizations and downstream analyses.
-- **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF`, `padj__VirusTvsF`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see Step 4 below). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
+- **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF_NB`, `padj__VirusTvsF_NB`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see Step 4 below). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
 - **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
 - **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
   - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping; `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
@@ -40,13 +40,24 @@ A CONTENTO-compatible SE has four required components:
 Both examples below follow the same sequence:
 
 1.  **Metadata Preparation**: load sample metadata and set factor levels/labels.
-2.  **Data Import**: pull RSEM quantifications into a `tximport` object.
+2.  **Data Import**: read the per-sample quantification files into a count matrix (Example 1, featureCounts) or a `tximport` object (Example 2, RSEM).
 3.  **Exploratory DESeq2 Analysis (Optional)**: fit a simple model and inspect a PCA to inspect the data before committing to a final design.
 4.  **Differential Expression Analysis**: fit the full design, extract one or more contrasts, and rename output columns to CONTENTO's generic vocabulary (`log2FC`, `stat`, `padj`).
 5.  **Create Expression Matrix**: extract the expression matrix for use in CONTENTO (normalization recommended).
-6.  **Create SummarizedExperiment (SE) Object**: assemble assays, rowData, colData, and metadata with `convert_to_SE()`.
+6.  **Create SummarizedExperiment (SE) Object**: assemble assays, rowData, colData, and metadata with [`convert_to_SE()`](#convert-to-se).
 
-**Example 1** covers a single two-group comparison (one contrast). **Example 2** covers a multi-factor design with an interaction term, producing several related contrasts and also includes variance partitioning results.
+The two examples cover different parts of CONTENTO. Pick the one closest to your data and borrow from the other as needed: import routes, designs and organisms are interchangeable (e.g. bacterial featureCounts files can go through the Example 1 import and the Example 2 design with multiple contrasts).
+
+|  | [Example 1](#example-1) | [Example 2](#example-2) |
+|------------------|------------------------------|------------------------------|
+| Dataset | *S. aureus* LAC alone in EBSS vs LAC on HNO | RSV infection × four bacterial conditions in HNO-ALI cultures |
+| Import | featureCounts files → count matrix → `DESeqDataSetFromMatrix()` | RSEM → `tximport` → `DESeqDataSetFromTximport()` |
+| Design | `~ media + exp`, one contrast (`HNO` vs `EBSS`) | `~ virus + bacteria + virus:bacteria + exp`, several contrasts + variance partitioning |
+| `organism` | `"Bacteria"` → Neighborhood Analysis | `"Homo sapiens"` → MSigDB GSEA |
+| `annotation` | `Sau_KPL4403_annot` (anvi'o, built in) | `Homo_sapiens.GRCh38.113_annot` (built in) |
+| Output | `Example1_SE.rds` | `Example2_SE.rds` |
+
+Both datasets are used only to demonstrate the workflow. Example 1 is a simplified subset of a larger experiment (culture condition and experiment date only), and its results should not be interpreted biologically.
 
 ```{r}
 # Set up your R environment
@@ -63,101 +74,11 @@ library(SummarizedExperiment)
 SE_DIR <- here("../inst/extdata/SE")
 ```
 
-# Example 1: Single Contrast
+# Helper Functions {#helper-functions}
 
-A simple experiment examining RSV infection in HNO-ALI cultures across three independent experiments. Samples are classified by a single factor (`virus`), with levels `FALSE` (control) and `TRUE` (RSV infected).
+Both examples use the two helper functions below. Run this section once before either example.
 
-## Step 1. Metadata Preparation
-
-`meta` must contain one row per sample, a `file_base` column matching your RSEM output filenames, and the experimental factor columns used in the design formula below.
-
-```{r}
-# Read metadata file
-project_name <- "ExpSingleContrast"
-meta <- read_csv(file.path(SE_DIR, paste0(project_name, "_metadata.csv")))
-
-# Create unique condition and label for each sample. This will be used by CONTENTO for visualization.
-meta <- meta |>
-  mutate(
-    virus = factor(virus, levels = c("FALSE", "TRUE")),
-    exp = factor(exp),
-    label = interaction(virus, exp, sep = " | ") # unique label for each sample 
-  )
-```
-
-## Step 2. Data Import
-
-The [**tximport**](https://www.bioconductor.org/packages/release/bioc/html/tximport.html) [@tximport] function reads in gene-level quantification results from RSEM and organizes them into a structured list for downstream analysis. It extracts estimated counts, transcript lengths, and abundance values, ensuring compatibility with DESeq2 and other Bioconductor workflows. Since some transcripts may have a reported length of 0, we update those to 1 to prevent issues ensuring valid calculations during analysis.
-
-```{r}
-# Import data using tximport
-rsem_folder <- file.path(SE_DIR, "rsem_counts")
-count_files <- file.path(rsem_folder, paste0(meta$file_base, ".genes.results"))
-names(count_files) <- meta$label
-txi <- tximport(count_files, type = "rsem", txIn = FALSE, txOut = FALSE)
-txi$length[txi$length == 0] <- 1
-```
-
-## Step 3. Exploratory DESeq2 Analysis
-
-We run an initial DESeq model design to explore the data. This exploratory fit is only used for the PCA check below — it is not the design used for contrast extraction, which comes next.
-
-```{r}
-# DESeq design 
-dds <- DESeqDataSetFromTximport(txi,
-                                colData = meta,
-                                design = ~ virus + exp)
-
-# Run DESeq
-dds <- DESeq(dds)
-```
-
-### Principal Component Analysis (PCA)
-
-PCA calculated based on the VST normalized [@tibshirani1988; @huber2003; @Anders2010] data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data.
-
-```{r, fig.width=8, fig.height=6, fig.align="center"}
-vsd <- vst(dds, blind = TRUE)
-pcaData <- plotPCA(vsd, intgroup = c("virus", "exp"), returnData = TRUE)
-percentVar <- round(100 * attr(pcaData, "percentVar"))
-Bac.Vir_colors = c("#CC9564", "#856141")
-Bac.Vir_fill <- c("white", "#856141")
-
-ggplot(pcaData, aes(PC1, PC2)) +
-  geom_point(aes(fill = virus, color = virus, 
-                 shape = exp), 
-             size = 4, stroke = 1) +  
-  scale_shape_manual(values = c(23, 25, 21)) + 
-  scale_color_manual(values = Bac.Vir_colors) + 
-  scale_fill_manual(values = Bac.Vir_fill) +
-  ggtitle("Principal Component Analysis (blind = TRUE)") +
-  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
-  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
-  theme_bw(base_size = 14) +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
-  ) +
-    guides(
-    color = guide_legend(title = "virus", override.aes = list(color = Bac.Vir_colors, shape = 22))
-  )
-```
-
-## Step 4. Differential Expression Analysis
-
-The design captures all the variables of interest.
-
-```{r}
-# DESeq design 
-dds <- DESeqDataSetFromTximport(txi,
-                                colData = meta,
-                                design = ~ virus + exp)
-
-# Run DESeq
-dds <- DESeq(dds)
-```
-
-### Generate Contrast Results
+## `run_contrast_analysis()` {#run-contrast-analysis}
 
 This function runs the DESeq2 `results()` and `lfcShrink()` functions for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.
 
@@ -185,34 +106,9 @@ run_contrast_analysis <- function(dds, contrast_name, contrast = NULL, coef = NU
 }
 ```
 
-```{r}
-contrasts_df <- run_contrast_analysis(dds, contrast_name = "VirusTvsF", coef = "virus_TRUE_vs_FALSE")
-```
+## `convert_to_SE()` {#convert-to-se}
 
-::: callout-important
-### IMPORTANT:
-
-CONTENTO requires generic column names so it works with any DE tool, not just DESeq2. **Required:** `log2FC`, `stat`, `padj`. **Optional:** `log2FC_shrunk`. DESeq2's `results()` already outputs `stat` and `padj` with the right names — only `log2FoldChange` (and `log2FoldChange_shrunk`) need renaming.
-:::
-
-```{r}
-contrasts_df <- contrasts_df |>
-  dplyr::rename(log2FC = log2FoldChange, log2FC_shrunk = log2FoldChange_shrunk)
-```
-
-## Step 5. Create Expression Matrix
-
-The expression matrix stored in the SE can be generated using any normalization or transformation method appropriate for your dataset. CONTENTO treats this assay as a matrix of expression values used for visualization and downstream analyses such as expression plots, heatmaps, and GESECA. Common choices include VST-transformed counts from DESeq2, log-CPM values from edgeR, or log-transformed TPM values.
-
-For RNA-seq workflows based on DESeq2, we recommend using the variance stabilizing transformation (VST), which reduces the dependence of variance on expression level while preserving biological signal. This generally produces expression values that are well suited for visualization and exploratory analyses in CONTENTO.
-
-```{r}
-expr_matrix <- assay(vst(dds, blind = FALSE))
-```
-
-## Step 6. Create SummarizedExperiment (SE) Object
-
-The `convert_to_SE()` helper below builds the final SE object. It reshapes the long-format differential expression results into the wide-format `rowData` structure expected by CONTENTO, where each statistic is stored in a separate column with the pattern `<statistic>__<contrast_name>`. It attaches sample metadata as `colData`, stores the expression matrix in the `expr_matrix` assay, optionally merges variance-partition results as `varpart_*` columns, and records `contrasts`, `organism`, `annotation`, `db_species`, and `dataset_name` in `metadata(se)`. The same function can be reused regardless of experimental design or the number of contrasts being included.
+`convert_to_SE()` builds the final SE object. It reshapes the long-format differential expression results into the wide-format `rowData` structure expected by CONTENTO, where each statistic is stored in a separate column with the pattern `<statistic>__<contrast_name>`. It attaches sample metadata as `colData`, stores the expression matrix in the `expr_matrix` assay, optionally merges variance-partition results as `varpart_*` columns, and records `contrasts`, `organism`, `annotation`, `db_species`, and `dataset_name` in `metadata(se)`. The same function can be reused regardless of experimental design or the number of contrasts being included.
 
 ```{r}
 convert_to_SE <- function(dds, contrasts_df, expr_matrix,
@@ -305,22 +201,11 @@ convert_to_SE <- function(dds, contrasts_df, expr_matrix,
 }
 ```
 
-```{r}
-SE = convert_to_SE(
-  dds = dds,
-  contrasts_df = contrasts_df,
-  expr_matrix = expr_matrix,
-  organism = "Homo sapiens", 
-  annotation = "Homo_sapiens.GRCh38.113_annot",
-  dataset_name = "ExpSingleContrast"
-  # db_species is left NULL here because "Homo sapiens" already defaults to "HS";
-  # set e.g. db_species = "MM" to instead query mouse-curated gene sets
-  # ortholog-mapped onto this organism, overriding the automatic "HS" default.
-)
-saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
-```
+# Example 1 {#example-1}
 
-# Example 2: Multiple Contrasts
+
+
+# Example 2 {#example-2}
 
 A more complex experiment examining RSV infection across four bacterial conditions (NB, Spn, Hin, and Dpi) in HNO-ALI cultures. The design models virus status, bacterial condition, and their interaction while accounting for variation across independent experiments.
 
@@ -330,8 +215,7 @@ A more complex experiment examining RSV infection across four bacterial conditio
 
 ```{r}
 # Read metadata file
-project_name <- "ExpMultContrast"
-meta <- read_csv(file.path(SE_DIR, paste0(project_name, "_metadata.csv")))
+meta <- read_csv(file.path(SE_DIR, "Example2_metadata.csv"))
 
 # Create unique condition and label for each sample. This will be used by CONTENTO for visualization.
 meta <- meta |>
@@ -346,7 +230,7 @@ meta <- meta |>
 
 ## Step 2. Data Import
 
-Same import procedure as Example 1, applied to this project's samples.
+The [**tximport**](https://www.bioconductor.org/packages/release/bioc/html/tximport.html) [@tximport] function reads in gene-level quantification results from RSEM and organizes them into a structured list for downstream analysis. It extracts estimated counts, transcript lengths, and abundance values, ensuring compatibility with DESeq2 and other Bioconductor workflows. Since some transcripts may have a reported length of 0, we update those to 1 to prevent issues during analysis.
 
 ```{r}
 # Import data using tximport
@@ -568,7 +452,7 @@ all_contrast_df <- all_contrast_df |>
 
 ## Step 5. Create Expression Matrix
 
-As in Example 1, the expression matrix can be generated using any normalization or transformation method suitable for downstream visualization and exploratory analysis. Here we use the DESeq2 variance stabilizing transformation (VST).
+As in [Example 1](#example-1), the expression matrix can be generated using any normalization or transformation method suitable for downstream visualization and exploratory analysis. Here we use the DESeq2 variance stabilizing transformation (VST).
 
 ```{r}
 expr_matrix <- assay(vst(dds, blind = FALSE))
@@ -576,7 +460,7 @@ expr_matrix <- assay(vst(dds, blind = FALSE))
 
 ## Step 6. Create SummarizedExperiment (SE) Object
 
-We use the same `convert_to_SE()` function as in Example 1 to build the final SE object. In this case, we also include the variance partitioning results as additional columns in `rowData`, which can be visualized in CONTENTO's Variance Decomposition tab.
+We use [`convert_to_SE()`](#convert-to-se) to build the final SE object. In this case, we also include the variance partitioning results as additional columns in `rowData`, which can be visualized in CONTENTO's Variance Decomposition tab.
 
 ```{r}
 SE = convert_to_SE(
@@ -586,9 +470,9 @@ SE = convert_to_SE(
   varpart = varPart,
   organism = "Homo sapiens", 
   annotation = "Homo_sapiens.GRCh38.113_annot",
-  dataset_name = "ExpMultContrast"
+  dataset_name = "Example2"
 )
-saveRDS(SE, file.path(SE_DIR, paste0(project_name, "_SE.rds")))
+saveRDS(SE, file.path(SE_DIR, "Example2_SE.rds"))
 ```
 
 # Verify Your SE Object
