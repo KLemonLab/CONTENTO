@@ -57,6 +57,8 @@ The two examples cover different parts of CONTENTO. Pick the one closest to your
 | `annotation` | `Sau_KPL4403_annot` (anvi'o, built in) | `Homo_sapiens.GRCh38.113_annot` (built in) |
 | Output | `Example1_SE.rds` | `Example2_SE.rds` |
 
+**Example files.** The input files for both examples (featureCounts and RSEM outputs, sample metadata) and the resulting `Example1_SE.rds` and `Example2_SE.rds` are in [`inst/extdata/SE`](https://github.com/KLemonLab/CONTENTO/tree/main/inst/extdata/SE) in the GitHub repository. They are not included in the CONTENTO container. To run the code below, clone or download the repository and set `SE_DIR` to that folder. To only explore the results in the app, download the two SE files and upload them in the sidebar.
+
 
 
 ```{r}

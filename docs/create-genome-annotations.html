@@ -323,6 +323,54 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 </tbody>
 </table>
+<p><strong>Built-in annotations.</strong> CONTENTO ships ready-made annotation files (in <a href="https://github.com/KLemonLab/CONTENTO/tree/main/inst/annotations"><code>inst/annotations</code></a>, also included in the container) for:</p>
+<table class="table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Annotation</th>
+<th>Organism</th>
+<th>Genome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Homo_sapiens.GRCh38.113_annot</code></td>
+<td><em>Homo sapiens</em></td>
+<td>GRCh38, Ensembl release 113</td>
+</tr>
+<tr class="even">
+<td><code>Sau_KPL4403_annot</code></td>
+<td><em>Staphylococcus aureus</em> LAC (USA300_FPR3757)</td>
+<td>GCF_000013465.1</td>
+</tr>
+<tr class="odd">
+<td><code>Sau_KPL2115_annot</code></td>
+<td><em>Staphylococcus aureus</em> JE2</td>
+<td>GCF_002085525.1</td>
+</tr>
+<tr class="even">
+<td><code>Cac_KPL1818_annot</code></td>
+<td><em>Corynebacterium accolens</em> KPL1818</td>
+<td>GCF_000478135.1</td>
+</tr>
+<tr class="odd">
+<td><code>Cps_KPL1989_annot</code></td>
+<td><em>Corynebacterium pseudodiphtheriticum</em> KPL1989</td>
+<td>GCF_000477955.1</td>
+</tr>
+<tr class="even">
+<td><code>Dpi_KPL3065_annot</code></td>
+<td><em>Dolosigranulum pigrum</em> KPL3065</td>
+<td>GCF_017655845.1</td>
+</tr>
+</tbody>
+</table>
+<p>If your SE was quantified against one of these genomes, set <code>metadata(se)$annotation</code> to its name and CONTENTO loads it automatically; you don’t need to create your own. Use this tutorial for any other genome, or to add annotation columns of your own.</p>
 <hr>
 </section>
 </section>

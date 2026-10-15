@@ -57,6 +57,8 @@ Press `Ctrl+C` in the terminal to stop the app.
 
 **Loading your data.** Upload your SE file in the app's sidebar, and an annotation file from the load panel if needed. Built-in annotations are included in the container and load automatically when `metadata(se)$annotation` names one of them. Uploaded files are only kept for the current session.
 
+**Trying CONTENTO with example data.** The example SE files are not included in the container. Download them from [`inst/extdata/SE`](https://github.com/KLemonLab/CONTENTO/tree/main/inst/extdata/SE) and upload them in the sidebar. See [Create SE for CONTENTO](create-se-file.html) for how they were built.
+
 **Using your own annotation files.** To load your own annotation files automatically instead of uploading them each session, mount the folder that contains them and point `CONTENTO_ANNOTATION_DIR` to it:
 
 ```{bash}

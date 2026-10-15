@@ -266,6 +266,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <pre><code>http://localhost:3838</code></pre>
 <p>Press <code>Ctrl+C</code> in the terminal to stop the app.</p>
 <p><strong>Loading your data.</strong> Upload your SE file in the app’s sidebar, and an annotation file from the load panel if needed. Built-in annotations are included in the container and load automatically when <code>metadata(se)$annotation</code> names one of them. Uploaded files are only kept for the current session.</p>
+<p><strong>Trying CONTENTO with example data.</strong> The example SE files are not included in the container. Download them from <a href="https://github.com/KLemonLab/CONTENTO/tree/main/inst/extdata/SE"><code>inst/extdata/SE</code></a> and upload them in the sidebar. See <a href="create-se-file.html">Create SE for CONTENTO</a> for how they were built.</p>
 <p><strong>Using your own annotation files.</strong> To load your own annotation files automatically instead of uploading them each session, mount the folder that contains them and point <code>CONTENTO_ANNOTATION_DIR</code> to it:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">--rm</span> <span class="at">-p</span> 3838:3838 <span class="dt">\</span></span>
