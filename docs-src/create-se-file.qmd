@@ -21,7 +21,7 @@ format:
 A CONTENTO-compatible SE has four required components:
 
 - **assays**: must contain an assay named `expr_matrix`, which provides the expression values used by CONTENTO visualizations and downstream analyses.
-- **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF_NB`, `padj__VirusTvsF_NB`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see Step 4 below). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
+- **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF_NB`, `padj__VirusTvsF_NB`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see [Rename Columns for CONTENTO](#rename-columns)). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
 - **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
 - **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
   - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping; `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
@@ -57,7 +57,7 @@ The two examples cover different parts of CONTENTO. Pick the one closest to your
 | `annotation` | `Sau_KPL4403_annot` (anvi'o, built in) | `Homo_sapiens.GRCh38.113_annot` (built in) |
 | Output | `Example1_SE.rds` | `Example2_SE.rds` |
 
-Both datasets are used only to demonstrate the workflow. Example 1 is a simplified subset of a larger experiment (culture condition and experiment date only), and its results should not be interpreted biologically.
+
 
 ```{r}
 # Set up your R environment
@@ -203,7 +203,149 @@ convert_to_SE <- function(dds, contrasts_df, expr_matrix,
 
 # Example 1 {#example-1}
 
+A simple two-group experiment: *Staphylococcus aureus* LAC alone in EBSS compared with LAC on human nasal organoids (HNO), in 3 independent experiments (A, B and C). Reads were mapped to the `Sau_KPL4403` genome and counted with featureCounts, which writes one count file per sample. The design compares the two media while accounting for variation across experiments, and produces a single contrast.
 
+## Step 1. Metadata Preparation
+
+`meta` must contain one row per sample, a `file_base` column matching your featureCounts output filenames, and the experimental factor columns used in the design formula below.
+
+```{r}
+# Read metadata file
+meta <- read_csv(file.path(SE_DIR, "Example1_metadata.csv"))
+
+# Create unique condition and label for each sample. This will be used by CONTENTO for visualization.
+meta <- meta |>
+  mutate(
+    media = factor(media, levels = c("EBSS", "HNO")), # EBSS (LAC alone) is the reference level
+    exp = factor(exp),
+    condition = media, # unique condition for each sample
+    sample = str_extract(file_base, "^\\d+_\\d+"), # run_sample, e.g. 5772_002
+    label = paste(media, exp, sample, sep = " | ") # unique label for each sample (exp B has two HNO samples)
+  ) |>
+  arrange(media, exp)
+```
+
+## Step 2. Data Import
+
+featureCounts writes one tab-separated file per sample: a comment line with the command used, a header line, and one row per gene with its coordinates (`Chr`, `Start`, `End`, `Strand`, `Length`) and counts. The counts column is named after the BAM file, so we supply our own column names, keep only `Geneid` and the counts, and combine all samples into a genes x samples matrix with one column per sample, in the same order as `meta`.
+
+```{r}
+# Import featureCounts files
+fc_folder <- file.path(SE_DIR, "featureCounts")
+count_files <- file.path(fc_folder, paste0(meta$file_base, "_index_Sau_KPL4403_counts.txt"))
+names(count_files) <- meta$label
+
+read_featurecounts <- function(file) {
+  read_tsv(file,
+           skip = 2, # comment and header lines
+           col_names = c("Geneid", "Chr", "Start", "End", "Strand", "Length", "Counts"),
+           show_col_types = FALSE) |>
+    select(Geneid, Counts)
+}
+
+fc_list <- map(count_files, read_featurecounts)
+
+# All files must list the same genes in the same order (same annotation file)
+stopifnot(all(map_lgl(fc_list, ~ identical(.x$Geneid, fc_list[[1]]$Geneid))))
+
+counts_matrix <- sapply(fc_list, `[[`, "Counts")
+rownames(counts_matrix) <- fc_list[[1]]$Geneid
+
+# Columns must match the metadata rows
+stopifnot(identical(colnames(counts_matrix), meta$label))
+```
+
+## Step 3. Exploratory DESeq2 Analysis {#example1-step3}
+
+With a count matrix, the DESeq2 object is built with `DESeqDataSetFromMatrix()` instead of `DESeqDataSetFromTximport()`. The design formula is `~ media + exp`: the media effect we want to test, with the experiment as a covariate. With only one variable of interest, this is also the final design used for the contrast in [Step 4](#example1-step4).
+
+```{r}
+# DESeq design 
+dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
+                              colData = meta,
+                              design = ~ media + exp)
+
+# Run DESeq
+dds <- DESeq(dds)
+```
+
+### Principal Component Analysis (PCA)
+
+PCA calculated based on the VST normalized [@tibshirani1988; @huber2003; @Anders2010] data using ntop=500 top features by variance.
+
+```{r, fig.width=8, fig.height=6, fig.align="center"}
+vsd <- vst(dds, blind = TRUE)
+pcaData <- plotPCA(vsd, intgroup = c("media", "exp"), returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+Media_colors <- c("#2e67f2", "#1e439d")
+Media_fill <- c("white", "#1e439d")
+
+ggplot(pcaData, aes(PC1, PC2)) +
+  geom_point(aes(fill = media, color = media, 
+                 shape = exp), 
+             size = 4, stroke = 1) +  
+  scale_shape_manual(values = c(23, 25, 21)) + 
+  scale_color_manual(values = Media_colors) + 
+  scale_fill_manual(values = Media_fill) +
+  ggtitle("Principal Component Analysis (blind = TRUE)") +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  theme_bw(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  guides(
+    color = guide_legend(title = "media", override.aes = list(color = Media_colors, shape = 22))
+  )
+```
+
+## Step 4. Differential Expression Analysis {#example1-step4}
+
+The design from [Step 3](#example1-step3) already captures all the variables of interest, so we use the same `dds` to extract the single contrast, LAC on HNO vs LAC alone in EBSS, with [`run_contrast_analysis()`](#run-contrast-analysis). `resultsNames(dds)` lists the available coefficients.
+
+```{r}
+resultsNames(dds)
+
+contrasts_df <- run_contrast_analysis(dds, contrast_name = "HNOvsEBSS", coef = "media_HNO_vs_EBSS")
+```
+
+### Rename Columns for CONTENTO {#rename-columns}
+
+::: callout-important
+### IMPORTANT:
+
+CONTENTO requires generic column names so it works with any DE tool, not just DESeq2. **Required:** `log2FC`, `stat`, `padj`. **Optional:** `log2FC_shrunk`. DESeq2's `results()` already outputs `stat` and `padj` with the right names — only `log2FoldChange` (and `log2FoldChange_shrunk`) need renaming.
+:::
+
+```{r}
+contrasts_df <- contrasts_df |>
+  dplyr::rename(log2FC = log2FoldChange, log2FC_shrunk = log2FoldChange_shrunk)
+```
+
+## Step 5. Create Expression Matrix
+
+The expression matrix can be generated using any normalization or transformation method suitable for downstream visualization and exploratory analysis. Here we use the DESeq2 variance stabilizing transformation (VST).
+
+```{r}
+expr_matrix <- assay(vst(dds, blind = FALSE))
+```
+
+## Step 6. Create SummarizedExperiment (SE) Object
+
+We use [`convert_to_SE()`](#convert-to-se) to build the final SE object. Setting `organism = "Bacteria"` enables CONTENTO's Neighborhood Analysis, which uses the gene coordinates in the built-in `Sau_KPL4403_annot` annotation.
+
+```{r}
+SE = convert_to_SE(
+  dds = dds,
+  contrasts_df = contrasts_df,
+  expr_matrix = expr_matrix,
+  organism = "Bacteria", 
+  annotation = "Sau_KPL4403_annot",
+  dataset_name = "Example1"
+)
+saveRDS(SE, file.path(SE_DIR, "Example1_SE.rds"))
+```
 
 # Example 2 {#example-2}
 
@@ -439,11 +581,7 @@ all_contrast_results <- list(
 all_contrast_df <- bind_rows(all_contrast_results)
 ```
 
-::: callout-important
-### IMPORTANT:
-
-CONTENTO requires generic column names so it works with any DE tool, not just DESeq2. **Required:** `log2FC`, `stat`, `padj`. **Optional:** `log2FC_shrunk`. DESeq2's `results()` already outputs `stat` and `padj` with the right names — only `log2FoldChange` (and `log2FoldChange_shrunk`) need renaming.
-:::
+Rename the DESeq2 columns to CONTENTO's generic names, as in [Example 1](#rename-columns).
 
 ```{r}
 all_contrast_df <- all_contrast_df |>
