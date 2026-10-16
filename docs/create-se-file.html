@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-10-15">
+<meta name="dcterms.date" content="2026-10-16">
 
 <title>CONTENTO - Create SE for CONTENTO</title>
 <style>
@@ -55,7 +55,26 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -210,18 +229,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#example1-step3" id="toc-example1-step3" class="nav-link" data-scroll-target="#example1-step3">Step 3. Exploratory DESeq2 Analysis</a></li>
   <li><a href="#example1-step4" id="toc-example1-step4" class="nav-link" data-scroll-target="#example1-step4">Step 4. Differential Expression Analysis</a></li>
   <li><a href="#step-5.-create-expression-matrix" id="toc-step-5.-create-expression-matrix" class="nav-link" data-scroll-target="#step-5.-create-expression-matrix">Step 5. Create Expression Matrix</a></li>
-  <li><a href="#step-6.-create-summarizedexperiment-se-object" id="toc-step-6.-create-summarizedexperiment-se-object" class="nav-link" data-scroll-target="#step-6.-create-summarizedexperiment-se-object">Step 6. Create SummarizedExperiment (SE) Object</a></li>
+  <li><a href="#example1-step6" id="toc-example1-step6" class="nav-link" data-scroll-target="#example1-step6">Step 6. Create SummarizedExperiment (SE) Object</a></li>
   </ul></li>
   <li><a href="#example-2" id="toc-example-2" class="nav-link" data-scroll-target="#example-2">Example 2</a>
   <ul class="collapse">
   <li><a href="#step-1.-metadata-preparation-1" id="toc-step-1.-metadata-preparation-1" class="nav-link" data-scroll-target="#step-1.-metadata-preparation-1">Step 1. Metadata Preparation</a></li>
   <li><a href="#step-2.-data-import-1" id="toc-step-2.-data-import-1" class="nav-link" data-scroll-target="#step-2.-data-import-1">Step 2. Data Import</a></li>
-  <li><a href="#step-3.-exploratory-deseq2-analysis" id="toc-step-3.-exploratory-deseq2-analysis" class="nav-link" data-scroll-target="#step-3.-exploratory-deseq2-analysis">Step 3. Exploratory DESeq2 Analysis</a></li>
+  <li><a href="#example2-step3" id="toc-example2-step3" class="nav-link" data-scroll-target="#example2-step3">Step 3. Exploratory DESeq2 Analysis</a></li>
   <li><a href="#step-4.-differential-expression-analysis" id="toc-step-4.-differential-expression-analysis" class="nav-link" data-scroll-target="#step-4.-differential-expression-analysis">Step 4. Differential Expression Analysis</a></li>
   <li><a href="#step-5.-create-expression-matrix-1" id="toc-step-5.-create-expression-matrix-1" class="nav-link" data-scroll-target="#step-5.-create-expression-matrix-1">Step 5. Create Expression Matrix</a></li>
-  <li><a href="#step-6.-create-summarizedexperiment-se-object-1" id="toc-step-6.-create-summarizedexperiment-se-object-1" class="nav-link" data-scroll-target="#step-6.-create-summarizedexperiment-se-object-1">Step 6. Create SummarizedExperiment (SE) Object</a></li>
+  <li><a href="#step-6.-create-summarizedexperiment-se-object" id="toc-step-6.-create-summarizedexperiment-se-object" class="nav-link" data-scroll-target="#step-6.-create-summarizedexperiment-se-object">Step 6. Create SummarizedExperiment (SE) Object</a></li>
   </ul></li>
   <li><a href="#verify-your-se-object" id="toc-verify-your-se-object" class="nav-link" data-scroll-target="#verify-your-se-object">Verify Your SE Object</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
     </div>
@@ -241,7 +261,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 15, 2026</p>
+      <p class="date">October 16, 2026</p>
     </div>
   </div>
   
@@ -253,15 +273,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="overview" class="level1">
 <h1>Overview</h1>
-<p><strong>CONTENTO</strong> expects a single <code>SummarizedExperiment</code> (SE) object (<code>.rds</code>) containing expression data, differential expression results for every contrast, and descriptive metadata. This document walks through building that object with DESeq2 from two common quantification outputs: per-sample featureCounts files (<a href="#example-1">Example 1</a>) and RSEM gene-level results imported with tximport (<a href="#example-2">Example 2</a>). CONTENTO itself is agnostic to how the downstream analysis was performed. If you have a different quantification method (e.g.&nbsp;Salmon) or a different DE tool (e.g.&nbsp;edgeR, limma-voom), you can still build a compatible SE as long as you reproduce the following structure.</p>
+<p><strong>CONTENTO</strong> expects a single <code>SummarizedExperiment</code><span class="citation" data-cites="SummarizedExperiment"><sup><a href="#ref-SummarizedExperiment" role="doc-biblioref">1</a></sup></span> (SE) object (<code>.rds</code>) containing expression data, differential expression results for every contrast, and descriptive metadata. This document walks through building that object with DESeq2<span class="citation" data-cites="Love2014"><sup><a href="#ref-Love2014" role="doc-biblioref">2</a></sup></span> from two common quantification outputs: per-sample featureCounts<span class="citation" data-cites="Liao2014"><sup><a href="#ref-Liao2014" role="doc-biblioref">3</a></sup></span> files (<a href="#example-1">Example 1</a>) and RSEM<span class="citation" data-cites="li2011"><sup><a href="#ref-li2011" role="doc-biblioref">4</a></sup></span> gene-level results imported with tximport<span class="citation" data-cites="tximport"><sup><a href="#ref-tximport" role="doc-biblioref">5</a></sup></span> (<a href="#example-2">Example 2</a>). CONTENTO doesn’t depend on how reads were aligned (e.g.&nbsp;STAR<span class="citation" data-cites="dobin2012"><sup><a href="#ref-dobin2012" role="doc-biblioref">6</a></sup></span> or HISAT2<span class="citation" data-cites="Kim2019"><sup><a href="#ref-Kim2019" role="doc-biblioref">7</a></sup></span>) or quantified (e.g.&nbsp;Salmon<span class="citation" data-cites="patro2017"><sup><a href="#ref-patro2017" role="doc-biblioref">8</a></sup></span>), or on the DE tool (e.g.&nbsp;edgeR<span class="citation" data-cites="robinson2009"><sup><a href="#ref-robinson2009" role="doc-biblioref">9</a></sup></span>, limma-voom<span class="citation" data-cites="ritchie2015 law2014"><sup><a href="#ref-ritchie2015" role="doc-biblioref">10</a>,<a href="#ref-law2014" role="doc-biblioref">11</a></sup></span>): you can build a compatible SE from any of them as long as you reproduce the following structure.</p>
 <p>A CONTENTO-compatible SE has four required components:</p>
 <ul>
 <li><strong>assays</strong>: must contain an assay named <code>expr_matrix</code>, which provides the expression values used by CONTENTO visualizations and downstream analyses.</li>
-<li><strong>rowData</strong>: one row per gene, with DE statistics for each contrast stored as columns named <code>&lt;name&gt;__&lt;contrast_name&gt;</code> (double underscore separator, e.g.&nbsp;<code>log2FC__VirusTvsF_NB</code>, <code>padj__VirusTvsF_NB</code>). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: <code>log2FC</code>, <code>stat</code> and <code>padj</code> (required for every contrast), and <code>log2FC_shrunk</code> (optional). If your tool uses different names (e.g.&nbsp;DESeq2’s <code>log2FoldChange</code>, edgeR’s <code>logFC</code>), rename the columns to this vocabulary before building the SE (see <a href="#rename-columns">Rename Columns for CONTENTO</a>). Any other columns you include (e.g.&nbsp;<code>baseMean</code>, <code>lfcSE</code>) are carried through but not used by CONTENTO.</li>
+<li><strong>rowData</strong>: one row per gene, with DE statistics for each contrast stored as columns named <code>&lt;name&gt;__&lt;contrast_name&gt;</code> (double underscore separator, e.g.&nbsp;<code>log2FC__VirusTvsF_NoBac</code>, <code>padj__VirusTvsF_NoBac</code>). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: <code>log2FC</code>, <code>stat</code> and <code>padj</code> (required for every contrast), and <code>log2FC_shrunk</code> (optional). If your tool uses different names (e.g.&nbsp;DESeq2’s <code>log2FoldChange</code>, edgeR’s <code>logFC</code>), rename the columns to this vocabulary before building the SE (see <a href="#rename-columns">Rename Columns for CONTENTO</a>). Any other columns you include (e.g.&nbsp;<code>baseMean</code>, <code>lfcSE</code>) are carried through but not used by CONTENTO.</li>
 <li><strong>colData</strong>: sample-level metadata (experimental factors used for grouping/coloring in plots).</li>
-<li><strong>metadata(se)</strong>: a list with, at minimum, <code>contrasts</code> (a character vector of unique contrast names matching the <code>__&lt;contrast_name&gt;</code> suffixes described above). Optional fields <code>organism</code> and <code>annotation</code> unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
+<li><strong>metadata(se)</strong>: a list with, at minimum, <code>contrasts</code> (a character vector of unique contrast names matching the <code>__&lt;contrast_name&gt;</code> suffixes described above). Optional fields <code>organism</code> and <code>annotation</code> unlock MSigDB-based<span class="citation" data-cites="liberzon2015"><sup><a href="#ref-liberzon2015" role="doc-biblioref">12</a></sup></span> GSEA<span class="citation" data-cites="subramanian2005"><sup><a href="#ref-subramanian2005" role="doc-biblioref">13</a></sup></span> and annotation loading, respectively (see the <a href="create-genome-annotations.html">annotation tutorial</a> for details). Two further optional fields fine-tune the CONTENTO experience:
 <ul>
-<li><code>db_species</code>: character string, <code>"HS"</code> or <code>"MM"</code>. By default, CONTENTO picks the MSigDB source database automatically: <code>"MM"</code> (mouse-curated) only when <code>organism</code> is exactly <code>"Mus musculus"</code>, and <code>"HS"</code> (human-curated) for every other <code>msigdbr</code>-supported organism. Set <code>db_species</code> to override that default — e.g.&nbsp;to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that <code>organism</code> must still be a species <code>msigdbr</code> recognizes for ortholog mapping; <code>db_species</code> does not extend MSigDB support to organisms <code>msigdbr</code> doesn’t already support.</li>
+<li><code>db_species</code>: character string, <code>"HS"</code> or <code>"MM"</code>. By default, CONTENTO picks the MSigDB source database automatically: <code>"MM"</code> (mouse-curated) only when <code>organism</code> is exactly <code>"Mus musculus"</code>, and <code>"HS"</code> (human-curated) for every other <code>msigdbr</code>-supported<span class="citation" data-cites="msigdbr"><sup><a href="#ref-msigdbr" role="doc-biblioref">14</a></sup></span> organism. Set <code>db_species</code> to override that default — e.g.&nbsp;to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that <code>organism</code> must still be a species <code>msigdbr</code> recognizes for ortholog mapping (see the <a href="https://igordot.github.io/msigdbr/reference/msigdbr_species.html">list of supported species</a>); <code>db_species</code> does not extend MSigDB support to organisms <code>msigdbr</code> doesn’t already support.</li>
 <li><code>dataset_name</code>: character string used as the base filename prefix for every file downloaded from CONTENTO (tables, plots, etc.). If omitted, CONTENTO falls back to the uploaded SE filename, or <code>"CONTENTO"</code> if that isn’t available either.</li>
 </ul></li>
 </ul>
@@ -322,8 +342,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>Dataset</td>
-<td><em>S. aureus</em> LAC alone in EBSS vs LAC on HNO</td>
-<td>RSV infection × four bacterial conditions in HNO-ALI cultures</td>
+<td>One bacterial strain alone in its inoculum vs in a host model</td>
+<td>Host model × virus infection × four bacterial conditions</td>
 </tr>
 <tr class="even">
 <td>Import</td>
@@ -332,7 +352,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>Design</td>
-<td><code>~ media + exp</code>, one contrast (<code>HNO</code> vs <code>EBSS</code>)</td>
+<td><code>~ culture + exp</code>, one contrast (<code>Host</code> vs <code>Inoculum</code>)</td>
 <td><code>~ virus + bacteria + virus:bacteria + exp</code>, several contrasts + variance partitioning</td>
 </tr>
 <tr class="even">
@@ -342,7 +362,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td><code>annotation</code></td>
-<td><code>Sau_KPL4403_annot</code> (anvi’o, built in)</td>
+<td><code>Sau_KPL4403_annot</code> (built in)</td>
 <td><code>Homo_sapiens.GRCh38.113_annot</code> (built in)</td>
 </tr>
 <tr class="even">
@@ -352,6 +372,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 </tbody>
 </table>
+<p>Both examples use anonymized demonstration data: they illustrate the workflow and are not intended for biological interpretation.</p>
 <p><strong>Example files.</strong> The input files for both examples (featureCounts and RSEM outputs, sample metadata) and the resulting <code>Example1_SE.rds</code> and <code>Example2_SE.rds</code> are in <a href="https://github.com/KLemonLab/CONTENTO/tree/main/inst/extdata/SE"><code>inst/extdata/SE</code></a> in the GitHub repository. They are not included in the CONTENTO container. To run the code below, clone or download the repository and set <code>SE_DIR</code> to that folder. To only explore the results in the app, download the two SE files and upload them in the sidebar.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment</span></span>
@@ -374,7 +395,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Both examples use the two helper functions below. Run this section once before either example.</p>
 <section id="run-contrast-analysis" class="level2">
 <h2 class="anchored" data-anchor-id="run-contrast-analysis"><code>run_contrast_analysis()</code></h2>
-<p>This function runs the DESeq2 <code>results()</code> and <code>lfcShrink()</code> functions for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.</p>
+<p>This function runs the DESeq2 <code>results()</code> and <code>lfcShrink()</code> functions (with the ashr shrinkage estimator<span class="citation" data-cites="stephens2016"><sup><a href="#ref-stephens2016" role="doc-biblioref">15</a></sup></span>) for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>run_contrast_analysis <span class="ot">&lt;-</span> <span class="cf">function</span>(dds, contrast_name, <span class="at">contrast =</span> <span class="cn">NULL</span>, <span class="at">coef =</span> <span class="cn">NULL</span>) {</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(contrast)) {</span>
@@ -496,7 +517,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="example-1" class="level1">
 <h1>Example 1</h1>
-<p>A simple two-group experiment: <em>Staphylococcus aureus</em> LAC alone in EBSS compared with LAC on human nasal organoids (HNO), in 3 independent experiments (A, B and C). Reads were mapped to the <code>Sau_KPL4403</code> genome and counted with featureCounts, which writes one count file per sample. The design compares the two media while accounting for variation across experiments, and produces a single contrast.</p>
+<p>A two-group experiment comparing one bacterial strain in its inoculum medium with the same strain growing in a host model, in three independent experiments. Bacterial reads were counted per gene with featureCounts, which writes one count file per sample. The design compares the two conditions while accounting for variation between experiments, and produces a single contrast.</p>
 <section id="step-1.-metadata-preparation" class="level2">
 <h2 class="anchored" data-anchor-id="step-1.-metadata-preparation">Step 1. Metadata Preparation</h2>
 <p><code>meta</code> must contain one row per sample, a <code>file_base</code> column matching your featureCounts output filenames, and the experimental factor columns used in the design formula below.</p>
@@ -507,22 +528,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create unique condition and label for each sample. This will be used by CONTENTO for visualization.</span></span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> meta <span class="sc">|&gt;</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">media =</span> <span class="fu">factor</span>(media, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"EBSS"</span>, <span class="st">"HNO"</span>)), <span class="co"># EBSS (LAC alone) is the reference level</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">culture =</span> <span class="fu">factor</span>(culture, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Inoculum"</span>, <span class="st">"Host"</span>)), <span class="co"># Inoculum (strain alone) is the reference level</span></span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">exp =</span> <span class="fu">factor</span>(exp),</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">condition =</span> media, <span class="co"># unique condition for each sample</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">sample =</span> <span class="fu">str_extract</span>(file_base, <span class="st">"^</span><span class="sc">\\</span><span class="st">d+_</span><span class="sc">\\</span><span class="st">d+"</span>), <span class="co"># run_sample, e.g. 5772_002</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">paste</span>(media, exp, sample, <span class="at">sep =</span> <span class="st">" | "</span>) <span class="co"># unique label for each sample (exp B has two HNO samples)</span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(media, exp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">condition =</span> culture, <span class="co"># unique condition for each sample</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">paste</span>(culture, exp, <span class="at">sep =</span> <span class="st">" | "</span>) <span class="co"># unique label for each sample</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(culture, exp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="step-2.-data-import" class="level2">
 <h2 class="anchored" data-anchor-id="step-2.-data-import">Step 2. Data Import</h2>
-<p>featureCounts writes one tab-separated file per sample: a comment line with the command used, a header line, and one row per gene with its coordinates (<code>Chr</code>, <code>Start</code>, <code>End</code>, <code>Strand</code>, <code>Length</code>) and counts. The counts column is named after the BAM file, so we supply our own column names, keep only <code>Geneid</code> and the counts, and combine all samples into a genes x samples matrix with one column per sample, in the same order as <code>meta</code>.</p>
+<p>featureCounts writes one file per sample. Each file starts with two lines (the command that was run and the column names), followed by one row per gene: <code>Geneid</code>, the gene coordinates (<code>Chr</code>, <code>Start</code>, <code>End</code>, <code>Strand</code>, <code>Length</code>) and the read count. The code below:</p>
+<ol type="1">
+<li>Reads each sample’s file, skipping the two top lines, and keeps only <code>Geneid</code> and the count. We name the count column <code>Counts</code> ourselves, because featureCounts names it after the BAM file.</li>
+<li>Checks that all files list the same genes in the same order.</li>
+<li>Combines the samples into one count matrix, with genes in rows and samples in columns, named and ordered as in <code>meta</code>.</li>
+</ol>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Import featureCounts files</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fc_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(SE_DIR, <span class="st">"featureCounts"</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>count_files <span class="ot">&lt;-</span> <span class="fu">file.path</span>(fc_folder, <span class="fu">paste0</span>(meta<span class="sc">$</span>file_base, <span class="st">"_index_Sau_KPL4403_counts.txt"</span>))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>count_files <span class="ot">&lt;-</span> <span class="fu">file.path</span>(fc_folder, <span class="fu">paste0</span>(meta<span class="sc">$</span>file_base, <span class="st">"_counts.txt"</span>))</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(count_files) <span class="ot">&lt;-</span> meta<span class="sc">$</span>label</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>read_featurecounts <span class="ot">&lt;-</span> <span class="cf">function</span>(file) {</span>
@@ -547,33 +572,33 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="example1-step3" class="level2">
 <h2 class="anchored" data-anchor-id="example1-step3">Step 3. Exploratory DESeq2 Analysis</h2>
-<p>With a count matrix, the DESeq2 object is built with <code>DESeqDataSetFromMatrix()</code> instead of <code>DESeqDataSetFromTximport()</code>. The design formula is <code>~ media + exp</code>: the media effect we want to test, with the experiment as a covariate. With only one variable of interest, this is also the final design used for the contrast in <a href="#example1-step4">Step 4</a>.</p>
+<p>With a count matrix, the DESeq2 object is built with <code>DESeqDataSetFromMatrix()</code> instead of <code>DESeqDataSetFromTximport()</code> (used for the RSEM files in <a href="#example2-step3">Example 2</a>). The design formula is <code>~ culture + exp</code>: the culture effect we want to test, with the experiment as a covariate. With only one variable of interest, this is also the final design used for the contrast in <a href="#example1-step4">Step 4</a>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DESeq design </span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> counts_matrix,</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                              <span class="at">colData =</span> meta,</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                              <span class="at">design =</span> <span class="sc">~</span> media <span class="sc">+</span> exp)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                              <span class="at">design =</span> <span class="sc">~</span> culture <span class="sc">+</span> exp)</span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Run DESeq</span></span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="principal-component-analysis-pca" class="level3">
 <h3 class="anchored" data-anchor-id="principal-component-analysis-pca">Principal Component Analysis (PCA)</h3>
-<p>PCA calculated based on the VST normalized <span class="citation" data-cites="tibshirani1988 huber2003 Anders2010">[@tibshirani1988; @huber2003; @Anders2010]</span> data using ntop=500 top features by variance.</p>
+<p>PCA calculated based on the VST normalized<span class="citation" data-cites="tibshirani1988 huber2003 Anders2010"><sup><a href="#ref-tibshirani1988" role="doc-biblioref">16</a>–<a href="#ref-Anders2010" role="doc-biblioref">18</a></sup></span> data using ntop=500 top features by variance.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>vsd <span class="ot">&lt;-</span> <span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>pcaData <span class="ot">&lt;-</span> <span class="fu">plotPCA</span>(vsd, <span class="at">intgroup =</span> <span class="fu">c</span>(<span class="st">"media"</span>, <span class="st">"exp"</span>), <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>pcaData <span class="ot">&lt;-</span> <span class="fu">plotPCA</span>(vsd, <span class="at">intgroup =</span> <span class="fu">c</span>(<span class="st">"culture"</span>, <span class="st">"exp"</span>), <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>percentVar <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">attr</span>(pcaData, <span class="st">"percentVar"</span>))</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>Media_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"#2e67f2"</span>, <span class="st">"#1e439d"</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>Media_fill <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"#1e439d"</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>Culture_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"#8ab4f8"</span>, <span class="st">"#1e439d"</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>Culture_fill <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"#8ab4f8"</span>, <span class="st">"#1e439d"</span>)</span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(pcaData, <span class="fu">aes</span>(PC1, PC2)) <span class="sc">+</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">fill =</span> media, <span class="at">color =</span> media, </span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">fill =</span> culture, <span class="at">color =</span> culture, </span>
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">shape =</span> exp), </span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>             <span class="at">size =</span> <span class="dv">4</span>, <span class="at">stroke =</span> <span class="dv">1</span>) <span class="sc">+</span>  </span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_shape_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="dv">23</span>, <span class="dv">25</span>, <span class="dv">21</span>)) <span class="sc">+</span> </span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> Media_colors) <span class="sc">+</span> </span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> Media_fill) <span class="sc">+</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> Culture_colors) <span class="sc">+</span> </span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> Culture_fill) <span class="sc">+</span></span>
 <span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Principal Component Analysis (blind = TRUE)"</span>) <span class="sc">+</span></span>
 <span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="fu">paste0</span>(<span class="st">"PC1: "</span>, percentVar[<span class="dv">1</span>], <span class="st">"% variance"</span>)) <span class="sc">+</span></span>
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="fu">paste0</span>(<span class="st">"PC2: "</span>, percentVar[<span class="dv">2</span>], <span class="st">"% variance"</span>)) <span class="sc">+</span></span>
@@ -583,7 +608,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>()</span>
 <span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
 <span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"media"</span>, <span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">color =</span> Media_colors, <span class="at">shape =</span> <span class="dv">22</span>))</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"culture"</span>, <span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">color =</span> Culture_colors, <span class="at">shape =</span> <span class="dv">22</span>))</span>
 <span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -597,14 +622,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="example1-step4" class="level2">
 <h2 class="anchored" data-anchor-id="example1-step4">Step 4. Differential Expression Analysis</h2>
-<p>The design from <a href="#example1-step3">Step 3</a> already captures all the variables of interest, so we use the same <code>dds</code> to extract the single contrast, LAC on HNO vs LAC alone in EBSS, with <a href="#run-contrast-analysis"><code>run_contrast_analysis()</code></a>. <code>resultsNames(dds)</code> lists the available coefficients.</p>
+<p>The design from <a href="#example1-step3">Step 3</a> already captures all the variables of interest, so we use the same <code>dds</code> to extract the single contrast, the strain in the host model vs the strain alone in its inoculum, with <a href="#run-contrast-analysis"><code>run_contrast_analysis()</code></a>. <code>resultsNames(dds)</code> lists the available coefficients.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "Intercept"         "media_HNO_vs_EBSS" "exp_B_vs_A"       
-[4] "exp_C_vs_A"       </code></pre>
+<pre><code>[1] "Intercept"                "culture_Host_vs_Inoculum"
+[3] "exp_B_vs_A"               "exp_C_vs_A"              </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>contrasts_df <span class="ot">&lt;-</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> <span class="st">"HNOvsEBSS"</span>, <span class="at">coef =</span> <span class="st">"media_HNO_vs_EBSS"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>contrasts_df <span class="ot">&lt;-</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> <span class="st">"HostvsInoculum"</span>, <span class="at">coef =</span> <span class="st">"culture_Host_vs_Inoculum"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="rename-columns" class="level3">
 <h3 class="anchored" data-anchor-id="rename-columns">Rename Columns for CONTENTO</h3>
@@ -634,9 +659,9 @@ IMPORTANT:
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>expr_matrix <span class="ot">&lt;-</span> <span class="fu">assay</span>(<span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">FALSE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="step-6.-create-summarizedexperiment-se-object" class="level2">
-<h2 class="anchored" data-anchor-id="step-6.-create-summarizedexperiment-se-object">Step 6. Create SummarizedExperiment (SE) Object</h2>
-<p>We use <a href="#convert-to-se"><code>convert_to_SE()</code></a> to build the final SE object. Setting <code>organism = "Bacteria"</code> enables CONTENTO’s Neighborhood Analysis, which uses the gene coordinates in the built-in <code>Sau_KPL4403_annot</code> annotation.</p>
+<section id="example1-step6" class="level2">
+<h2 class="anchored" data-anchor-id="example1-step6">Step 6. Create SummarizedExperiment (SE) Object</h2>
+<p>We use <a href="#convert-to-se"><code>convert_to_SE()</code></a> to build the final SE object. Setting <code>organism = "Bacteria"</code> enables CONTENTO’s Neighborhood Analysis, which uses the gene coordinates in the genome annotation. The <code>annotation</code> value must match the name of the annotation file without <code>.rds</code> (here the built-in <code>Sau_KPL4403_annot.rds</code>), so CONTENTO can find and load it. See the <a href="create-genome-annotations.html">annotation tutorial</a> for the list of built-in annotations and how to create your own.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>SE <span class="ot">=</span> <span class="fu">convert_to_SE</span>(</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dds =</span> dds,</span>
@@ -647,9 +672,9 @@ IMPORTANT:
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">"Example1"</span></span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>✓ Found 1 contrasts: HNOvsEBSS 
+<pre><code>✓ Found 1 contrasts: HostvsInoculum 
 ✓ Gene order verified: 2929 genes match
-  Dimensions: 2929 genes x 7 samples
+  Dimensions: 2929 genes x 6 samples
   Assays: expr_matrix 
   Columns in rowData: 7 </code></pre>
 </div>
@@ -659,7 +684,7 @@ IMPORTANT:
 </section>
 <section id="example-2" class="level1">
 <h1>Example 2</h1>
-<p>A more complex experiment examining RSV infection across four bacterial conditions (NB, Spn, Hin, and Dpi) in HNO-ALI cultures. The design models virus status, bacterial condition, and their interaction while accounting for variation across independent experiments.</p>
+<p>A multi-factor experiment in which a host model was infected or not with a virus, either alone or precolonized with one of three bacterial species, in three independent experiments. Host reads were quantified with RSEM. The design models virus status, bacterial condition and their interaction while accounting for variation between experiments, and produces several related contrasts plus variance partitioning results.</p>
 <section id="step-1.-metadata-preparation-1" class="level2">
 <h2 class="anchored" data-anchor-id="step-1.-metadata-preparation-1">Step 1. Metadata Preparation</h2>
 <p><code>meta</code> must contain one row per sample, a <code>file_base</code> column matching your RSEM output filenames, and the experimental factor columns used in the design formula below.</p>
@@ -670,7 +695,7 @@ IMPORTANT:
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create unique condition and label for each sample. This will be used by CONTENTO for visualization.</span></span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> meta <span class="sc">|&gt;</span></span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">bacteria =</span> <span class="fu">factor</span>(bacteria, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"NB"</span>, <span class="st">"Spn"</span>, <span class="st">"Hin"</span>, <span class="st">"Dpi"</span>)), <span class="co"># NB (No-Bacteria) is the reference level</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">bacteria =</span> <span class="fu">factor</span>(bacteria, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"NoBac"</span>, <span class="st">"Bac1"</span>, <span class="st">"Bac2"</span>, <span class="st">"Bac3"</span>)), <span class="co"># NoBac (no bacteria) is the reference level</span></span>
 <span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">virus =</span> <span class="fu">factor</span>(virus, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"FALSE"</span>, <span class="st">"TRUE"</span>)),</span>
 <span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">exp =</span> <span class="fu">factor</span>(exp),</span>
 <span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">condition =</span> <span class="fu">interaction</span>(bacteria, virus, <span class="at">sep =</span> <span class="st">"_"</span>), <span class="co"># unique condition for each sample</span></span>
@@ -680,7 +705,7 @@ IMPORTANT:
 </section>
 <section id="step-2.-data-import-1" class="level2">
 <h2 class="anchored" data-anchor-id="step-2.-data-import-1">Step 2. Data Import</h2>
-<p>The <a href="https://www.bioconductor.org/packages/release/bioc/html/tximport.html"><strong>tximport</strong></a> <span class="citation" data-cites="tximport">[@tximport]</span> function reads in gene-level quantification results from RSEM and organizes them into a structured list for downstream analysis. It extracts estimated counts, transcript lengths, and abundance values, ensuring compatibility with DESeq2 and other Bioconductor workflows. Since some transcripts may have a reported length of 0, we update those to 1 to prevent issues during analysis.</p>
+<p>The <a href="https://www.bioconductor.org/packages/release/bioc/html/tximport.html"><strong>tximport</strong></a><span class="citation" data-cites="tximport"><sup><a href="#ref-tximport" role="doc-biblioref">5</a></sup></span> function reads in gene-level quantification results from RSEM and organizes them into a structured list for downstream analysis. It extracts estimated counts, transcript lengths, and abundance values, ensuring compatibility with DESeq2 and other Bioconductor workflows. Since some transcripts may have a reported length of 0, we update those to 1 to prevent issues during analysis.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Import data using tximport</span></span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>rsem_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(SE_DIR, <span class="st">"rsem_counts"</span>)</span>
@@ -690,8 +715,8 @@ IMPORTANT:
 <span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>txi<span class="sc">$</span>length[txi<span class="sc">$</span>length <span class="sc">==</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="step-3.-exploratory-deseq2-analysis" class="level2">
-<h2 class="anchored" data-anchor-id="step-3.-exploratory-deseq2-analysis">Step 3. Exploratory DESeq2 Analysis</h2>
+<section id="example2-step3" class="level2">
+<h2 class="anchored" data-anchor-id="example2-step3">Step 3. Exploratory DESeq2 Analysis</h2>
 <p>We run an initial DESeq model design to explore the data. It does not consider the interaction between variables. We only use it to explore the data and possible effects for the 3 independent experiments. The design formula is <code>~ bacteria + virus + exp</code>, which accounts for the main effects of bacteria, virus, and experiment without considering their interactions. This allows us to assess the individual contributions of each factor to gene expression changes. This exploratory fit is only used for the PCA check below, it is not the design used for contrast extraction, which comes later.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DESeq design </span></span>
@@ -704,7 +729,7 @@ IMPORTANT:
 </div>
 <section id="principal-component-analysis-pca-1" class="level3">
 <h3 class="anchored" data-anchor-id="principal-component-analysis-pca-1">Principal Component Analysis (PCA)</h3>
-<p>PCA calculated based on the VST normalized <span class="citation" data-cites="tibshirani1988 huber2003 Anders2010">[@tibshirani1988; @huber2003; @Anders2010]</span> data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data.</p>
+<p>PCA calculated based on the VST normalized<span class="citation" data-cites="tibshirani1988 huber2003 Anders2010"><sup><a href="#ref-tibshirani1988" role="doc-biblioref">16</a>–<a href="#ref-Anders2010" role="doc-biblioref">18</a></sup></span> data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>vsd <span class="ot">&lt;-</span> <span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>pcaData <span class="ot">&lt;-</span> <span class="fu">plotPCA</span>(vsd, <span class="at">intgroup =</span> <span class="fu">c</span>(<span class="st">"bacteria"</span>, <span class="st">"virus"</span>, <span class="st">"exp"</span>), <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
@@ -743,7 +768,7 @@ IMPORTANT:
 <h3 class="anchored" data-anchor-id="variance-partitioning-analysis">Variance Partitioning Analysis</h3>
 <p>In this more complex design we are also interested in quantifying the contribution of each factor (virus, bacteria, and experiment) to the overall variance in gene expression. This is particularly important for understanding how much of the observed variability can be attributed to biological factors versus technical or experimental factors. CONTENTO allows users to visualize the variance partitioning results for each gene, providing insights into the relative importance of each factor in shaping gene expression patterns.</p>
 <p>Gene-level expression values were modeled using precision weights estimated with the <code>limma::voom()</code> transformation, which accounts for the mean–variance relationship in RNA-seq data. Lowly expressed genes can be filtered using <code>edgeR::filterByExpr()</code>, which removes genes with insufficient counts for reliable statistical analysis and improves the stability of downstream variance estimates.</p>
-<p>We use the <a href="https://bioconductor.org/packages/release/bioc/html/variancePartition.html">variancePartition</a> <span class="citation" data-cites="hoffman2017">[@hoffman2017]</span> package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.</p>
+<p>We use the <a href="https://bioconductor.org/packages/release/bioc/html/variancePartition.html">variancePartition</a><span class="citation" data-cites="hoffman2016 hoffman2017"><sup><a href="#ref-hoffman2016" role="doc-biblioref">19</a>,<a href="#ref-hoffman2017" role="doc-biblioref">20</a></sup></span> package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>run_varPart_analysis <span class="ot">&lt;-</span> <span class="cf">function</span>(txi, meta, formula_vp, formula_fixed, <span class="at">filter_low_expr =</span> <span class="cn">TRUE</span>) {</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Align meta to sample order</span></span>
@@ -816,15 +841,15 @@ IMPORTANT:
 <h4 class="anchored" data-anchor-id="virus-true-vs-false-in-each-species">Virus TRUE vs FALSE in each Species</h4>
 <p>This section tests the effect of virus infection (TRUE vs FALSE) within each bacterial species specifically:</p>
 <ul>
-<li>For the reference bacteria condition (NB), the virus effect is captured by the main coefficient <code>virus_TRUE_vs_FALSE</code>.</li>
-<li>For other bacteria conditions (Spn, Hin, Dpi), the virus effect is a combination of the main virus effect plus the interaction term (e.g., <code>virusTRUE.bacteriaDpi</code>).</li>
+<li>For the reference bacteria condition (NoBac), the virus effect is captured by the main coefficient <code>virus_TRUE_vs_FALSE</code>.</li>
+<li>For other bacteria conditions (Bac1, Bac2, Bac3), the virus effect is a combination of the main virus effect plus the interaction term (e.g., <code>virusTRUE.bacteriaBac1</code>).</li>
 </ul>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Virus_TvsF <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_NB  =</span> <span class="st">"virus_TRUE_vs_FALSE"</span>,                                   </span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Spn =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaSpn"</span>)), </span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Hin =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaHin"</span>)), </span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Dpi =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaDpi"</span>))  </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_NoBac  =</span> <span class="st">"virus_TRUE_vs_FALSE"</span>,                                   </span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Bac1 =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaBac1"</span>)), </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Bac2 =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaBac2"</span>)), </span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusTvsF_Bac3 =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"virus_TRUE_vs_FALSE"</span>, <span class="st">"virusTRUE.bacteriaBac3"</span>))  </span>
 <span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>results_Virus_TvsF <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Virus_TvsF, <span class="cf">function</span>(contrast_val, name) {</span>
 <span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.character</span>(contrast_val)) {</span>
@@ -835,49 +860,49 @@ IMPORTANT:
 <span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="difference-in-virus-effect-compared-to-nb" class="level4">
-<h4 class="anchored" data-anchor-id="difference-in-virus-effect-compared-to-nb">Difference in Virus Effect Compared to NB</h4>
-<p>Here we focus on whether the virus effect differs between each bacteria condition and relative to the reference NB. This highlights species-specific modulation of virus response by comparing the virus effect in each bacteria against the baseline virus effect in NB.</p>
+<section id="difference-in-virus-effect-compared-to-nobac" class="level4">
+<h4 class="anchored" data-anchor-id="difference-in-virus-effect-compared-to-nobac">Difference in Virus Effect Compared to NoBac</h4>
+<p>Here we focus on whether the virus effect differs between each bacteria condition and relative to the reference NoBac. This highlights species-specific modulation of virus response by comparing the virus effect in each bacteria against the baseline virus effect in NoBac.</p>
 <ul>
-<li>We use the interaction terms alone (e.g., <code>virusTRUE.bacteriaDpi</code>), which quantify how much the virus effect in each species deviates from that in NB.</li>
+<li>We use the interaction terms alone (e.g., <code>virusTRUE.bacteriaBac1</code>), which quantify how much the virus effect in each species deviates from that in NoBac.</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>contrast_list_VirusInteract_vsNB <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Dpi =</span> <span class="st">"virusTRUE.bacteriaDpi"</span>,</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Spn =</span> <span class="st">"virusTRUE.bacteriaSpn"</span>,</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Hin =</span> <span class="st">"virusTRUE.bacteriaHin"</span></span>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>contrast_list_VirusInteract_vsNoBac <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Bac1 =</span> <span class="st">"virusTRUE.bacteriaBac1"</span>,</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Bac2 =</span> <span class="st">"virusTRUE.bacteriaBac2"</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">VirusInteract_Bac3 =</span> <span class="st">"virusTRUE.bacteriaBac3"</span></span>
 <span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>results_VirusInteract_vsNB <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_VirusInteract_vsNB, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x,))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>results_VirusInteract_vsNoBac <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_VirusInteract_vsNoBac, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x,))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="bacteria-vs-nb-in-virus-false" class="level4">
-<h4 class="anchored" data-anchor-id="bacteria-vs-nb-in-virus-false">Bacteria vs NB in Virus FALSE</h4>
-<p>This comparison evaluates how each bacterial species differs from the reference NB when virus is absent (<code>virus = FALSE</code>). This reveals baseline species-specific gene expression differences without virus influence.</p>
+<section id="bacteria-vs-nobac-in-virus-false" class="level4">
+<h4 class="anchored" data-anchor-id="bacteria-vs-nobac-in-virus-false">Bacteria vs NoBac in Virus FALSE</h4>
+<p>This comparison evaluates how each bacterial species differs from the reference NoBac when virus is absent (<code>virus = FALSE</code>). This reveals baseline species-specific gene expression differences without virus influence.</p>
 <ul>
-<li>Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., <code>bacteria_Dpi_vs_NB</code>).</li>
+<li>Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., <code>bacteria_Bac1_vs_NoBac</code>).</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNB_VF <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">DpivsNB_VF =</span> <span class="st">"bacteria_Dpi_vs_NB"</span>,</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">SpnvsNB_VF =</span> <span class="st">"bacteria_Spn_vs_NB"</span>,</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">HinvsNB_VF =</span> <span class="st">"bacteria_Hin_vs_NB"</span></span>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNoBac_VF <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Bac1vsNoBac_VF =</span> <span class="st">"bacteria_Bac1_vs_NoBac"</span>,</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Bac2vsNoBac_VF =</span> <span class="st">"bacteria_Bac2_vs_NoBac"</span>,</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">Bac3vsNoBac_VF =</span> <span class="st">"bacteria_Bac3_vs_NoBac"</span></span>
 <span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>results_Species_vsNB_VF <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNB_VF, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>results_Species_vsNoBac_VF <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNoBac_VF, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">coef =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="bacteria-vs-nb-in-virus-true" class="level4">
-<h4 class="anchored" data-anchor-id="bacteria-vs-nb-in-virus-true">Bacteria vs NB in Virus TRUE</h4>
+<section id="bacteria-vs-nobac-in-virus-true" class="level4">
+<h4 class="anchored" data-anchor-id="bacteria-vs-nobac-in-virus-true">Bacteria vs NoBac in Virus TRUE</h4>
 <p>Here we test the bacteria differences under virus infection (virus = TRUE). This reveals species-specific gene expression differences that might occur under virus influence.</p>
 <ul>
-<li>These contrasts combine the main bacteria effect plus the interaction with virus (e.g., <code>bacteria_Dpi_vs_NB</code> + <code>virusTRUE.bacteriaDpi</code>).</li>
+<li>These contrasts combine the main bacteria effect plus the interaction with virus (e.g., <code>bacteria_Bac1_vs_NoBac</code> + <code>virusTRUE.bacteriaBac1</code>).</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNB_VT <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">DpivsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Dpi_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaDpi"</span>)),</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">SpnvsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Spn_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaSpn"</span>)),</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">HinvsNB_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Hin_vs_NB"</span>, <span class="st">"virusTRUE.bacteriaHin"</span>))</span>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>contrast_list_Bacteria_vsNoBac_VT <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Bac1vsNoBac_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Bac1_vs_NoBac"</span>, <span class="st">"virusTRUE.bacteriaBac1"</span>)),</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Bac2vsNoBac_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Bac2_vs_NoBac"</span>, <span class="st">"virusTRUE.bacteriaBac2"</span>)),</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">Bac3vsNoBac_VT =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"bacteria_Bac3_vs_NoBac"</span>, <span class="st">"virusTRUE.bacteriaBac3"</span>))</span>
 <span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>results_Bacteria_vsNB_VT <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNB_VT, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">contrast =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>results_Bacteria_vsNoBac_VT <span class="ot">&lt;-</span> <span class="fu">imap</span>(contrast_list_Bacteria_vsNoBac_VT, <span class="sc">~</span> <span class="fu">run_contrast_analysis</span>(dds, <span class="at">contrast_name =</span> .y, <span class="at">contrast =</span> .x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="combine-all-contrast-results" class="level4">
@@ -885,9 +910,9 @@ IMPORTANT:
 <div class="cell">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>all_contrast_results <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  results_Virus_TvsF,</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  results_VirusInteract_vsNB,</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  results_Species_vsNB_VF,</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  results_Bacteria_vsNB_VT</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  results_VirusInteract_vsNoBac,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  results_Species_vsNoBac_VF,</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  results_Bacteria_vsNoBac_VT</span>
 <span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> <span class="fu">flatten</span>() </span>
 <span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>all_contrast_df <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(all_contrast_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -907,9 +932,9 @@ IMPORTANT:
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>expr_matrix <span class="ot">&lt;-</span> <span class="fu">assay</span>(<span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">FALSE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="step-6.-create-summarizedexperiment-se-object-1" class="level2">
-<h2 class="anchored" data-anchor-id="step-6.-create-summarizedexperiment-se-object-1">Step 6. Create SummarizedExperiment (SE) Object</h2>
-<p>We use <a href="#convert-to-se"><code>convert_to_SE()</code></a> to build the final SE object. In this case, we also include the variance partitioning results as additional columns in <code>rowData</code>, which can be visualized in CONTENTO’s Variance Decomposition tab.</p>
+<section id="step-6.-create-summarizedexperiment-se-object" class="level2">
+<h2 class="anchored" data-anchor-id="step-6.-create-summarizedexperiment-se-object">Step 6. Create SummarizedExperiment (SE) Object</h2>
+<p>We use <a href="#convert-to-se"><code>convert_to_SE()</code></a> to build the final SE object. Setting <code>organism = "Homo sapiens"</code> enables CONTENTO’s MSigDB gene set enrichment, which works for any species supported by <code>msigdbr</code>. As in <a href="#example1-step6">Example 1</a>, the <code>annotation</code> value must match the name of the annotation file without <code>.rds</code> (here the built-in <code>Homo_sapiens.GRCh38.113_annot.rds</code>, built from Ensembl release 113<span class="citation" data-cites="dyer2024"><sup><a href="#ref-dyer2024" role="doc-biblioref">21</a></sup></span>); for human data it adds gene names to the Ensembl IDs. We also pass the variance partitioning results from <a href="#example2-step3">Step 3</a> with <code>varpart</code>: they are added as columns in <code>rowData</code> and shown in CONTENTO’s Variance Decomposition tab.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>SE <span class="ot">=</span> <span class="fu">convert_to_SE</span>(</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dds =</span> dds,</span>
@@ -921,7 +946,7 @@ IMPORTANT:
 <span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">"Example2"</span></span>
 <span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>✓ Found 13 contrasts: VirusTvsF_NB, VirusTvsF_Spn, VirusTvsF_Hin, VirusTvsF_Dpi, VirusInteract_Dpi, VirusInteract_Spn, VirusInteract_Hin, DpivsNB_VF, SpnvsNB_VF, HinvsNB_VF, DpivsNB_VT, SpnvsNB_VT, HinvsNB_VT 
+<pre><code>✓ Found 13 contrasts: VirusTvsF_NoBac, VirusTvsF_Bac1, VirusTvsF_Bac2, VirusTvsF_Bac3, VirusInteract_Bac1, VirusInteract_Bac2, VirusInteract_Bac3, Bac1vsNoBac_VF, Bac2vsNoBac_VF, Bac3vsNoBac_VF, Bac1vsNoBac_VT, Bac2vsNoBac_VT, Bac3vsNoBac_VT 
 Loading variance partition data...
 ✓ Added variance partition for 23620 genes
   Factors: bacteria, exp, virus, Residuals 
@@ -948,6 +973,74 @@ Loading variance partition data...
 <li><input type="checkbox"><code>rownames(se)</code> are consistent gene identifiers matching your annotation’s <code>Geneid</code> column, if used.</li>
 </ul>
 <p>If a tab or control is missing/greyed out in CONTENTO, it’s almost always one of the above.</p>
+</section>
+<section id="references" class="level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body" data-line-spacing="2" role="list">
+<div id="ref-SummarizedExperiment" class="csl-entry" role="listitem">
+<div class="csl-left-margin">1. </div><div class="csl-right-inline">Morgan, M., Obenchain, V., Hester, J. &amp; Pagès, H. <em>SummarizedExperiment: A Container (S4 Class) for Matrix-Like Assays</em>. (2026). doi:<a href="https://doi.org/10.18129/B9.bioc.SummarizedExperiment">10.18129/B9.bioc.SummarizedExperiment</a>.</div>
+</div>
+<div id="ref-Love2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">2. </div><div class="csl-right-inline">Love, M. I., Huber, W. &amp; Anders, S. <a href="https://doi.org/10.1186/s13059-014-0550-8">Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2</a>. <em>Genome Biology</em> <strong>15</strong>, (2014).</div>
+</div>
+<div id="ref-Liao2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">3. </div><div class="csl-right-inline">Liao, Y., Smyth, G. K. &amp; Shi, W. <a href="https://doi.org/10.1093/bioinformatics/btt656">featureCounts: an efficient general purpose program for assigning sequence reads to genomic features</a>. <em>Bioinformatics</em> <strong>30</strong>, 923–930 (2013).</div>
+</div>
+<div id="ref-li2011" class="csl-entry" role="listitem">
+<div class="csl-left-margin">4. </div><div class="csl-right-inline">Li, B. &amp; Dewey, C. N. <a href="https://doi.org/10.1186/1471-2105-12-323">RSEM: accurate transcript quantification from RNA-Seq data with or without a reference genome</a>. <em>BMC Bioinformatics</em> <strong>12</strong>, (2011).</div>
+</div>
+<div id="ref-tximport" class="csl-entry" role="listitem">
+<div class="csl-left-margin">5. </div><div class="csl-right-inline">Soneson, C., Love, M. I. &amp; Robinson, M. D. <a href="https://doi.org/10.12688/f1000research.7563.1">Differential analyses for RNA-seq: Transcript-level estimates improve gene-level inferences</a>. <em>F1000Research</em> <strong>4</strong>, 1521 (2015).</div>
+</div>
+<div id="ref-dobin2012" class="csl-entry" role="listitem">
+<div class="csl-left-margin">6. </div><div class="csl-right-inline">Dobin, A. <em>et al.</em> <a href="https://doi.org/10.1093/bioinformatics/bts635">STAR: ultrafast universal RNA-seq aligner</a>. <em>Bioinformatics</em> <strong>29</strong>, 15–21 (2012).</div>
+</div>
+<div id="ref-Kim2019" class="csl-entry" role="listitem">
+<div class="csl-left-margin">7. </div><div class="csl-right-inline">Kim, D., Paggi, J. M., Park, C., Bennett, C. &amp; Salzberg, S. L. <a href="https://doi.org/10.1038/s41587-019-0201-4">Graph-based genome alignment and genotyping with HISAT2 and HISAT-genotype</a>. <em>Nature Biotechnology</em> <strong>37</strong>, 907–915 (2019).</div>
+</div>
+<div id="ref-patro2017" class="csl-entry" role="listitem">
+<div class="csl-left-margin">8. </div><div class="csl-right-inline">Patro, R., Duggal, G., Love, M. I., Irizarry, R. A. &amp; Kingsford, C. <a href="https://doi.org/10.1038/nmeth.4197">Salmon provides fast and bias-aware quantification of transcript expression</a>. <em>Nature Methods</em> <strong>14</strong>, 417–419 (2017).</div>
+</div>
+<div id="ref-robinson2009" class="csl-entry" role="listitem">
+<div class="csl-left-margin">9. </div><div class="csl-right-inline">Robinson, M. D., McCarthy, D. J. &amp; Smyth, G. K. <a href="https://doi.org/10.1093/bioinformatics/btp616">edgeR: a Bioconductor package for differential expression analysis of digital gene expression data</a>. <em>Bioinformatics</em> <strong>26</strong>, 139–140 (2009).</div>
+</div>
+<div id="ref-ritchie2015" class="csl-entry" role="listitem">
+<div class="csl-left-margin">10. </div><div class="csl-right-inline">Ritchie, M. E. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkv007">limma powers differential expression analyses for RNA-sequencing and microarray studies</a>. <em>Nucleic Acids Research</em> <strong>43</strong>, e47–e47 (2015).</div>
+</div>
+<div id="ref-law2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">11. </div><div class="csl-right-inline">Law, C. W., Chen, Y., Shi, W. &amp; Smyth, G. K. <a href="https://doi.org/10.1186/gb-2014-15-2-r29">Voom: Precision weights unlock linear model analysis tools for RNA-seq read counts</a>. <em>Genome Biology</em> <strong>15</strong>, R29 (2014).</div>
+</div>
+<div id="ref-liberzon2015" class="csl-entry" role="listitem">
+<div class="csl-left-margin">12. </div><div class="csl-right-inline">Liberzon, A. <em>et al.</em> <a href="https://doi.org/10.1016/j.cels.2015.12.004">The Molecular Signatures Database Hallmark Gene Set Collection</a>. <em>Cell Systems</em> <strong>1</strong>, 417–425 (2015).</div>
+</div>
+<div id="ref-subramanian2005" class="csl-entry" role="listitem">
+<div class="csl-left-margin">13. </div><div class="csl-right-inline">Subramanian, A. <em>et al.</em> <a href="https://doi.org/10.1073/pnas.0506580102">Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles</a>. <em>Proceedings of the National Academy of Sciences</em> <strong>102</strong>, 15545–15550 (2005).</div>
+</div>
+<div id="ref-msigdbr" class="csl-entry" role="listitem">
+<div class="csl-left-margin">14. </div><div class="csl-right-inline">Dolgalev, I. <em>Msigdbr: MSigDB Gene Sets for Multiple Organisms in a Tidy Data Format</em>. (2025). doi:<a href="https://doi.org/10.32614/CRAN.package.msigdbr">10.32614/CRAN.package.msigdbr</a>.</div>
+</div>
+<div id="ref-stephens2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">15. </div><div class="csl-right-inline">Stephens, M. False discovery rates: a new deal. <em>Biostatistics</em> kxw041 (2016) doi:<a href="https://doi.org/10.1093/biostatistics/kxw041">10.1093/biostatistics/kxw041</a>.</div>
+</div>
+<div id="ref-tibshirani1988" class="csl-entry" role="listitem">
+<div class="csl-left-margin">16. </div><div class="csl-right-inline">Tibshirani, R. <a href="https://doi.org/10.1080/01621459.1988.10478610">Estimating Transformations for Regression via Additivity and Variance Stabilization</a>. <em>Journal of the American Statistical Association</em> <strong>83</strong>, 394–405 (1988).</div>
+</div>
+<div id="ref-huber2003" class="csl-entry" role="listitem">
+<div class="csl-left-margin">17. </div><div class="csl-right-inline">Huber, W., Heydebreck, A. von, Sueltmann, H., Poustka, A. &amp; Vingron, M. <a href="https://doi.org/10.2202/1544-6115.1008">Parameter estimation for the calibration and variance stabilization of microarray data</a>. <em>Statistical Applications in Genetics and Molecular Biology</em> <strong>2</strong>, (2003).</div>
+</div>
+<div id="ref-Anders2010" class="csl-entry" role="listitem">
+<div class="csl-left-margin">18. </div><div class="csl-right-inline">Anders, S. &amp; Huber, W. <a href="https://doi.org/10.1186/gb-2010-11-10-r106">Differential expression analysis for sequence count data</a>. <em>Genome Biology</em> <strong>11</strong>, (2010).</div>
+</div>
+<div id="ref-hoffman2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">19. </div><div class="csl-right-inline">Hoffman, G. E. &amp; Schadt, E. E. <a href="https://doi.org/10.1186/s12859-016-1323-z">variancePartition: Interpreting drivers of variation in complex gene expression studies</a>. <em>BMC Bioinformatics</em> <strong>17</strong>, 483 (2016).</div>
+</div>
+<div id="ref-hoffman2017" class="csl-entry" role="listitem">
+<div class="csl-left-margin">20. </div><div class="csl-right-inline">Hoffman, G. E. <em>variancePartition</em>. (2017). doi:<a href="https://doi.org/10.18129/B9.BIOC.VARIANCEPARTITION">10.18129/B9.BIOC.VARIANCEPARTITION</a>.</div>
+</div>
+<div id="ref-dyer2024" class="csl-entry" role="listitem">
+<div class="csl-left-margin">21. </div><div class="csl-right-inline">Dyer, S. C. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkae1071">Ensembl 2025</a>. <em>Nucleic Acids Research</em> <strong>53</strong>, D948–D957 (2025).</div>
+</div>
+</div>
 
 
 </section>

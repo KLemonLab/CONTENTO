@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-10-15">
+<meta name="dcterms.date" content="2026-10-16">
 
 <title>CONTENTO - Create Genome Annotations for CONTENTO</title>
 <style>
@@ -55,7 +55,26 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -218,6 +237,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#example-enhance-annotations-with-anvio" id="toc-example-enhance-annotations-with-anvio" class="nav-link" data-scroll-target="#example-enhance-annotations-with-anvio">3.3 Example: Enhance Annotations with Anvi’o</a></li>
   </ul></li>
   <li><a href="#step-4-verify-your-annotation-file" id="toc-step-4-verify-your-annotation-file" class="nav-link" data-scroll-target="#step-4-verify-your-annotation-file">Step 4: Verify Your Annotation File</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
     </div>
@@ -237,7 +257,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 15, 2026</p>
+      <p class="date">October 16, 2026</p>
     </div>
   </div>
   
@@ -251,7 +271,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1>Overview:</h1>
 <p>Annotation files are optional in CONTENTO, but they enable many of the platform’s most useful features. Depending on your organism and the identifiers used in your SummarizedExperiment (SE) object, functionality may be limited without an annotation file. In particular, annotation files are used for:</p>
 <ul>
-<li>Functional enrichment analysis (GSEA/GESECA)</li>
+<li>Functional enrichment analysis (GSEA<span class="citation" data-cites="subramanian2005"><sup><a href="#ref-subramanian2005" role="doc-biblioref">1</a></sup></span> and GESECA, run with fgsea<span class="citation" data-cites="korotkevich2016"><sup><a href="#ref-korotkevich2016" role="doc-biblioref">2</a></sup></span>)</li>
 <li>Displaying informative gene labels and symbols</li>
 <li>Genomic neighborhood analysis (bacterial genomes only)</li>
 </ul>
@@ -262,9 +282,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><p><strong>Annotation-Based Gene Sets:</strong> Available for any organism through a user-provided annotation data frame (<code>.rds</code> format). Required elements:</p>
 <ul>
 <li>A <code>Geneid</code> column matching the <code>rownames()</code> of the SE object, with <strong>exactly one row per <code>Geneid</code></strong>. CONTENTO rejects annotation files with duplicated <code>Geneid</code> values.</li>
-<li>One or more functional annotation columns containing gene set assignments (e.g.&nbsp;COG categories, KEGG pathways, GO terms, regulons, custom categories). Multiple values per gene <strong>must</strong> be collapsed into a single string separated by <code>!!!</code> (e.g., <code>"GO:0006415!!!GO:0016149"</code>). Do not use any other separator (<code>,</code>, <code>;</code>, <code>|</code>, …): CONTENTO only splits on <code>!!!</code>, so <code>"GO:0006415,GO:0016149"</code> would be treated as one single category. CONTENTO counts the gene as belonging to each <code>!!!</code>-separated category for functional enrichment analysis. See <a href="#multiple-annotations-per-gene">Multiple annotations per gene</a> for how to build these strings.</li>
+<li>One or more functional annotation columns containing gene set assignments (e.g.&nbsp;COG categories<span class="citation" data-cites="galperin2024"><sup><a href="#ref-galperin2024" role="doc-biblioref">3</a></sup></span>, KEGG pathways<span class="citation" data-cites="Kanehisa2000 Kanehisa2023"><sup><a href="#ref-Kanehisa2000" role="doc-biblioref">4</a>,<a href="#ref-Kanehisa2023" role="doc-biblioref">5</a></sup></span>, GO terms, regulons, custom categories). Multiple values per gene <strong>must</strong> be collapsed into a single string separated by <code>!!!</code> (e.g., <code>"GO:0006415!!!GO:0016149"</code>). Do not use any other separator (<code>,</code>, <code>;</code>, <code>|</code>, …): CONTENTO only splits on <code>!!!</code>, so <code>"GO:0006415,GO:0016149"</code> would be treated as one single category. CONTENTO counts the gene as belonging to each <code>!!!</code>-separated category for functional enrichment analysis. See <a href="#multiple-annotations-per-gene">Multiple annotations per gene</a> for how to build these strings.</li>
 </ul></li>
-<li><p><a href="https://www.gsea-msigdb.org/gsea/msigdb"><strong>MSigDB</strong></a> <strong>Gene Sets:</strong> Available only for human, mouse, and other species supported by <a href="https://igordot.github.io/msigdbr/reference/msigdbr_species.html">msigdbr</a> R package. It requires:</p>
+<li><p><a href="https://www.gsea-msigdb.org/gsea/msigdb"><strong>MSigDB</strong></a> <strong>Gene Sets</strong><span class="citation" data-cites="liberzon2015"><sup><a href="#ref-liberzon2015" role="doc-biblioref">6</a></sup></span><strong>:</strong> Available only for human, mouse, and other species supported by the <a href="https://igordot.github.io/msigdbr/reference/msigdbr_species.html">msigdbr</a><span class="citation" data-cites="msigdbr-2"><sup><a href="#ref-msigdbr-2" role="doc-biblioref">7</a></sup></span> R package. It requires:</p>
 <ul>
 <li><code>metadata(se)$organism</code> must exactly match a valid <code>msigdbr</code> species name (e.g.&nbsp;<code>Homo sapiens</code>, <code>Mus musculus</code>, etc.).</li>
 <li>Gene identifiers must be Ensembl gene IDs (<code>ENSG...</code>, <code>ENSMUSG...</code>, etc.), either: directly in <code>rownames(se)</code>, or in a column of the annotation file containing Ensembl IDs. CONTENTO automatically detects Ensembl identifier columns when present.</li>
@@ -386,7 +406,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The following sections describe how to obtain the source annotation files required to build a CONTENTO annotation data frame.</p>
 <section id="ensembl-based-organisms-human-mouse-other-msigdbr-species" class="level2">
 <h2 class="anchored" data-anchor-id="ensembl-based-organisms-human-mouse-other-msigdbr-species">1.1 Ensembl-Based Organisms (Human, Mouse, other msigdbr Species)</h2>
-<p>For organisms distributed through Ensembl, download the same GTF and genome assembly used during RNA-seq analysis. The genome FASTA is not required to create a CONTENTO annotation file, but is often downloaded alongside the GTF because both are used during alignment, genome indexing, or other downstream analyses.</p>
+<p>For organisms distributed through Ensembl<span class="citation" data-cites="dyer2024"><sup><a href="#ref-dyer2024" role="doc-biblioref">8</a></sup></span>, download the same GTF and genome assembly used during RNA-seq analysis. The genome FASTA is not required to create a CONTENTO annotation file, but is often downloaded alongside the GTF because both are used during alignment, genome indexing, or other downstream analyses.</p>
 <p><strong>Example:</strong> Human GRCh38 (Ensembl Release 113)</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">FILES_DIR</span><span class="op">=</span><span class="st">"inst/extdata/genomes"</span> </span>
@@ -416,7 +436,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="option-b-download-using-the-ncbi-datasets-cli" class="level3">
 <h3 class="anchored" data-anchor-id="option-b-download-using-the-ncbi-datasets-cli">Option B: Download Using the NCBI Datasets CLI</h3>
-<p>For reproducible workflows, the NCBI Datasets command-line tool is recommended.</p>
+<p>For reproducible workflows, the NCBI Datasets<span class="citation" data-cites="oleary2024"><sup><a href="#ref-oleary2024" role="doc-biblioref">9</a></sup></span> command-line tool is recommended.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install NCBI Datasets CLI if you haven't already. This should be run in your terminal.</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate ncbi_datasets </span>
@@ -434,12 +454,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">/</span><span class="va">$GENOME_NAME</span><span class="st">.zip"</span> <span class="at">-d</span> <span class="st">"</span><span class="va">$FILES_DIR</span><span class="st">"</span></span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Individual files can be renamed to include the genome name for easier identification.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The accompanying GenBank file (<code>.gbff</code>) is optional for CONTENTO itself but is useful for downstream tools such as anvi’o, Prokka, or Bakta.</p>
+<p>The accompanying GenBank file (<code>.gbff</code>) is optional for CONTENTO itself but is useful for downstream tools such as anvi’o<span class="citation" data-cites="eren2020"><sup><a href="#ref-eren2020" role="doc-biblioref">10</a></sup></span>, Prokka<span class="citation" data-cites="seemann2014"><sup><a href="#ref-seemann2014" role="doc-biblioref">11</a></sup></span>, or Bakta<span class="citation" data-cites="schwengers2021"><sup><a href="#ref-schwengers2021" role="doc-biblioref">12</a></sup></span>.</p>
 </section>
 </section>
 <section id="generate-your-own-gff3-file-optional" class="level2">
 <h2 class="anchored" data-anchor-id="generate-your-own-gff3-file-optional">1.3 Generate your own GFF3 file (Optional)</h2>
-<p>For newly assembled genomes or organisms lacking public annotations, you may generate your own annotation files using tools such as Prokka or Bakta. These tools typically produce GFF3 files that can be processed using the same workflow described below. Regardless of the annotation source, the resulting GFF3 should contain stable gene identifiers (e.g.&nbsp;locus_tag) that correspond to the identifiers used in downstream RNA-Seq quantification.</p>
+<p>For newly assembled genomes or organisms lacking public annotations, you may generate your own annotation files using tools such as Prokka<span class="citation" data-cites="seemann2014"><sup><a href="#ref-seemann2014" role="doc-biblioref">11</a></sup></span> or Bakta<span class="citation" data-cites="schwengers2021"><sup><a href="#ref-schwengers2021" role="doc-biblioref">12</a></sup></span>. These tools typically produce GFF3 files that can be processed using the same workflow described below. Regardless of the annotation source, the resulting GFF3 should contain stable gene identifiers (e.g.&nbsp;locus_tag) that correspond to the identifiers used in downstream RNA-Seq quantification.</p>
 <hr>
 </section>
 </section>
@@ -460,7 +480,7 @@ IMPORTANT:
 </div>
 <section id="from-a-gtf-ensembl" class="level2">
 <h2 class="anchored" data-anchor-id="from-a-gtf-ensembl">2.1 From a GTF (Ensembl)</h2>
-<p>We can import <code>Geneid</code> from the <code>gene_id</code> attribute in the GTF file using <code>rtracklayer</code>, along with other useful information such as gene name and biotype.</p>
+<p>We can import <code>Geneid</code> from the <code>gene_id</code> attribute in the GTF file using <code>rtracklayer</code><span class="citation" data-cites="lawrence2009"><sup><a href="#ref-lawrence2009" role="doc-biblioref">13</a></sup></span>, along with other useful information such as gene name and biotype.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the GTF file. Adapt based on the GTF name and location</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
@@ -649,7 +669,7 @@ Found a Useful Annotation Source?
 </section>
 <section id="example-merging-regprecise-regulons" class="level2">
 <h2 class="anchored" data-anchor-id="example-merging-regprecise-regulons">3.2 Example: Merging RegPrecise Regulons</h2>
-<p>In this example, we demonstrate how to merge the RegPrecise regulon annotations with the GFF3-derived annotations. The RegPrecise file is tab-delimited and contains a <code>locus_tag</code> column that matches the <code>Geneid</code> column in the GFF3-derived annotations.</p>
+<p>In this example, we demonstrate how to merge the RegPrecise<span class="citation" data-cites="novichkov2013"><sup><a href="#ref-novichkov2013" role="doc-biblioref">14</a></sup></span> regulon annotations with the GFF3-derived annotations. The RegPrecise file is tab-delimited and contains a <code>locus_tag</code> column that matches the <code>Geneid</code> column in the GFF3-derived annotations.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up your R environment and read the RegPrecise file. Adapt based on the file name and location</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
@@ -690,11 +710,11 @@ Found a Useful Annotation Source?
 <h2 class="anchored" data-anchor-id="example-enhance-annotations-with-anvio">3.3 Example: Enhance Annotations with Anvi’o</h2>
 <p><strong>Anvi’o</strong> is a comprehensive platform that integrates multiple annotation sources and can be used to generate a rich annotation file for bacterial genomes. It can be run on any genome in GenBank format and will produce a single annotation file with multiple functional annotations for each gene.</p>
 <ul>
-<li><strong>HMMs</strong> - Generic protein domain detection</li>
-<li><strong>COG24</strong> - Clusters of Orthologous Groups (excellent for functional enrichment)</li>
-<li><strong>KEGG</strong> - Kyoto Encyclopedia of Genes and Genomes pathways (excellent for functional enrichment)</li>
-<li><strong>Pfams</strong> - Protein family annotations</li>
-<li><strong>CAZymes</strong> - Carbohydrate-active enzyme classification</li>
+<li><strong>HMMs</strong> - Generic protein domain detection, with HMMER<span class="citation" data-cites="Eddy2011"><sup><a href="#ref-Eddy2011" role="doc-biblioref">15</a></sup></span></li>
+<li><strong>COG24</strong> - Clusters of Orthologous Groups<span class="citation" data-cites="galperin2024"><sup><a href="#ref-galperin2024" role="doc-biblioref">3</a></sup></span>, searched with DIAMOND<span class="citation" data-cites="buchfink2014"><sup><a href="#ref-buchfink2014" role="doc-biblioref">16</a></sup></span> (excellent for functional enrichment)</li>
+<li><strong>KEGG</strong> - Kyoto Encyclopedia of Genes and Genomes pathways<span class="citation" data-cites="Kanehisa2023"><sup><a href="#ref-Kanehisa2023" role="doc-biblioref">5</a></sup></span>, assigned with KOfams<span class="citation" data-cites="aramaki2019"><sup><a href="#ref-aramaki2019" role="doc-biblioref">17</a></sup></span> (excellent for functional enrichment)</li>
+<li><strong>Pfams</strong> - Protein family annotations<span class="citation" data-cites="Mistry2021"><sup><a href="#ref-Mistry2021" role="doc-biblioref">18</a></sup></span></li>
+<li><strong>CAZymes</strong> - Carbohydrate-active enzyme classification<span class="citation" data-cites="drula2021"><sup><a href="#ref-drula2021" role="doc-biblioref">19</a></sup></span></li>
 </ul>
 <section id="run-anvio-annotation-pipeline" class="level3">
 <h3 class="anchored" data-anchor-id="run-anvio-annotation-pipeline">Run Anvi’o Annotation Pipeline</h3>
@@ -861,6 +881,68 @@ Found a Useful Annotation Source?
 <li><input type="checkbox">File is saved as <code>.rds</code> containing a data frame or tibble (not a list).</li>
 </ul>
 <p>If a feature is greyed out or missing in the app (e.g.&nbsp;MSigDB radio button absent, neighborhood tab missing), it’s almost always one of the above checks failing silently. Problems with the <code>Geneid</code> column (missing, not character, or duplicated) are the exception: CONTENTO shows an error and does not load the file.</p>
+</section>
+<section id="references" class="level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body" data-line-spacing="2" role="list">
+<div id="ref-subramanian2005" class="csl-entry" role="listitem">
+<div class="csl-left-margin">1. </div><div class="csl-right-inline">Subramanian, A. <em>et al.</em> <a href="https://doi.org/10.1073/pnas.0506580102">Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles</a>. <em>Proceedings of the National Academy of Sciences</em> <strong>102</strong>, 15545–15550 (2005).</div>
+</div>
+<div id="ref-korotkevich2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">2. </div><div class="csl-right-inline">Korotkevich, G. <em>et al.</em> Fast gene set enrichment analysis. (2016) doi:<a href="https://doi.org/10.1101/060012">10.1101/060012</a>.</div>
+</div>
+<div id="ref-galperin2024" class="csl-entry" role="listitem">
+<div class="csl-left-margin">3. </div><div class="csl-right-inline">Galperin, M. Y. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkae983">COG database update 2024</a>. <em>Nucleic Acids Research</em> <strong>53</strong>, D356–D363 (2024).</div>
+</div>
+<div id="ref-Kanehisa2000" class="csl-entry" role="listitem">
+<div class="csl-left-margin">4. </div><div class="csl-right-inline">Kanehisa, M. <a href="https://doi.org/10.1093/nar/28.1.27">KEGG: Kyoto encyclopedia of genes and genomes</a>. <em>Nucleic Acids Research</em> <strong>28</strong>, 27–30 (2000).</div>
+</div>
+<div id="ref-Kanehisa2023" class="csl-entry" role="listitem">
+<div class="csl-left-margin">5. </div><div class="csl-right-inline">Kanehisa, M., Furumichi, M., Sato, Y., Kawashima, M. &amp; Ishiguro-Watanabe, M. <a href="https://doi.org/10.1093/nar/gkac963">KEGG for taxonomy-based analysis of pathways and genomes</a>. <em>Nucleic Acids Research</em> <strong>51</strong>, D587–D592 (2022).</div>
+</div>
+<div id="ref-liberzon2015" class="csl-entry" role="listitem">
+<div class="csl-left-margin">6. </div><div class="csl-right-inline">Liberzon, A. <em>et al.</em> <a href="https://doi.org/10.1016/j.cels.2015.12.004">The Molecular Signatures Database Hallmark Gene Set Collection</a>. <em>Cell Systems</em> <strong>1</strong>, 417–425 (2015).</div>
+</div>
+<div id="ref-msigdbr-2" class="csl-entry" role="listitem">
+<div class="csl-left-margin">7. </div><div class="csl-right-inline">Dolgalev, I. Msigdbr: MSigDB gene sets for multiple organisms in a tidy data format. <a href="https://doi.org/10.32614/CRAN.package.msigdbr">https://doi.org/10.32614/CRAN.package.msigdbr</a> (2026) doi:<a href="https://doi.org/10.32614/CRAN.package.msigdbr">10.32614/CRAN.package.msigdbr</a>.</div>
+</div>
+<div id="ref-dyer2024" class="csl-entry" role="listitem">
+<div class="csl-left-margin">8. </div><div class="csl-right-inline">Dyer, S. C. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkae1071">Ensembl 2025</a>. <em>Nucleic Acids Research</em> <strong>53</strong>, D948–D957 (2025).</div>
+</div>
+<div id="ref-oleary2024" class="csl-entry" role="listitem">
+<div class="csl-left-margin">9. </div><div class="csl-right-inline">O’Leary, N. A. <em>et al.</em> <a href="https://doi.org/10.1038/s41597-024-03571-y">Exploring and retrieving sequence and metadata for species across the tree of life with NCBI Datasets</a>. <em>Scientific Data</em> <strong>11</strong>, (2024).</div>
+</div>
+<div id="ref-eren2020" class="csl-entry" role="listitem">
+<div class="csl-left-margin">10. </div><div class="csl-right-inline">Eren, A. M. <em>et al.</em> <a href="https://doi.org/10.1038/s41564-020-00834-3">Community-led, integrated, reproducible multi-omics with anvi<span>’</span>o</a>. <em>Nature Microbiology</em> <strong>6</strong>, 3–6 (2020).</div>
+</div>
+<div id="ref-seemann2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">11. </div><div class="csl-right-inline">Seemann, T. <a href="https://doi.org/10.1093/bioinformatics/btu153">Prokka: rapid prokaryotic genome annotation</a>. <em>Bioinformatics</em> <strong>30</strong>, 2068–2069 (2014).</div>
+</div>
+<div id="ref-schwengers2021" class="csl-entry" role="listitem">
+<div class="csl-left-margin">12. </div><div class="csl-right-inline">Schwengers, O. <em>et al.</em> <a href="https://doi.org/10.1099/mgen.0.000685">Bakta: rapid and standardized annotation of bacterial genomes via alignment-free sequence identification</a>. <em>Microbial Genomics</em> <strong>7</strong>, (2021).</div>
+</div>
+<div id="ref-lawrence2009" class="csl-entry" role="listitem">
+<div class="csl-left-margin">13. </div><div class="csl-right-inline">Lawrence, M., Gentleman, R. &amp; Carey, V. <a href="https://doi.org/10.1093/bioinformatics/btp328">rtracklayer: an R package for interfacing with genome browsers</a>. <em>Bioinformatics</em> <strong>25</strong>, 1841–1842 (2009).</div>
+</div>
+<div id="ref-novichkov2013" class="csl-entry" role="listitem">
+<div class="csl-left-margin">14. </div><div class="csl-right-inline">Novichkov, P. S. <em>et al.</em> <a href="https://doi.org/10.1186/1471-2164-14-745">RegPrecise 3.0 <span></span> A resource for genome-scale exploration of transcriptional regulation in bacteria</a>. <em>BMC Genomics</em> <strong>14</strong>, 745 (2013).</div>
+</div>
+<div id="ref-Eddy2011" class="csl-entry" role="listitem">
+<div class="csl-left-margin">15. </div><div class="csl-right-inline">Eddy, S. R. <a href="https://doi.org/10.1371/journal.pcbi.1002195">Accelerated Profile HMM Searches</a>. <em>PLoS Computational Biology</em> <strong>7</strong>, e1002195 (2011).</div>
+</div>
+<div id="ref-buchfink2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">16. </div><div class="csl-right-inline">Buchfink, B., Xie, C. &amp; Huson, D. H. <a href="https://doi.org/10.1038/nmeth.3176">Fast and sensitive protein alignment using DIAMOND</a>. <em>Nature Methods</em> <strong>12</strong>, 59–60 (2014).</div>
+</div>
+<div id="ref-aramaki2019" class="csl-entry" role="listitem">
+<div class="csl-left-margin">17. </div><div class="csl-right-inline">Aramaki, T. <em>et al.</em> <a href="https://doi.org/10.1093/bioinformatics/btz859">KofamKOALA: KEGG Ortholog assignment based on profile HMM and adaptive score threshold</a>. <em>Bioinformatics</em> <strong>36</strong>, 2251–2252 (2019).</div>
+</div>
+<div id="ref-Mistry2021" class="csl-entry" role="listitem">
+<div class="csl-left-margin">18. </div><div class="csl-right-inline">Mistry, J. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkaa913">Pfam: The protein families database in 2021</a>. <em>Nucleic Acids Research</em> <strong>49</strong>, D412–D419 (2020).</div>
+</div>
+<div id="ref-drula2021" class="csl-entry" role="listitem">
+<div class="csl-left-margin">19. </div><div class="csl-right-inline">Drula, E. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkab1045">The carbohydrate-active enzyme database: functions and literature</a>. <em>Nucleic Acids Research</em> <strong>50</strong>, D571–D577 (2021).</div>
+</div>
+</div>
 
 
 </section>

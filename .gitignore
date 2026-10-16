@@ -36,3 +36,9 @@ RNASeqApp.Rproj
 .lintr
 /.quarto/
 .bash_env
+
+# Single-file Quarto renders inside docs-src (the site is rendered to docs/)
+docs-src/*.html
+docs-src/site_libs/
+docs-src/*_files/
+docs-src/*.rmarkdown

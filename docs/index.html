@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-10-15">
+<meta name="dcterms.date" content="2026-10-16">
 
 <title>CONTENTO - Introduction</title>
 <style>
@@ -55,7 +55,26 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -199,6 +218,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#citation" id="toc-citation" class="nav-link" data-scroll-target="#citation">Citation</a></li>
   <li><a href="#license" id="toc-license" class="nav-link" data-scroll-target="#license">License</a></li>
   <li><a href="#contact" id="toc-contact" class="nav-link" data-scroll-target="#contact">Contact</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
     </div>
@@ -218,7 +238,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 15, 2026</p>
+      <p class="date">October 16, 2026</p>
     </div>
   </div>
   
@@ -239,7 +259,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div><div class="column" style="width:25%;">
 <div class="quarto-figure quarto-figure-right">
 <figure class="figure">
-<p><img src="images/logo_hex-01.svg" class="img-fluid figure-img" width="100"></p>
+<p><img src="images/logo_hex.svg" class="img-fluid figure-img" width="100"></p>
 </figure>
 </div>
 </div>
@@ -250,7 +270,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="running-contento" class="level2">
 <h2 class="anchored" data-anchor-id="running-contento">Running CONTENTO</h2>
-<p>CONTENTO can be run in two ways. We recommend the container, since it ships with R, Bioconductor, and every dependency pre-installed, and behaves identically on any operating system.</p>
+<p>CONTENTO can be run in two ways. We recommend the container, since it ships with R<span class="citation" data-cites="R"><sup><a href="#ref-R" role="doc-biblioref">1</a></sup></span>, Bioconductor<span class="citation" data-cites="huber2015"><sup><a href="#ref-huber2015" role="doc-biblioref">2</a></sup></span>, and every dependency pre-installed, and behaves identically on any operating system.</p>
 <section id="option-1-run-the-container-recommended" class="level3">
 <h3 class="anchored" data-anchor-id="option-1-run-the-container-recommended"><em>Option 1:</em> Run the container (recommended)</h3>
 <p>A container bundles the app together with everything it needs to run. You only need to install a container runtime once:</p>
@@ -286,7 +306,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="option-2-run-locally-within-rrstudio" class="level3">
 <h3 class="anchored" data-anchor-id="option-2-run-locally-within-rrstudio"><em>Option 2:</em> Run locally within R/RStudio</h3>
-<p>Some users may prefer to execute <strong>CONTENTO</strong> directly from an existing R installation, usually used in conjunction with the popular IDE <a href="https://posit.co/download/rstudio-desktop">RStudio</a>.</p>
+<p>Some users may prefer to execute <strong>CONTENTO</strong> directly from an existing R installation, usually used in conjunction with the popular IDE <a href="https://posit.co/download/rstudio-desktop">RStudio</a><span class="citation" data-cites="RStudio"><sup><a href="#ref-RStudio" role="doc-biblioref">3</a></sup></span>.</p>
 <p>Clone the CONTENTO repository:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/klemonlab/contento.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -344,6 +364,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="contact" class="level2">
 <h2 class="anchored" data-anchor-id="contact">Contact</h2>
 <p>Issues, bug reports, and feature requests are welcome through the GitHub issue tracker.</p>
+</section>
+<section id="references" class="level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body" data-line-spacing="2" role="list">
+<div id="ref-R" class="csl-entry" role="listitem">
+<div class="csl-left-margin">1. </div><div class="csl-right-inline">R Core Team. <em><a href="https://www.R-project.org/">R: A Language and Environment for Statistical Computing</a></em>. (R Foundation for Statistical Computing, Vienna, Austria, 2021).</div>
+</div>
+<div id="ref-huber2015" class="csl-entry" role="listitem">
+<div class="csl-left-margin">2. </div><div class="csl-right-inline">Huber, W. <em>et al.</em> <a href="https://doi.org/10.1038/nmeth.3252">Orchestrating high-throughput genomic analysis with Bioconductor</a>. <em>Nature Methods</em> <strong>12</strong>, 115–121 (2015).</div>
+</div>
+<div id="ref-RStudio" class="csl-entry" role="listitem">
+<div class="csl-left-margin">3. </div><div class="csl-right-inline">RStudio Team. <em><a href="http://www.rstudio.com/">RStudio: Integrated Development Environment for r</a></em>. (RStudio, PBC., Boston, MA, 2020).</div>
+</div>
+</div>
 
 
 </section>

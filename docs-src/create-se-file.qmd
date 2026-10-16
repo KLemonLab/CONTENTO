@@ -11,20 +11,19 @@ format:
     toc: true
     toc-depth: 2
     code-fold: false
-    theme: cosmo
 ---
 
 # Overview
 
-**CONTENTO** expects a single `SummarizedExperiment` (SE) object (`.rds`) containing expression data, differential expression results for every contrast, and descriptive metadata. This document walks through building that object with DESeq2 from two common quantification outputs: per-sample featureCounts files ([Example 1](#example-1)) and RSEM gene-level results imported with tximport ([Example 2](#example-2)). CONTENTO itself is agnostic to how the downstream analysis was performed. If you have a different quantification method (e.g. Salmon) or a different DE tool (e.g. edgeR, limma-voom), you can still build a compatible SE as long as you reproduce the following structure.
+**CONTENTO** expects a single `SummarizedExperiment` [@SummarizedExperiment] (SE) object (`.rds`) containing expression data, differential expression results for every contrast, and descriptive metadata. This document walks through building that object with DESeq2 [@Love2014] from two common quantification outputs: per-sample featureCounts [@Liao2014] files ([Example 1](#example-1)) and RSEM [@li2011] gene-level results imported with tximport [@tximport] ([Example 2](#example-2)). CONTENTO doesn't depend on how reads were aligned (e.g. STAR [@dobin2012] or HISAT2 [@Kim2019]) or quantified (e.g. Salmon [@patro2017]), or on the DE tool (e.g. edgeR [@robinson2009], limma-voom [@ritchie2015; @law2014]): you can build a compatible SE from any of them as long as you reproduce the following structure.
 
 A CONTENTO-compatible SE has four required components:
 
 - **assays**: must contain an assay named `expr_matrix`, which provides the expression values used by CONTENTO visualizations and downstream analyses.
 - **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF_NoBac`, `padj__VirusTvsF_NoBac`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see [Rename Columns for CONTENTO](#rename-columns)). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
 - **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
-- **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
-  - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping; `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
+- **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based [@liberzon2015] GSEA [@subramanian2005] and annotation loading, respectively (see the [annotation tutorial](create-genome-annotations.html) for details). Two further optional fields fine-tune the CONTENTO experience:
+  - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported [@msigdbr] organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping (see the [list of supported species](https://igordot.github.io/msigdbr/reference/msigdbr_species.html)); `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
   - `dataset_name`: character string used as the base filename prefix for every file downloaded from CONTENTO (tables, plots, etc.). If omitted, CONTENTO falls back to the uploaded SE filename, or `"CONTENTO"` if that isn't available either.
 
 | Feature | Required SE component |
@@ -48,20 +47,18 @@ Both examples below follow the same sequence:
 
 The two examples cover different parts of CONTENTO. Pick the one closest to your data and borrow from the other as needed: import routes, designs and organisms are interchangeable (e.g. bacterial featureCounts files can go through the Example 1 import and the Example 2 design with multiple contrasts).
 
-|  | [Example 1](#example-1) | [Example 2](#example-2) |
-|------------------|------------------------------|------------------------------|
+|   | [Example 1](#example-1) | [Example 2](#example-2) |
+|------------------|---------------------------|---------------------------|
 | Dataset | One bacterial strain alone in its inoculum vs in a host model | Host model × virus infection × four bacterial conditions |
 | Import | featureCounts files → count matrix → `DESeqDataSetFromMatrix()` | RSEM → `tximport` → `DESeqDataSetFromTximport()` |
 | Design | `~ culture + exp`, one contrast (`Host` vs `Inoculum`) | `~ virus + bacteria + virus:bacteria + exp`, several contrasts + variance partitioning |
 | `organism` | `"Bacteria"` → Neighborhood Analysis | `"Homo sapiens"` → MSigDB GSEA |
-| `annotation` | `Sau_KPL4403_annot` (anvi'o, built in) | `Homo_sapiens.GRCh38.113_annot` (built in) |
+| `annotation` | `Sau_KPL4403_annot` (built in) | `Homo_sapiens.GRCh38.113_annot` (built in) |
 | Output | `Example1_SE.rds` | `Example2_SE.rds` |
 
 Both examples use anonymized demonstration data: they illustrate the workflow and are not intended for biological interpretation.
 
 **Example files.** The input files for both examples (featureCounts and RSEM outputs, sample metadata) and the resulting `Example1_SE.rds` and `Example2_SE.rds` are in [`inst/extdata/SE`](https://github.com/KLemonLab/CONTENTO/tree/main/inst/extdata/SE) in the GitHub repository. They are not included in the CONTENTO container. To run the code below, clone or download the repository and set `SE_DIR` to that folder. To only explore the results in the app, download the two SE files and upload them in the sidebar.
-
-
 
 ```{r}
 # Set up your R environment
@@ -84,7 +81,7 @@ Both examples use the two helper functions below. Run this section once before e
 
 ## `run_contrast_analysis()` {#run-contrast-analysis}
 
-This function runs the DESeq2 `results()` and `lfcShrink()` functions for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.
+This function runs the DESeq2 `results()` and `lfcShrink()` functions (with the ashr shrinkage estimator [@stephens2016]) for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.
 
 ```{r}
 run_contrast_analysis <- function(dds, contrast_name, contrast = NULL, coef = NULL) {
@@ -230,7 +227,11 @@ meta <- meta |>
 
 ## Step 2. Data Import
 
-featureCounts writes one tab-separated file per sample: a comment line with the command used, a header line, and one row per gene with its coordinates (`Chr`, `Start`, `End`, `Strand`, `Length`) and counts. The counts column is named after the BAM file, so we supply our own column names, keep only `Geneid` and the counts, and combine all samples into a genes x samples matrix with one column per sample, in the same order as `meta`.
+featureCounts writes one file per sample. Each file starts with two lines (the command that was run and the column names), followed by one row per gene: `Geneid`, the gene coordinates (`Chr`, `Start`, `End`, `Strand`, `Length`) and the read count. The code below:
+
+1.  Reads each sample's file, skipping the two top lines, and keeps only `Geneid` and the count. We name the count column `Counts` ourselves, because featureCounts names it after the BAM file.
+2.  Checks that all files list the same genes in the same order.
+3.  Combines the samples into one count matrix, with genes in rows and samples in columns, named and ordered as in `meta`.
 
 ```{r}
 # Import featureCounts files
@@ -260,7 +261,7 @@ stopifnot(identical(colnames(counts_matrix), meta$label))
 
 ## Step 3. Exploratory DESeq2 Analysis {#example1-step3}
 
-With a count matrix, the DESeq2 object is built with `DESeqDataSetFromMatrix()` instead of `DESeqDataSetFromTximport()`. The design formula is `~ culture + exp`: the culture effect we want to test, with the experiment as a covariate. With only one variable of interest, this is also the final design used for the contrast in [Step 4](#example1-step4).
+With a count matrix, the DESeq2 object is built with `DESeqDataSetFromMatrix()` instead of `DESeqDataSetFromTximport()` (used for the RSEM files in [Example 2](#example2-step3)). The design formula is `~ culture + exp`: the culture effect we want to test, with the experiment as a covariate. With only one variable of interest, this is also the final design used for the contrast in [Step 4](#example1-step4).
 
 ```{r}
 # DESeq design 
@@ -280,8 +281,8 @@ PCA calculated based on the VST normalized [@tibshirani1988; @huber2003; @Anders
 vsd <- vst(dds, blind = TRUE)
 pcaData <- plotPCA(vsd, intgroup = c("culture", "exp"), returnData = TRUE)
 percentVar <- round(100 * attr(pcaData, "percentVar"))
-Culture_colors <- c("#2e67f2", "#1e439d")
-Culture_fill <- c("white", "#1e439d")
+Culture_colors <- c("#8ab4f8", "#1e439d")
+Culture_fill <- c("#8ab4f8", "#1e439d")
 
 ggplot(pcaData, aes(PC1, PC2)) +
   geom_point(aes(fill = culture, color = culture, 
@@ -334,9 +335,9 @@ The expression matrix can be generated using any normalization or transformation
 expr_matrix <- assay(vst(dds, blind = FALSE))
 ```
 
-## Step 6. Create SummarizedExperiment (SE) Object
+## Step 6. Create SummarizedExperiment (SE) Object {#example1-step6}
 
-We use [`convert_to_SE()`](#convert-to-se) to build the final SE object. Setting `organism = "Bacteria"` enables CONTENTO's Neighborhood Analysis, which uses the gene coordinates in the built-in `Sau_KPL4403_annot` annotation.
+We use [`convert_to_SE()`](#convert-to-se) to build the final SE object. Setting `organism = "Bacteria"` enables CONTENTO's Neighborhood Analysis, which uses the gene coordinates in the genome annotation. The `annotation` value must match the name of the annotation file without `.rds` (here the built-in `Sau_KPL4403_annot.rds`), so CONTENTO can find and load it. See the [annotation tutorial](create-genome-annotations.html) for the list of built-in annotations and how to create your own.
 
 ```{r}
 SE = convert_to_SE(
@@ -386,7 +387,7 @@ txi <- tximport(count_files, type = "rsem", txIn = FALSE, txOut = FALSE)
 txi$length[txi$length == 0] <- 1
 ```
 
-## Step 3. Exploratory DESeq2 Analysis
+## Step 3. Exploratory DESeq2 Analysis {#example2-step3}
 
 We run an initial DESeq model design to explore the data. It does not consider the interaction between variables. We only use it to explore the data and possible effects for the 3 independent experiments. The design formula is `~ bacteria + virus + exp`, which accounts for the main effects of bacteria, virus, and experiment without considering their interactions. This allows us to assess the individual contributions of each factor to gene expression changes. This exploratory fit is only used for the PCA check below, it is not the design used for contrast extraction, which comes later.
 
@@ -437,7 +438,7 @@ In this more complex design we are also interested in quantifying the contributi
 
 Gene-level expression values were modeled using precision weights estimated with the `limma::voom()` transformation, which accounts for the mean–variance relationship in RNA-seq data. Lowly expressed genes can be filtered using `edgeR::filterByExpr()`, which removes genes with insufficient counts for reliable statistical analysis and improves the stability of downstream variance estimates.
 
-We use the [variancePartition](https://bioconductor.org/packages/release/bioc/html/variancePartition.html) [@hoffman2017] package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.
+We use the [variancePartition](https://bioconductor.org/packages/release/bioc/html/variancePartition.html) [@hoffman2016; @hoffman2017] package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.
 
 ```{r}
 run_varPart_analysis <- function(txi, meta, formula_vp, formula_fixed, filter_low_expr = TRUE) {
@@ -508,7 +509,7 @@ dds <- DESeq(dds)
 This section tests the effect of virus infection (TRUE vs FALSE) within each bacterial species specifically:
 
 - For the reference bacteria condition (NoBac), the virus effect is captured by the main coefficient `virus_TRUE_vs_FALSE`.
-- For other bacteria conditions (Bac1, Bac2, Bac3), the virus effect is a combination of the main virus effect plus the interaction term (e.g., `virusTRUE.bacteriaBac3`).
+- For other bacteria conditions (Bac1, Bac2, Bac3), the virus effect is a combination of the main virus effect plus the interaction term (e.g., `virusTRUE.bacteriaBac1`).
 
 ```{r}
 contrast_list_Virus_TvsF <- list(
@@ -530,13 +531,13 @@ results_Virus_TvsF <- imap(contrast_list_Virus_TvsF, function(contrast_val, name
 
 Here we focus on whether the virus effect differs between each bacteria condition and relative to the reference NoBac. This highlights species-specific modulation of virus response by comparing the virus effect in each bacteria against the baseline virus effect in NoBac.
 
-- We use the interaction terms alone (e.g., `virusTRUE.bacteriaBac3`), which quantify how much the virus effect in each species deviates from that in NoBac.
+- We use the interaction terms alone (e.g., `virusTRUE.bacteriaBac1`), which quantify how much the virus effect in each species deviates from that in NoBac.
 
 ```{r}
 contrast_list_VirusInteract_vsNoBac <- list(
-  VirusInteract_Bac3 = "virusTRUE.bacteriaBac3",
   VirusInteract_Bac1 = "virusTRUE.bacteriaBac1",
-  VirusInteract_Bac2 = "virusTRUE.bacteriaBac2"
+  VirusInteract_Bac2 = "virusTRUE.bacteriaBac2",
+  VirusInteract_Bac3 = "virusTRUE.bacteriaBac3"
 )
 results_VirusInteract_vsNoBac <- imap(contrast_list_VirusInteract_vsNoBac, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x,))
 ```
@@ -545,13 +546,13 @@ results_VirusInteract_vsNoBac <- imap(contrast_list_VirusInteract_vsNoBac, ~ run
 
 This comparison evaluates how each bacterial species differs from the reference NoBac when virus is absent (`virus = FALSE`). This reveals baseline species-specific gene expression differences without virus influence.
 
-- Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., `bacteria_Bac3_vs_NoBac`).
+- Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., `bacteria_Bac1_vs_NoBac`).
 
 ```{r}
 contrast_list_Bacteria_vsNoBac_VF <- list(
-  Bac3vsNoBac_VF = "bacteria_Bac3_vs_NoBac",
   Bac1vsNoBac_VF = "bacteria_Bac1_vs_NoBac",
-  Bac2vsNoBac_VF = "bacteria_Bac2_vs_NoBac"
+  Bac2vsNoBac_VF = "bacteria_Bac2_vs_NoBac",
+  Bac3vsNoBac_VF = "bacteria_Bac3_vs_NoBac"
 )
 results_Species_vsNoBac_VF <- imap(contrast_list_Bacteria_vsNoBac_VF, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x))
 ```
@@ -560,13 +561,13 @@ results_Species_vsNoBac_VF <- imap(contrast_list_Bacteria_vsNoBac_VF, ~ run_cont
 
 Here we test the bacteria differences under virus infection (virus = TRUE). This reveals species-specific gene expression differences that might occur under virus influence.
 
-- These contrasts combine the main bacteria effect plus the interaction with virus (e.g., `bacteria_Bac3_vs_NoBac` + `virusTRUE.bacteriaBac3`).
+- These contrasts combine the main bacteria effect plus the interaction with virus (e.g., `bacteria_Bac1_vs_NoBac` + `virusTRUE.bacteriaBac1`).
 
 ```{r}
 contrast_list_Bacteria_vsNoBac_VT <- list(
-  Bac3vsNoBac_VT = list(c("bacteria_Bac3_vs_NoBac", "virusTRUE.bacteriaBac3")),
   Bac1vsNoBac_VT = list(c("bacteria_Bac1_vs_NoBac", "virusTRUE.bacteriaBac1")),
-  Bac2vsNoBac_VT = list(c("bacteria_Bac2_vs_NoBac", "virusTRUE.bacteriaBac2"))
+  Bac2vsNoBac_VT = list(c("bacteria_Bac2_vs_NoBac", "virusTRUE.bacteriaBac2")),
+  Bac3vsNoBac_VT = list(c("bacteria_Bac3_vs_NoBac", "virusTRUE.bacteriaBac3"))
 )
 results_Bacteria_vsNoBac_VT <- imap(contrast_list_Bacteria_vsNoBac_VT, ~ run_contrast_analysis(dds, contrast_name = .y, contrast = .x))
 ```
@@ -601,7 +602,7 @@ expr_matrix <- assay(vst(dds, blind = FALSE))
 
 ## Step 6. Create SummarizedExperiment (SE) Object
 
-We use [`convert_to_SE()`](#convert-to-se) to build the final SE object. In this case, we also include the variance partitioning results as additional columns in `rowData`, which can be visualized in CONTENTO's Variance Decomposition tab.
+We use [`convert_to_SE()`](#convert-to-se) to build the final SE object. Setting `organism = "Homo sapiens"` enables CONTENTO's MSigDB gene set enrichment, which works for any species supported by `msigdbr`. As in [Example 1](#example1-step6), the `annotation` value must match the name of the annotation file without `.rds` (here the built-in `Homo_sapiens.GRCh38.113_annot.rds`, built from Ensembl release 113 [@dyer2024]); for human data it adds gene names to the Ensembl IDs. We also pass the variance partitioning results from [Step 3](#example2-step3) with `varpart`: they are added as columns in `rowData` and shown in CONTENTO's Variance Decomposition tab.
 
 ```{r}
 SE = convert_to_SE(
@@ -630,3 +631,8 @@ Before uploading to CONTENTO, confirm:
 - [ ] `rownames(se)` are consistent gene identifiers matching your annotation's `Geneid` column, if used.
 
 If a tab or control is missing/greyed out in CONTENTO, it's almost always one of the above.
+
+# References {.unnumbered}
+
+::: {#refs}
+:::
