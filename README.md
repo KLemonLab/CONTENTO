@@ -51,7 +51,7 @@ podman run --rm -p 3838:3838 \
 **Pinning a version.** `latest` always points to the newest release. For analyses you intend to publish, replace `latest` with a specific release version (see [Releases](https://github.com/KLemonLab/CONTENTO/releases)) and report that version in your methods:
 
 ``` bash
-podman run --rm -p 3838:3838 ghcr.io/klemonlab/contento:0.2.0
+podman run --rm -p 3838:3838 ghcr.io/klemonlab/contento:1.0.0
 ```
 
 **Building the image yourself.** A Dockerfile is included in the repository, so you can build and run the image locally from the cloned repository:
