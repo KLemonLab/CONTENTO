@@ -35,6 +35,8 @@ Full documentation, including tutorials for creating SE and annotation files, is
 
 CONTENTO can be run in two ways. We recommend the container, since it ships with R [@R], Bioconductor [@huber2015], and every dependency pre-installed, and behaves identically on any operating system.
 
+CONTENTO is built with shiny [@shiny] and uses DESeq2 [@Love2014], fgsea [@korotkevich2016], msigdbr [@msigdbr], ComplexHeatmap [@gu2016], circlize [@gu2014] and ComplexUpset [@complexupset; @lex2014] for its analyses and visualizations.
+
 ### *Option 1:* Run the container (recommended)
 
 A container bundles the app together with everything it needs to run. You only need to install a container runtime once:
@@ -84,7 +86,7 @@ podman run --rm -p 3838:3838 contento
 
 ### *Option 2:* Run locally within R/RStudio
 
-Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop) [@RStudio].
+Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop) [@RStudio]. This requires R ≥ 4.4 and Bioconductor ≥ 3.19, the versions used in the container.
 
 Clone the CONTENTO repository:
 
@@ -139,19 +141,23 @@ The application will then become available in your web browser.
 
 If you use this application in scientific work, please cite:
 
-Isabel FE, et al. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO>
+F. Escapa, I. & Lemon, K. P. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO>
 
 DOI: <https://doi.org/10.5281/zenodo.21629492>
 
 This DOI always resolves to the latest release; the DOI for each specific version is listed on the Zenodo page.
 
+## Funding
+
+This work was supported by the National Institute of General Medical Sciences (NIGMS) of the National Institutes of Health under award number R35GM141806, and by the National Institute of Allergy and Infectious Diseases (NIAID) under award number U19AI157981. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.
+
 ## License
 
-This project is covered under the GPL-3 license.
+This project is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
 
 ## Contact
 
-Issues, bug reports, and feature requests are welcome through the GitHub issue tracker.
+Issues, bug reports, and feature requests are welcome through the [GitHub issue tracker](https://github.com/KLemonLab/CONTENTO/issues).
 
 # References {.unnumbered}
 

@@ -3,13 +3,19 @@ title: "CONTENTO: CONTrast ExploratioN Toolkit for Omics"
 message: "If you use this software, please cite it using the metadata from this file."
 type: software
 authors:
-  - family-names: "FE"
+  - family-names: "F. Escapa"
     given-names: "Isabel"
+    orcid: "https://orcid.org/0000-0002-1454-7205"
+    affiliation: "Baylor College of Medicine"
+  - family-names: "Lemon"
+    given-names: "Katherine P."
+    orcid: "https://orcid.org/0000-0003-1542-1679"
+    affiliation: "Baylor College of Medicine"
 repository-code: "https://github.com/KLemonLab/CONTENTO"
 url: "https://github.com/KLemonLab/CONTENTO"
 license: "GPL-3.0-or-later"
 doi: "10.5281/zenodo.21629492"
-version: "0.1.0"
+version: "1.0.0"
 date-released: 2026-07-20
 keywords:
   - "RNA-seq"

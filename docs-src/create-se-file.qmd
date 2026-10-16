@@ -22,14 +22,14 @@ A CONTENTO-compatible SE has four required components:
 - **assays**: must contain an assay named `expr_matrix`, which provides the expression values used by CONTENTO visualizations and downstream analyses.
 - **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF_NoBac`, `padj__VirusTvsF_NoBac`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see [Rename Columns for CONTENTO](#rename-columns)). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
 - **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
-- **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based [@liberzon2015] GSEA [@subramanian2005] and annotation loading, respectively (see the [annotation tutorial](create-genome-annotations.html) for details). Two further optional fields fine-tune the CONTENTO experience:
-  - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported [@msigdbr] organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping (see the [list of supported species](https://igordot.github.io/msigdbr/reference/msigdbr_species.html)); `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
+- **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based [@liberzon2011; @liberzon2015] GSEA [@subramanian2005] and annotation loading, respectively (see the [annotation tutorial](create-genome-annotations.html) for details). Two further optional fields fine-tune the CONTENTO experience:
+  - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated [@castanza2023]) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported [@msigdbr] organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping (see the [list of supported species](https://igordot.github.io/msigdbr/reference/msigdbr_species.html)); `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
   - `dataset_name`: character string used as the base filename prefix for every file downloaded from CONTENTO (tables, plots, etc.). If omitted, CONTENTO falls back to the uploaded SE filename, or `"CONTENTO"` if that isn't available either.
 
 | Feature | Required SE component |
 |------------------------------------|------------------------------------|
 | DE tables & volcano plots | rowData contrast columns |
-| Expression Plot / Heatmap / GESECA | `expr_matrix` assay |
+| Expression Plot / Heatmap / GESECA [@korotkevich2016] | `expr_matrix` assay |
 | Variance Decomposition tab | optional `varpart_*` rowData columns |
 | MSigDB GSEA | `metadata(se)$organism` matching a valid `msigdbr` species (`metadata(se)$db_species` optionally overrides which source database — human or mouse — is queried) |
 | Neighborhood Analysis (bacteria) | `metadata(se)$organism == "Bacteria"` + annotation with coordinates |
@@ -436,7 +436,7 @@ ggplot(pcaData, aes(PC1, PC2)) +
 
 In this more complex design we are also interested in quantifying the contribution of each factor (virus, bacteria, and experiment) to the overall variance in gene expression. This is particularly important for understanding how much of the observed variability can be attributed to biological factors versus technical or experimental factors. CONTENTO allows users to visualize the variance partitioning results for each gene, providing insights into the relative importance of each factor in shaping gene expression patterns.
 
-Gene-level expression values were modeled using precision weights estimated with the `limma::voom()` transformation, which accounts for the mean–variance relationship in RNA-seq data. Lowly expressed genes can be filtered using `edgeR::filterByExpr()`, which removes genes with insufficient counts for reliable statistical analysis and improves the stability of downstream variance estimates.
+Gene-level expression values were modeled using precision weights estimated with the `limma::voom()` transformation [@law2014], which accounts for the mean–variance relationship in RNA-seq data, after TMM normalization of library sizes with `edgeR::normLibSizes()` [@robinson2010]. Lowly expressed genes can be filtered using `edgeR::filterByExpr()` [@chen2016], which removes genes with insufficient counts for reliable statistical analysis and improves the stability of downstream variance estimates.
 
 We use the [variancePartition](https://bioconductor.org/packages/release/bioc/html/variancePartition.html) [@hoffman2016; @hoffman2017] package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.
 
@@ -624,11 +624,13 @@ Before uploading to CONTENTO, confirm:
 - [ ] `assays(se)` includes `expr_matrix` (required for expression/heatmap/GESECA features).
 - [ ] `rowData(se)` has `<stat>__<contrast_name>` columns for every entry in `metadata(se)$contrasts`, with matching suffixes. `log2FC__<contrast>`, `stat__<contrast>`, and `padj__<contrast>` columns (required); `log2FC_shrunk__<contrast>` is optional.
 - [ ] `metadata(se)$contrasts` is a character vector, not a factor or list.
+- [ ] Contrast names do not contain `__` (double underscore), which CONTENTO uses as the separator in rowData column names.
 - [ ] `metadata(se)$organism`, if set, exactly matches a valid `msigdbr` species name (or is `"Bacteria"` for neighborhood analysis).
 - [ ] `metadata(se)$db_species`, if set, is exactly `"HS"` or `"MM"` — overrides which MSigDB source database (human- or mouse-curated) is queried, but `organism` must still be a valid `msigdbr` species.
-- [ ] `metadata(se)$annotation`, if set, matches the filename (without `.rds`) of a built-in or uploaded annotation file (or of a file in the folder set by `CONTENTO_ANNOTATION_DIR`; see [Running CONTENTO](index.qmd#running-contento)).
+- [ ] `metadata(se)$annotation`, if set, matches the filename (without `.rds`) of a built-in annotation or of a file in the folder set by `CONTENTO_ANNOTATION_DIR` (see [Running CONTENTO](index.qmd#running-contento)), so CONTENTO can load it automatically. An annotation file uploaded in the app does not need to match.
 - [ ] `metadata(se)$dataset_name`, if set, is a short descriptive string — it becomes the prefix for every file CONTENTO lets users download.
 - [ ] `rownames(se)` are consistent gene identifiers matching your annotation's `Geneid` column, if used.
+- [ ] For MSigDB enrichment, `rownames(se)` are Ensembl gene IDs (`ENSG...`, `ENSMUSG...`, etc.), or your annotation file has a column of Ensembl IDs (see the [annotation tutorial](create-genome-annotations.html)).
 
 If a tab or control is missing/greyed out in CONTENTO, it's almost always one of the above.
 

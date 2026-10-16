@@ -279,9 +279,9 @@ div.csl-indent {
 <li><strong>assays</strong>: must contain an assay named <code>expr_matrix</code>, which provides the expression values used by CONTENTO visualizations and downstream analyses.</li>
 <li><strong>rowData</strong>: one row per gene, with DE statistics for each contrast stored as columns named <code>&lt;name&gt;__&lt;contrast_name&gt;</code> (double underscore separator, e.g.&nbsp;<code>log2FC__VirusTvsF_NoBac</code>, <code>padj__VirusTvsF_NoBac</code>). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: <code>log2FC</code>, <code>stat</code> and <code>padj</code> (required for every contrast), and <code>log2FC_shrunk</code> (optional). If your tool uses different names (e.g.&nbsp;DESeq2’s <code>log2FoldChange</code>, edgeR’s <code>logFC</code>), rename the columns to this vocabulary before building the SE (see <a href="#rename-columns">Rename Columns for CONTENTO</a>). Any other columns you include (e.g.&nbsp;<code>baseMean</code>, <code>lfcSE</code>) are carried through but not used by CONTENTO.</li>
 <li><strong>colData</strong>: sample-level metadata (experimental factors used for grouping/coloring in plots).</li>
-<li><strong>metadata(se)</strong>: a list with, at minimum, <code>contrasts</code> (a character vector of unique contrast names matching the <code>__&lt;contrast_name&gt;</code> suffixes described above). Optional fields <code>organism</code> and <code>annotation</code> unlock MSigDB-based<span class="citation" data-cites="liberzon2015"><sup><a href="#ref-liberzon2015" role="doc-biblioref">12</a></sup></span> GSEA<span class="citation" data-cites="subramanian2005"><sup><a href="#ref-subramanian2005" role="doc-biblioref">13</a></sup></span> and annotation loading, respectively (see the <a href="create-genome-annotations.html">annotation tutorial</a> for details). Two further optional fields fine-tune the CONTENTO experience:
+<li><strong>metadata(se)</strong>: a list with, at minimum, <code>contrasts</code> (a character vector of unique contrast names matching the <code>__&lt;contrast_name&gt;</code> suffixes described above). Optional fields <code>organism</code> and <code>annotation</code> unlock MSigDB-based<span class="citation" data-cites="liberzon2011 liberzon2015"><sup><a href="#ref-liberzon2011" role="doc-biblioref">12</a>,<a href="#ref-liberzon2015" role="doc-biblioref">13</a></sup></span> GSEA<span class="citation" data-cites="subramanian2005"><sup><a href="#ref-subramanian2005" role="doc-biblioref">14</a></sup></span> and annotation loading, respectively (see the <a href="create-genome-annotations.html">annotation tutorial</a> for details). Two further optional fields fine-tune the CONTENTO experience:
 <ul>
-<li><code>db_species</code>: character string, <code>"HS"</code> or <code>"MM"</code>. By default, CONTENTO picks the MSigDB source database automatically: <code>"MM"</code> (mouse-curated) only when <code>organism</code> is exactly <code>"Mus musculus"</code>, and <code>"HS"</code> (human-curated) for every other <code>msigdbr</code>-supported<span class="citation" data-cites="msigdbr"><sup><a href="#ref-msigdbr" role="doc-biblioref">14</a></sup></span> organism. Set <code>db_species</code> to override that default — e.g.&nbsp;to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that <code>organism</code> must still be a species <code>msigdbr</code> recognizes for ortholog mapping (see the <a href="https://igordot.github.io/msigdbr/reference/msigdbr_species.html">list of supported species</a>); <code>db_species</code> does not extend MSigDB support to organisms <code>msigdbr</code> doesn’t already support.</li>
+<li><code>db_species</code>: character string, <code>"HS"</code> or <code>"MM"</code>. By default, CONTENTO picks the MSigDB source database automatically: <code>"MM"</code> (mouse-curated<span class="citation" data-cites="castanza2023"><sup><a href="#ref-castanza2023" role="doc-biblioref">15</a></sup></span>) only when <code>organism</code> is exactly <code>"Mus musculus"</code>, and <code>"HS"</code> (human-curated) for every other <code>msigdbr</code>-supported<span class="citation" data-cites="msigdbr"><sup><a href="#ref-msigdbr" role="doc-biblioref">16</a></sup></span> organism. Set <code>db_species</code> to override that default — e.g.&nbsp;to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that <code>organism</code> must still be a species <code>msigdbr</code> recognizes for ortholog mapping (see the <a href="https://igordot.github.io/msigdbr/reference/msigdbr_species.html">list of supported species</a>); <code>db_species</code> does not extend MSigDB support to organisms <code>msigdbr</code> doesn’t already support.</li>
 <li><code>dataset_name</code>: character string used as the base filename prefix for every file downloaded from CONTENTO (tables, plots, etc.). If omitted, CONTENTO falls back to the uploaded SE filename, or <code>"CONTENTO"</code> if that isn’t available either.</li>
 </ul></li>
 </ul>
@@ -302,7 +302,7 @@ div.csl-indent {
 <td>rowData contrast columns</td>
 </tr>
 <tr class="even">
-<td>Expression Plot / Heatmap / GESECA</td>
+<td>Expression Plot / Heatmap / GESECA<span class="citation" data-cites="korotkevich2016"><sup><a href="#ref-korotkevich2016" role="doc-biblioref">17</a></sup></span></td>
 <td><code>expr_matrix</code> assay</td>
 </tr>
 <tr class="odd">
@@ -395,7 +395,7 @@ div.csl-indent {
 <p>Both examples use the two helper functions below. Run this section once before either example.</p>
 <section id="run-contrast-analysis" class="level2">
 <h2 class="anchored" data-anchor-id="run-contrast-analysis"><code>run_contrast_analysis()</code></h2>
-<p>This function runs the DESeq2 <code>results()</code> and <code>lfcShrink()</code> functions (with the ashr shrinkage estimator<span class="citation" data-cites="stephens2016"><sup><a href="#ref-stephens2016" role="doc-biblioref">15</a></sup></span>) for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.</p>
+<p>This function runs the DESeq2 <code>results()</code> and <code>lfcShrink()</code> functions (with the ashr shrinkage estimator<span class="citation" data-cites="stephens2016"><sup><a href="#ref-stephens2016" role="doc-biblioref">18</a></sup></span>) for a given contrast or coefficient, returning a data frame with the results. It handles both types of contrasts (main effects and interaction terms) and adds the contrast name to the results for easier identification.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>run_contrast_analysis <span class="ot">&lt;-</span> <span class="cf">function</span>(dds, contrast_name, <span class="at">contrast =</span> <span class="cn">NULL</span>, <span class="at">coef =</span> <span class="cn">NULL</span>) {</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(contrast)) {</span>
@@ -584,7 +584,7 @@ div.csl-indent {
 </div>
 <section id="principal-component-analysis-pca" class="level3">
 <h3 class="anchored" data-anchor-id="principal-component-analysis-pca">Principal Component Analysis (PCA)</h3>
-<p>PCA calculated based on the VST normalized<span class="citation" data-cites="tibshirani1988 huber2003 Anders2010"><sup><a href="#ref-tibshirani1988" role="doc-biblioref">16</a>–<a href="#ref-Anders2010" role="doc-biblioref">18</a></sup></span> data using ntop=500 top features by variance.</p>
+<p>PCA calculated based on the VST normalized<span class="citation" data-cites="tibshirani1988 huber2003 Anders2010"><sup><a href="#ref-tibshirani1988" role="doc-biblioref">19</a>–<a href="#ref-Anders2010" role="doc-biblioref">21</a></sup></span> data using ntop=500 top features by variance.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>vsd <span class="ot">&lt;-</span> <span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>pcaData <span class="ot">&lt;-</span> <span class="fu">plotPCA</span>(vsd, <span class="at">intgroup =</span> <span class="fu">c</span>(<span class="st">"culture"</span>, <span class="st">"exp"</span>), <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
@@ -729,7 +729,7 @@ IMPORTANT:
 </div>
 <section id="principal-component-analysis-pca-1" class="level3">
 <h3 class="anchored" data-anchor-id="principal-component-analysis-pca-1">Principal Component Analysis (PCA)</h3>
-<p>PCA calculated based on the VST normalized<span class="citation" data-cites="tibshirani1988 huber2003 Anders2010"><sup><a href="#ref-tibshirani1988" role="doc-biblioref">16</a>–<a href="#ref-Anders2010" role="doc-biblioref">18</a></sup></span> data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data.</p>
+<p>PCA calculated based on the VST normalized<span class="citation" data-cites="tibshirani1988 huber2003 Anders2010"><sup><a href="#ref-tibshirani1988" role="doc-biblioref">19</a>–<a href="#ref-Anders2010" role="doc-biblioref">21</a></sup></span> data using ntop=500 top features by variance. Samples from different experiments were interspersed rather than clustered, suggesting that the experimental batch effect was not a major source of variation in the data.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>vsd <span class="ot">&lt;-</span> <span class="fu">vst</span>(dds, <span class="at">blind =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>pcaData <span class="ot">&lt;-</span> <span class="fu">plotPCA</span>(vsd, <span class="at">intgroup =</span> <span class="fu">c</span>(<span class="st">"bacteria"</span>, <span class="st">"virus"</span>, <span class="st">"exp"</span>), <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
@@ -767,8 +767,8 @@ IMPORTANT:
 <section id="variance-partitioning-analysis" class="level3">
 <h3 class="anchored" data-anchor-id="variance-partitioning-analysis">Variance Partitioning Analysis</h3>
 <p>In this more complex design we are also interested in quantifying the contribution of each factor (virus, bacteria, and experiment) to the overall variance in gene expression. This is particularly important for understanding how much of the observed variability can be attributed to biological factors versus technical or experimental factors. CONTENTO allows users to visualize the variance partitioning results for each gene, providing insights into the relative importance of each factor in shaping gene expression patterns.</p>
-<p>Gene-level expression values were modeled using precision weights estimated with the <code>limma::voom()</code> transformation, which accounts for the mean–variance relationship in RNA-seq data. Lowly expressed genes can be filtered using <code>edgeR::filterByExpr()</code>, which removes genes with insufficient counts for reliable statistical analysis and improves the stability of downstream variance estimates.</p>
-<p>We use the <a href="https://bioconductor.org/packages/release/bioc/html/variancePartition.html">variancePartition</a><span class="citation" data-cites="hoffman2016 hoffman2017"><sup><a href="#ref-hoffman2016" role="doc-biblioref">19</a>,<a href="#ref-hoffman2017" role="doc-biblioref">20</a></sup></span> package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.</p>
+<p>Gene-level expression values were modeled using precision weights estimated with the <code>limma::voom()</code> transformation<span class="citation" data-cites="law2014"><sup><a href="#ref-law2014" role="doc-biblioref">11</a></sup></span>, which accounts for the mean–variance relationship in RNA-seq data, after TMM normalization of library sizes with <code>edgeR::normLibSizes()</code><span class="citation" data-cites="robinson2010"><sup><a href="#ref-robinson2010" role="doc-biblioref">22</a></sup></span>. Lowly expressed genes can be filtered using <code>edgeR::filterByExpr()</code><span class="citation" data-cites="chen2016"><sup><a href="#ref-chen2016" role="doc-biblioref">23</a></sup></span>, which removes genes with insufficient counts for reliable statistical analysis and improves the stability of downstream variance estimates.</p>
+<p>We use the <a href="https://bioconductor.org/packages/release/bioc/html/variancePartition.html">variancePartition</a><span class="citation" data-cites="hoffman2016 hoffman2017"><sup><a href="#ref-hoffman2016" role="doc-biblioref">24</a>,<a href="#ref-hoffman2017" role="doc-biblioref">25</a></sup></span> package, which quantifies the proportion of variance in gene expression attributable to each factor in a linear mixed model.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>run_varPart_analysis <span class="ot">&lt;-</span> <span class="cf">function</span>(txi, meta, formula_vp, formula_fixed, <span class="at">filter_low_expr =</span> <span class="cn">TRUE</span>) {</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Align meta to sample order</span></span>
@@ -934,7 +934,7 @@ IMPORTANT:
 </section>
 <section id="step-6.-create-summarizedexperiment-se-object" class="level2">
 <h2 class="anchored" data-anchor-id="step-6.-create-summarizedexperiment-se-object">Step 6. Create SummarizedExperiment (SE) Object</h2>
-<p>We use <a href="#convert-to-se"><code>convert_to_SE()</code></a> to build the final SE object. Setting <code>organism = "Homo sapiens"</code> enables CONTENTO’s MSigDB gene set enrichment, which works for any species supported by <code>msigdbr</code>. As in <a href="#example1-step6">Example 1</a>, the <code>annotation</code> value must match the name of the annotation file without <code>.rds</code> (here the built-in <code>Homo_sapiens.GRCh38.113_annot.rds</code>, built from Ensembl release 113<span class="citation" data-cites="dyer2024"><sup><a href="#ref-dyer2024" role="doc-biblioref">21</a></sup></span>); for human data it adds gene names to the Ensembl IDs. We also pass the variance partitioning results from <a href="#example2-step3">Step 3</a> with <code>varpart</code>: they are added as columns in <code>rowData</code> and shown in CONTENTO’s Variance Decomposition tab.</p>
+<p>We use <a href="#convert-to-se"><code>convert_to_SE()</code></a> to build the final SE object. Setting <code>organism = "Homo sapiens"</code> enables CONTENTO’s MSigDB gene set enrichment, which works for any species supported by <code>msigdbr</code>. As in <a href="#example1-step6">Example 1</a>, the <code>annotation</code> value must match the name of the annotation file without <code>.rds</code> (here the built-in <code>Homo_sapiens.GRCh38.113_annot.rds</code>, built from Ensembl release 113<span class="citation" data-cites="dyer2024"><sup><a href="#ref-dyer2024" role="doc-biblioref">26</a></sup></span>); for human data it adds gene names to the Ensembl IDs. We also pass the variance partitioning results from <a href="#example2-step3">Step 3</a> with <code>varpart</code>: they are added as columns in <code>rowData</code> and shown in CONTENTO’s Variance Decomposition tab.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>SE <span class="ot">=</span> <span class="fu">convert_to_SE</span>(</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dds =</span> dds,</span>
@@ -966,11 +966,13 @@ Loading variance partition data...
 <li><input type="checkbox"><code>assays(se)</code> includes <code>expr_matrix</code> (required for expression/heatmap/GESECA features).</li>
 <li><input type="checkbox"><code>rowData(se)</code> has <code>&lt;stat&gt;__&lt;contrast_name&gt;</code> columns for every entry in <code>metadata(se)$contrasts</code>, with matching suffixes. <code>log2FC__&lt;contrast&gt;</code>, <code>stat__&lt;contrast&gt;</code>, and <code>padj__&lt;contrast&gt;</code> columns (required); <code>log2FC_shrunk__&lt;contrast&gt;</code> is optional.</li>
 <li><input type="checkbox"><code>metadata(se)$contrasts</code> is a character vector, not a factor or list.</li>
+<li><input type="checkbox">Contrast names do not contain <code>__</code> (double underscore), which CONTENTO uses as the separator in rowData column names.</li>
 <li><input type="checkbox"><code>metadata(se)$organism</code>, if set, exactly matches a valid <code>msigdbr</code> species name (or is <code>"Bacteria"</code> for neighborhood analysis).</li>
 <li><input type="checkbox"><code>metadata(se)$db_species</code>, if set, is exactly <code>"HS"</code> or <code>"MM"</code> — overrides which MSigDB source database (human- or mouse-curated) is queried, but <code>organism</code> must still be a valid <code>msigdbr</code> species.</li>
-<li><input type="checkbox"><code>metadata(se)$annotation</code>, if set, matches the filename (without <code>.rds</code>) of a built-in or uploaded annotation file (or of a file in the folder set by <code>CONTENTO_ANNOTATION_DIR</code>; see <a href="./index.html#running-contento">Running CONTENTO</a>).</li>
+<li><input type="checkbox"><code>metadata(se)$annotation</code>, if set, matches the filename (without <code>.rds</code>) of a built-in annotation or of a file in the folder set by <code>CONTENTO_ANNOTATION_DIR</code> (see <a href="./index.html#running-contento">Running CONTENTO</a>), so CONTENTO can load it automatically. An annotation file uploaded in the app does not need to match.</li>
 <li><input type="checkbox"><code>metadata(se)$dataset_name</code>, if set, is a short descriptive string — it becomes the prefix for every file CONTENTO lets users download.</li>
 <li><input type="checkbox"><code>rownames(se)</code> are consistent gene identifiers matching your annotation’s <code>Geneid</code> column, if used.</li>
+<li><input type="checkbox">For MSigDB enrichment, <code>rownames(se)</code> are Ensembl gene IDs (<code>ENSG...</code>, <code>ENSMUSG...</code>, etc.), or your annotation file has a column of Ensembl IDs (see the <a href="create-genome-annotations.html">annotation tutorial</a>).</li>
 </ul>
 <p>If a tab or control is missing/greyed out in CONTENTO, it’s almost always one of the above.</p>
 </section>
@@ -981,19 +983,19 @@ Loading variance partition data...
 <div class="csl-left-margin">1. </div><div class="csl-right-inline">Morgan, M., Obenchain, V., Hester, J. &amp; Pagès, H. <em>SummarizedExperiment: A Container (S4 Class) for Matrix-Like Assays</em>. (2026). doi:<a href="https://doi.org/10.18129/B9.bioc.SummarizedExperiment">10.18129/B9.bioc.SummarizedExperiment</a>.</div>
 </div>
 <div id="ref-Love2014" class="csl-entry" role="listitem">
-<div class="csl-left-margin">2. </div><div class="csl-right-inline">Love, M. I., Huber, W. &amp; Anders, S. <a href="https://doi.org/10.1186/s13059-014-0550-8">Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2</a>. <em>Genome Biology</em> <strong>15</strong>, (2014).</div>
+<div class="csl-left-margin">2. </div><div class="csl-right-inline">Love, M. I., Huber, W. &amp; Anders, S. <a href="https://doi.org/10.1186/s13059-014-0550-8">Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2</a>. <em>Genome Biology</em> <strong>15</strong>, 550 (2014).</div>
 </div>
 <div id="ref-Liao2014" class="csl-entry" role="listitem">
-<div class="csl-left-margin">3. </div><div class="csl-right-inline">Liao, Y., Smyth, G. K. &amp; Shi, W. <a href="https://doi.org/10.1093/bioinformatics/btt656">featureCounts: an efficient general purpose program for assigning sequence reads to genomic features</a>. <em>Bioinformatics</em> <strong>30</strong>, 923–930 (2013).</div>
+<div class="csl-left-margin">3. </div><div class="csl-right-inline">Liao, Y., Smyth, G. K. &amp; Shi, W. <a href="https://doi.org/10.1093/bioinformatics/btt656">featureCounts: an efficient general purpose program for assigning sequence reads to genomic features</a>. <em>Bioinformatics</em> <strong>30</strong>, 923–930 (2014).</div>
 </div>
 <div id="ref-li2011" class="csl-entry" role="listitem">
-<div class="csl-left-margin">4. </div><div class="csl-right-inline">Li, B. &amp; Dewey, C. N. <a href="https://doi.org/10.1186/1471-2105-12-323">RSEM: accurate transcript quantification from RNA-Seq data with or without a reference genome</a>. <em>BMC Bioinformatics</em> <strong>12</strong>, (2011).</div>
+<div class="csl-left-margin">4. </div><div class="csl-right-inline">Li, B. &amp; Dewey, C. N. <a href="https://doi.org/10.1186/1471-2105-12-323">RSEM: accurate transcript quantification from RNA-Seq data with or without a reference genome</a>. <em>BMC Bioinformatics</em> <strong>12</strong>, 323 (2011).</div>
 </div>
 <div id="ref-tximport" class="csl-entry" role="listitem">
 <div class="csl-left-margin">5. </div><div class="csl-right-inline">Soneson, C., Love, M. I. &amp; Robinson, M. D. <a href="https://doi.org/10.12688/f1000research.7563.1">Differential analyses for RNA-seq: Transcript-level estimates improve gene-level inferences</a>. <em>F1000Research</em> <strong>4</strong>, 1521 (2015).</div>
 </div>
 <div id="ref-dobin2012" class="csl-entry" role="listitem">
-<div class="csl-left-margin">6. </div><div class="csl-right-inline">Dobin, A. <em>et al.</em> <a href="https://doi.org/10.1093/bioinformatics/bts635">STAR: ultrafast universal RNA-seq aligner</a>. <em>Bioinformatics</em> <strong>29</strong>, 15–21 (2012).</div>
+<div class="csl-left-margin">6. </div><div class="csl-right-inline">Dobin, A. <em>et al.</em> <a href="https://doi.org/10.1093/bioinformatics/bts635">STAR: ultrafast universal RNA-seq aligner</a>. <em>Bioinformatics</em> <strong>29</strong>, 15–21 (2013).</div>
 </div>
 <div id="ref-Kim2019" class="csl-entry" role="listitem">
 <div class="csl-left-margin">7. </div><div class="csl-right-inline">Kim, D., Paggi, J. M., Park, C., Bennett, C. &amp; Salzberg, S. L. <a href="https://doi.org/10.1038/s41587-019-0201-4">Graph-based genome alignment and genotyping with HISAT2 and HISAT-genotype</a>. <em>Nature Biotechnology</em> <strong>37</strong>, 907–915 (2019).</div>
@@ -1002,43 +1004,58 @@ Loading variance partition data...
 <div class="csl-left-margin">8. </div><div class="csl-right-inline">Patro, R., Duggal, G., Love, M. I., Irizarry, R. A. &amp; Kingsford, C. <a href="https://doi.org/10.1038/nmeth.4197">Salmon provides fast and bias-aware quantification of transcript expression</a>. <em>Nature Methods</em> <strong>14</strong>, 417–419 (2017).</div>
 </div>
 <div id="ref-robinson2009" class="csl-entry" role="listitem">
-<div class="csl-left-margin">9. </div><div class="csl-right-inline">Robinson, M. D., McCarthy, D. J. &amp; Smyth, G. K. <a href="https://doi.org/10.1093/bioinformatics/btp616">edgeR: a Bioconductor package for differential expression analysis of digital gene expression data</a>. <em>Bioinformatics</em> <strong>26</strong>, 139–140 (2009).</div>
+<div class="csl-left-margin">9. </div><div class="csl-right-inline">Robinson, M. D., McCarthy, D. J. &amp; Smyth, G. K. <a href="https://doi.org/10.1093/bioinformatics/btp616">edgeR: a Bioconductor package for differential expression analysis of digital gene expression data</a>. <em>Bioinformatics</em> <strong>26</strong>, 139–140 (2010).</div>
 </div>
 <div id="ref-ritchie2015" class="csl-entry" role="listitem">
-<div class="csl-left-margin">10. </div><div class="csl-right-inline">Ritchie, M. E. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkv007">limma powers differential expression analyses for RNA-sequencing and microarray studies</a>. <em>Nucleic Acids Research</em> <strong>43</strong>, e47–e47 (2015).</div>
+<div class="csl-left-margin">10. </div><div class="csl-right-inline">Ritchie, M. E. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkv007"><span>limma</span> powers differential expression analyses for RNA-sequencing and microarray studies</a>. <em>Nucleic Acids Research</em> <strong>43</strong>, e47–e47 (2015).</div>
 </div>
 <div id="ref-law2014" class="csl-entry" role="listitem">
-<div class="csl-left-margin">11. </div><div class="csl-right-inline">Law, C. W., Chen, Y., Shi, W. &amp; Smyth, G. K. <a href="https://doi.org/10.1186/gb-2014-15-2-r29">Voom: Precision weights unlock linear model analysis tools for RNA-seq read counts</a>. <em>Genome Biology</em> <strong>15</strong>, R29 (2014).</div>
+<div class="csl-left-margin">11. </div><div class="csl-right-inline">Law, C. W., Chen, Y., Shi, W. &amp; Smyth, G. K. <a href="https://doi.org/10.1186/gb-2014-15-2-r29"><span class="nocase">voom</span>: Precision weights unlock linear model analysis tools for RNA-seq read counts</a>. <em>Genome Biology</em> <strong>15</strong>, R29 (2014).</div>
+</div>
+<div id="ref-liberzon2011" class="csl-entry" role="listitem">
+<div class="csl-left-margin">12. </div><div class="csl-right-inline">Liberzon, A. <em>et al.</em> <a href="https://doi.org/10.1093/bioinformatics/btr260">Molecular signatures database (<span>MSigDB</span>) 3.0</a>. <em>Bioinformatics</em> <strong>27</strong>, 1739–1740 (2011).</div>
 </div>
 <div id="ref-liberzon2015" class="csl-entry" role="listitem">
-<div class="csl-left-margin">12. </div><div class="csl-right-inline">Liberzon, A. <em>et al.</em> <a href="https://doi.org/10.1016/j.cels.2015.12.004">The Molecular Signatures Database Hallmark Gene Set Collection</a>. <em>Cell Systems</em> <strong>1</strong>, 417–425 (2015).</div>
+<div class="csl-left-margin">13. </div><div class="csl-right-inline">Liberzon, A. <em>et al.</em> <a href="https://doi.org/10.1016/j.cels.2015.12.004">The Molecular Signatures Database Hallmark Gene Set Collection</a>. <em>Cell Systems</em> <strong>1</strong>, 417–425 (2015).</div>
 </div>
 <div id="ref-subramanian2005" class="csl-entry" role="listitem">
-<div class="csl-left-margin">13. </div><div class="csl-right-inline">Subramanian, A. <em>et al.</em> <a href="https://doi.org/10.1073/pnas.0506580102">Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles</a>. <em>Proceedings of the National Academy of Sciences</em> <strong>102</strong>, 15545–15550 (2005).</div>
+<div class="csl-left-margin">14. </div><div class="csl-right-inline">Subramanian, A. <em>et al.</em> <a href="https://doi.org/10.1073/pnas.0506580102">Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles</a>. <em>Proceedings of the National Academy of Sciences</em> <strong>102</strong>, 15545–15550 (2005).</div>
+</div>
+<div id="ref-castanza2023" class="csl-entry" role="listitem">
+<div class="csl-left-margin">15. </div><div class="csl-right-inline">Castanza, A. S. <em>et al.</em> <a href="https://doi.org/10.1038/s41592-023-02014-7">Extending support for mouse data in the molecular signatures database (<span>MSigDB</span>)</a>. <em>Nature Methods</em> <strong>20</strong>, 1619–1620 (2023).</div>
 </div>
 <div id="ref-msigdbr" class="csl-entry" role="listitem">
-<div class="csl-left-margin">14. </div><div class="csl-right-inline">Dolgalev, I. <em>Msigdbr: MSigDB Gene Sets for Multiple Organisms in a Tidy Data Format</em>. (2025). doi:<a href="https://doi.org/10.32614/CRAN.package.msigdbr">10.32614/CRAN.package.msigdbr</a>.</div>
+<div class="csl-left-margin">16. </div><div class="csl-right-inline">Dolgalev, I. <em><span class="nocase">msigdbr</span>: MSigDB Gene Sets for Multiple Organisms in a Tidy Data Format</em>. (2025). doi:<a href="https://doi.org/10.32614/CRAN.package.msigdbr">10.32614/CRAN.package.msigdbr</a>.</div>
+</div>
+<div id="ref-korotkevich2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">17. </div><div class="csl-right-inline">Korotkevich, G. <em>et al.</em> Fast gene set enrichment analysis. (2016) doi:<a href="https://doi.org/10.1101/060012">10.1101/060012</a>.</div>
 </div>
 <div id="ref-stephens2016" class="csl-entry" role="listitem">
-<div class="csl-left-margin">15. </div><div class="csl-right-inline">Stephens, M. False discovery rates: a new deal. <em>Biostatistics</em> kxw041 (2016) doi:<a href="https://doi.org/10.1093/biostatistics/kxw041">10.1093/biostatistics/kxw041</a>.</div>
+<div class="csl-left-margin">18. </div><div class="csl-right-inline">Stephens, M. <a href="https://doi.org/10.1093/biostatistics/kxw041">False discovery rates: a new deal</a>. <em>Biostatistics</em> <strong>18</strong>, 275–294 (2017).</div>
 </div>
 <div id="ref-tibshirani1988" class="csl-entry" role="listitem">
-<div class="csl-left-margin">16. </div><div class="csl-right-inline">Tibshirani, R. <a href="https://doi.org/10.1080/01621459.1988.10478610">Estimating Transformations for Regression via Additivity and Variance Stabilization</a>. <em>Journal of the American Statistical Association</em> <strong>83</strong>, 394–405 (1988).</div>
+<div class="csl-left-margin">19. </div><div class="csl-right-inline">Tibshirani, R. <a href="https://doi.org/10.1080/01621459.1988.10478610">Estimating Transformations for Regression via Additivity and Variance Stabilization</a>. <em>Journal of the American Statistical Association</em> <strong>83</strong>, 394–405 (1988).</div>
 </div>
 <div id="ref-huber2003" class="csl-entry" role="listitem">
-<div class="csl-left-margin">17. </div><div class="csl-right-inline">Huber, W., Heydebreck, A. von, Sueltmann, H., Poustka, A. &amp; Vingron, M. <a href="https://doi.org/10.2202/1544-6115.1008">Parameter estimation for the calibration and variance stabilization of microarray data</a>. <em>Statistical Applications in Genetics and Molecular Biology</em> <strong>2</strong>, (2003).</div>
+<div class="csl-left-margin">20. </div><div class="csl-right-inline">Huber, W., Heydebreck, A. von, Sueltmann, H., Poustka, A. &amp; Vingron, M. <a href="https://doi.org/10.2202/1544-6115.1008">Parameter estimation for the calibration and variance stabilization of microarray data</a>. <em>Statistical Applications in Genetics and Molecular Biology</em> <strong>2</strong>, Article 3 (2003).</div>
 </div>
 <div id="ref-Anders2010" class="csl-entry" role="listitem">
-<div class="csl-left-margin">18. </div><div class="csl-right-inline">Anders, S. &amp; Huber, W. <a href="https://doi.org/10.1186/gb-2010-11-10-r106">Differential expression analysis for sequence count data</a>. <em>Genome Biology</em> <strong>11</strong>, (2010).</div>
+<div class="csl-left-margin">21. </div><div class="csl-right-inline">Anders, S. &amp; Huber, W. <a href="https://doi.org/10.1186/gb-2010-11-10-r106">Differential expression analysis for sequence count data</a>. <em>Genome Biology</em> <strong>11</strong>, R106 (2010).</div>
+</div>
+<div id="ref-robinson2010" class="csl-entry" role="listitem">
+<div class="csl-left-margin">22. </div><div class="csl-right-inline">Robinson, M. D. &amp; Oshlack, A. <a href="https://doi.org/10.1186/gb-2010-11-3-r25">A scaling normalization method for differential expression analysis of <span class="nocase">RNA-seq</span> data</a>. <em>Genome Biology</em> <strong>11</strong>, R25 (2010).</div>
+</div>
+<div id="ref-chen2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">23. </div><div class="csl-right-inline">Chen, Y., Lun, A. T. L. &amp; Smyth, G. K. <a href="https://doi.org/10.12688/f1000research.8987.2">From reads to genes to pathways: Differential expression analysis of <span>RNA-Seq</span> experiments using <span>Rsubread</span> and the <span class="nocase">edgeR</span> quasi-likelihood pipeline</a>. <em>F1000Research</em> <strong>5</strong>, 1438 (2016).</div>
 </div>
 <div id="ref-hoffman2016" class="csl-entry" role="listitem">
-<div class="csl-left-margin">19. </div><div class="csl-right-inline">Hoffman, G. E. &amp; Schadt, E. E. <a href="https://doi.org/10.1186/s12859-016-1323-z">variancePartition: Interpreting drivers of variation in complex gene expression studies</a>. <em>BMC Bioinformatics</em> <strong>17</strong>, 483 (2016).</div>
+<div class="csl-left-margin">24. </div><div class="csl-right-inline">Hoffman, G. E. &amp; Schadt, E. E. <a href="https://doi.org/10.1186/s12859-016-1323-z">variancePartition: Interpreting drivers of variation in complex gene expression studies</a>. <em>BMC Bioinformatics</em> <strong>17</strong>, 483 (2016).</div>
 </div>
 <div id="ref-hoffman2017" class="csl-entry" role="listitem">
-<div class="csl-left-margin">20. </div><div class="csl-right-inline">Hoffman, G. E. <em>variancePartition</em>. (2017). doi:<a href="https://doi.org/10.18129/B9.BIOC.VARIANCEPARTITION">10.18129/B9.BIOC.VARIANCEPARTITION</a>.</div>
+<div class="csl-left-margin">25. </div><div class="csl-right-inline">Hoffman, G. E. <em>variancePartition</em>. (2017). doi:<a href="https://doi.org/10.18129/B9.BIOC.VARIANCEPARTITION">10.18129/B9.BIOC.VARIANCEPARTITION</a>.</div>
 </div>
 <div id="ref-dyer2024" class="csl-entry" role="listitem">
-<div class="csl-left-margin">21. </div><div class="csl-right-inline">Dyer, S. C. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkae1071">Ensembl 2025</a>. <em>Nucleic Acids Research</em> <strong>53</strong>, D948–D957 (2025).</div>
+<div class="csl-left-margin">26. </div><div class="csl-right-inline">Dyer, S. C. <em>et al.</em> <a href="https://doi.org/10.1093/nar/gkae1071">Ensembl 2025</a>. <em>Nucleic Acids Research</em> <strong>53</strong>, D948–D957 (2025).</div>
 </div>
 </div>
 

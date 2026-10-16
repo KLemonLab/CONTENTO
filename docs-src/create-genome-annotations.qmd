@@ -28,9 +28,9 @@ CONTENTO can perform functional enrichment analysis using gene sets from two sou
 1.  **Annotation-Based Gene Sets:** Available for any organism through a user-provided annotation data frame (`.rds` format). Required elements:
 
     - A `Geneid` column matching the `rownames()` of the SE object, with **exactly one row per `Geneid`**. CONTENTO rejects annotation files with duplicated `Geneid` values.
-    - One or more functional annotation columns containing gene set assignments (e.g. COG categories [@galperin2024], KEGG pathways [@Kanehisa2000; @Kanehisa2023], GO terms, regulons, custom categories). Multiple values per gene **must** be collapsed into a single string separated by `!!!` (e.g., `"GO:0006415!!!GO:0016149"`). Do not use any other separator (`,`, `;`, `|`, ...): CONTENTO only splits on `!!!`, so `"GO:0006415,GO:0016149"` would be treated as one single category. CONTENTO counts the gene as belonging to each `!!!`-separated category for functional enrichment analysis. See [Multiple annotations per gene](#multiple-annotations-per-gene) for how to build these strings.
+    - One or more functional annotation columns containing gene set assignments (e.g. COG categories [@galperin2024], KEGG pathways [@Kanehisa2000; @Kanehisa2023], GO terms [@ashburner2000; @go2023], regulons, custom categories). Multiple values per gene **must** be collapsed into a single string separated by `!!!` (e.g., `"GO:0006415!!!GO:0016149"`). Do not use any other separator (`,`, `;`, `|`, ...): CONTENTO only splits on `!!!`, so `"GO:0006415,GO:0016149"` would be treated as one single category. CONTENTO counts the gene as belonging to each `!!!`-separated category for functional enrichment analysis. See [Multiple annotations per gene](#multiple-annotations-per-gene) for how to build these strings.
 
-2.  [**MSigDB**](https://www.gsea-msigdb.org/gsea/msigdb) **Gene Sets** [@liberzon2015]**:** Available only for human, mouse, and other species supported by the [msigdbr](https://igordot.github.io/msigdbr/reference/msigdbr_species.html) [@msigdbr] R package. It requires:
+2.  [**MSigDB**](https://www.gsea-msigdb.org/gsea/msigdb) **Gene Sets** [@liberzon2011; @liberzon2015]**:** Available only for human, mouse, and other species supported by the [msigdbr](https://igordot.github.io/msigdbr/reference/msigdbr_species.html) [@msigdbr] R package. It requires:
 
     - `metadata(se)$organism` must exactly match a valid `msigdbr` species name (e.g. `Homo sapiens`, `Mus musculus`, etc.).
     - Gene identifiers must be Ensembl gene IDs (`ENSG...`, `ENSMUSG...`, etc.), either: directly in `rownames(se)`, or in a column of the annotation file containing Ensembl IDs. CONTENTO automatically detects Ensembl identifier columns when present.
@@ -100,7 +100,7 @@ wget -P "$FILES_DIR" \
 
 ## 1.2 NCBI/RefSeq-Based Organisms (Bacteria and Other Non-Ensembl Genomes)
 
-For organisms that are not maintained in Ensembl, the preferred annotation source is typically the NCBI RefSeq assembly. These annotations are distributed as GFF3 and GenBank (`.gbff`) files and contain gene coordinates, locus tags, product descriptions, and other metadata that can be incorporated into CONTENTO annotation files.
+For organisms that are not maintained in Ensembl, the preferred annotation source is typically the NCBI RefSeq [@oleary2016] assembly. These annotations are distributed as GFF3 and GenBank (`.gbff`) files and contain gene coordinates, locus tags, product descriptions, and other metadata that can be incorporated into CONTENTO annotation files.
 
 ### Option A: Download from the NCBI Assembly Website
 
@@ -283,7 +283,7 @@ You can merge annotations from any source that contains gene identifiers (Gene I
 ::: callout-tip
 ### Found a Useful Annotation Source?
 
-Open an [issue on GitHub](https://github.com/KLemonLab/RNASeqApp/issues) to share it with the community! Include the name, URL, and how you used it.
+Open an [issue on GitHub](https://github.com/KLemonLab/CONTENTO/issues) to share it with the community! Include the name, URL, and how you used it.
 :::
 
 ### Requirements and Format
@@ -380,7 +380,7 @@ saveRDS(annotations_merged, file.path(GENOMES_DIR, paste0(GENOME_NAME, "_annot_R
 
 ## 3.3 Example: Enhance Annotations with Anvi'o
 
-**Anvi'o** is a comprehensive platform that integrates multiple annotation sources and can be used to generate a rich annotation file for bacterial genomes. It can be run on any genome in GenBank format and will produce a single annotation file with multiple functional annotations for each gene.
+**Anvi'o** [@eren2020] is a comprehensive platform that integrates multiple annotation sources and can be used to generate a rich annotation file for bacterial genomes. It can be run on any genome in GenBank format and will produce a single annotation file with multiple functional annotations for each gene.
 
 - **HMMs** - Generic protein domain detection, with HMMER [@Eddy2011]
 - **COG24** - Clusters of Orthologous Groups [@galperin2024], searched with DIAMOND [@buchfink2014] (excellent for functional enrichment)

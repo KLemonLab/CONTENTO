@@ -429,20 +429,21 @@ subset_scale_expr_matrix <- function(se_obj, geneids, de_df = NULL) {
 #'
 #' An optional `override` argument allows you to manually specify the db_species
 #' code. If provided as "HS" or "MM", it takes precedence over automatic detection
-#' based on the organism name.
+#' based on the organism name, but only when the organism is a valid msigdbr
+#' species (msigdbr still needs it for ortholog mapping).
 #'
 #' @param organism Character; organism name as stored in metadata(se)$organism,
 #'   e.g. "Homo sapiens", "Mus musculus", "Rattus norvegicus"
 #' @param override Optional character; manually force the db_species value.
 #'   Must be either "HS" or "MM". If supplied and valid, this value is returned
-#'   directly, bypassing organism-based logic.
+#'   instead of the automatic choice, provided the organism is valid.
 #' @return Character "HS", "MM", or NULL
 #' @export
 get_msigdbr_db_species <- function(organism, override = NULL) {
-  if (!is.null(override) && override %in% c("HS", "MM")) return(override)
   if (is.null(organism) || !nzchar(trimws(organism))) return(NULL)
   valid <- tryCatch(msigdbr::msigdbr_species()$species_name, error = function(e) character(0))
   if (!organism %in% valid) return(NULL)
+  if (!is.null(override) && override %in% c("HS", "MM")) return(override)  # only for valid organisms
   if (organism == "Mus musculus") "MM" else "HS"
 }
 

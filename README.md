@@ -4,12 +4,6 @@
 
 > *CONTrast ExploratioN Toolkit for Omics*
 
-## Intro
-
-Modern omics experiments in microbial research rarely conform to simple two-group comparisons. Experimental designs frequently involve multiple variables tested simultaneously (microbial species, growth conditions, treatments, and their interaction effects) generating multiple pairwise contrasts that are difficult to navigate with standard tools. Identifying which genes or pathways are uniquely regulated in one condition, shared across several, or driven by interaction effects requires an analytical framework that scales with experimental complexity. We present CONTENTO (CONTrast ExploratioN Toolkit for Omics), an interactive R Shiny dashboard designed to help researchers explore, visualize, and compare results across any number of contrasts, with the broader vision of supporting multiple omics data types. CONTENTO currently focuses on DESeq2-processed RNAseq data, supporting both microbial and host transcriptomes within a unified interface, making it well-suited for experimental systems ranging from in vitro microbial cultures to complex in vivo and coculture host-microbe models.
-
-CONTENTO integrates per-contrast visualization of differential expression results, interactive volcano plots, expression heatmaps, and gene set enrichment analysis. Gene sets are drawn from MSigDB collections for host transcriptomes, while microbial transcriptomes are supported through COG and KEGG functional annotations, enabling pathway-level enrichment analysis across both organisms in dual-host-microbe experimental systems. CONTENTO’s multi-contrast comparison framework allows users to identify differentially expressed genes and pathway overlap across any combination of conditions, revealing shared and condition-specific transcriptional responses. Single-gene expression visualization across user-defined experimental metadata enables detailed interrogation of individual genes simultaneously across contrasts. CONTENTO provides an accessible and scalable platform for extracting biological insight from experimentally complex omics datasets.
-
 ## Documentation
 
 Full documentation, including tutorials for creating SE and annotation files, is available at: <https://klemonlab.github.io/CONTENTO/>
@@ -17,6 +11,8 @@ Full documentation, including tutorials for creating SE and annotation files, is
 ## Running CONTENTO
 
 CONTENTO can be run in two ways. We recommend the container, since it ships with R, Bioconductor, and every dependency pre-installed, and behaves identically on any operating system.
+
+CONTENTO is built with shiny and uses DESeq2, fgsea, msigdbr, ComplexHeatmap, circlize and ComplexUpset for its analyses and visualizations.
 
 ### *Option 1:* Run the container (recommended)
 
@@ -67,7 +63,7 @@ podman run --rm -p 3838:3838 contento
 
 ### *Option 2:* Run locally within R/RStudio
 
-Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop).
+Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop). This requires R ≥ 4.4 and Bioconductor ≥ 3.19, the versions used in the container.
 
 Clone the CONTENTO repository:
 
@@ -122,16 +118,20 @@ The application will then become available in your web browser.
 
 If you use this application in scientific work, please cite:
 
-Isabel FE, et al. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO>
+F. Escapa, I. & Lemon, K. P. "CONTENTO: CONTrast ExploratioN Toolkit for Omics". <https://github.com/KLemonLab/CONTENTO>
 
 DOI: <https://doi.org/10.5281/zenodo.21629492>
 
 This DOI always resolves to the latest release; the DOI for each specific version is listed on the Zenodo page.
 
+## Funding
+
+This work was supported by the National Institute of General Medical Sciences (NIGMS) of the National Institutes of Health under award number R35GM141806, and by the National Institute of Allergy and Infectious Diseases (NIAID) under award number U19AI157981. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.
+
 ## License
 
-This project is covered under the GPL-3 license.
+This project is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
 
 ## Contact
 
-Issues, bug reports, and feature requests are welcome through the GitHub issue tracker.
+Issues, bug reports, and feature requests are welcome through the [GitHub issue tracker](https://github.com/KLemonLab/CONTENTO/issues).
