@@ -21,7 +21,7 @@ format:
 A CONTENTO-compatible SE has four required components:
 
 - **assays**: must contain an assay named `expr_matrix`, which provides the expression values used by CONTENTO visualizations and downstream analyses.
-- **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF_NB`, `padj__VirusTvsF_NB`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see [Rename Columns for CONTENTO](#rename-columns)). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
+- **rowData**: one row per gene, with DE statistics for each contrast stored as columns named `<name>__<contrast_name>` (double underscore separator, e.g. `log2FC__VirusTvsF_NoBac`, `padj__VirusTvsF_NoBac`). CONTENTO is agnostic to the DE tool used, but requires these exact generic statistic names: `log2FC`, `stat` and `padj` (required for every contrast), and `log2FC_shrunk` (optional). If your tool uses different names (e.g. DESeq2's `log2FoldChange`, edgeR's `logFC`), rename the columns to this vocabulary before building the SE (see [Rename Columns for CONTENTO](#rename-columns)). Any other columns you include (e.g. `baseMean`, `lfcSE`) are carried through but not used by CONTENTO.
 - **colData**: sample-level metadata (experimental factors used for grouping/coloring in plots).
 - **metadata(se)**: a list with, at minimum, `contrasts` (a character vector of unique contrast names matching the `__<contrast_name>` suffixes described above). Optional fields `organism` and `annotation` unlock MSigDB-based GSEA and annotation loading, respectively (see the annotation article for details). Two further optional fields fine-tune the CONTENTO experience:
   - `db_species`: character string, `"HS"` or `"MM"`. By default, CONTENTO picks the MSigDB source database automatically: `"MM"` (mouse-curated) only when `organism` is exactly `"Mus musculus"`, and `"HS"` (human-curated) for every other `msigdbr`-supported organism. Set `db_species` to override that default — e.g. to force human-curated gene sets for a mouse dataset, or mouse-curated gene sets ortholog-mapped onto another species, instead of the automatic choice. Note that `organism` must still be a species `msigdbr` recognizes for ortholog mapping; `db_species` does not extend MSigDB support to organisms `msigdbr` doesn't already support.
@@ -50,12 +50,14 @@ The two examples cover different parts of CONTENTO. Pick the one closest to your
 
 |  | [Example 1](#example-1) | [Example 2](#example-2) |
 |------------------|------------------------------|------------------------------|
-| Dataset | *S. aureus* LAC alone in EBSS vs LAC on HNO | RSV infection × four bacterial conditions in HNO-ALI cultures |
+| Dataset | One bacterial strain alone in its inoculum vs in a host model | Host model × virus infection × four bacterial conditions |
 | Import | featureCounts files → count matrix → `DESeqDataSetFromMatrix()` | RSEM → `tximport` → `DESeqDataSetFromTximport()` |
-| Design | `~ media + exp`, one contrast (`HNO` vs `EBSS`) | `~ virus + bacteria + virus:bacteria + exp`, several contrasts + variance partitioning |
+| Design | `~ culture + exp`, one contrast (`Host` vs `Inoculum`) | `~ virus + bacteria + virus:bacteria + exp`, several contrasts + variance partitioning |
 | `organism` | `"Bacteria"` → Neighborhood Analysis | `"Homo sapiens"` → MSigDB GSEA |
 | `annotation` | `Sau_KPL4403_annot` (anvi'o, built in) | `Homo_sapiens.GRCh38.113_annot` (built in) |
 | Output | `Example1_SE.rds` | `Example2_SE.rds` |
+
+Both examples use anonymized demonstration data: they illustrate the workflow and are not intended for biological interpretation.
 
 **Example files.** The input files for both examples (featureCounts and RSEM outputs, sample metadata) and the resulting `Example1_SE.rds` and `Example2_SE.rds` are in [`inst/extdata/SE`](https://github.com/KLemonLab/CONTENTO/tree/main/inst/extdata/SE) in the GitHub repository. They are not included in the CONTENTO container. To run the code below, clone or download the repository and set `SE_DIR` to that folder. To only explore the results in the app, download the two SE files and upload them in the sidebar.
 
@@ -205,7 +207,7 @@ convert_to_SE <- function(dds, contrasts_df, expr_matrix,
 
 # Example 1 {#example-1}
 
-A simple two-group experiment: *Staphylococcus aureus* LAC alone in EBSS compared with LAC on human nasal organoids (HNO), in 3 independent experiments (A, B and C). Reads were mapped to the `Sau_KPL4403` genome and counted with featureCounts, which writes one count file per sample. The design compares the two media while accounting for variation across experiments, and produces a single contrast.
+A two-group experiment comparing one bacterial strain in its inoculum medium with the same strain growing in a host model, in three independent experiments. Bacterial reads were counted per gene with featureCounts, which writes one count file per sample. The design compares the two conditions while accounting for variation between experiments, and produces a single contrast.
 
 ## Step 1. Metadata Preparation
 
@@ -218,13 +220,12 @@ meta <- read_csv(file.path(SE_DIR, "Example1_metadata.csv"))
 # Create unique condition and label for each sample. This will be used by CONTENTO for visualization.
 meta <- meta |>
   mutate(
-    media = factor(media, levels = c("EBSS", "HNO")), # EBSS (LAC alone) is the reference level
+    culture = factor(culture, levels = c("Inoculum", "Host")), # Inoculum (strain alone) is the reference level
     exp = factor(exp),
-    condition = media, # unique condition for each sample
-    sample = str_extract(file_base, "^\\d+_\\d+"), # run_sample, e.g. 5772_002
-    label = paste(media, exp, sample, sep = " | ") # unique label for each sample (exp B has two HNO samples)
+    condition = culture, # unique condition for each sample
+    label = paste(culture, exp, sep = " | ") # unique label for each sample
   ) |>
-  arrange(media, exp)
+  arrange(culture, exp)
 ```
 
 ## Step 2. Data Import
@@ -234,7 +235,7 @@ featureCounts writes one tab-separated file per sample: a comment line with the 
 ```{r}
 # Import featureCounts files
 fc_folder <- file.path(SE_DIR, "featureCounts")
-count_files <- file.path(fc_folder, paste0(meta$file_base, "_index_Sau_KPL4403_counts.txt"))
+count_files <- file.path(fc_folder, paste0(meta$file_base, "_counts.txt"))
 names(count_files) <- meta$label
 
 read_featurecounts <- function(file) {
@@ -259,13 +260,13 @@ stopifnot(identical(colnames(counts_matrix), meta$label))
 
 ## Step 3. Exploratory DESeq2 Analysis {#example1-step3}
 
-With a count matrix, the DESeq2 object is built with `DESeqDataSetFromMatrix()` instead of `DESeqDataSetFromTximport()`. The design formula is `~ media + exp`: the media effect we want to test, with the experiment as a covariate. With only one variable of interest, this is also the final design used for the contrast in [Step 4](#example1-step4).
+With a count matrix, the DESeq2 object is built with `DESeqDataSetFromMatrix()` instead of `DESeqDataSetFromTximport()`. The design formula is `~ culture + exp`: the culture effect we want to test, with the experiment as a covariate. With only one variable of interest, this is also the final design used for the contrast in [Step 4](#example1-step4).
 
 ```{r}
 # DESeq design 
 dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
                               colData = meta,
-                              design = ~ media + exp)
+                              design = ~ culture + exp)
 
 # Run DESeq
 dds <- DESeq(dds)
@@ -277,18 +278,18 @@ PCA calculated based on the VST normalized [@tibshirani1988; @huber2003; @Anders
 
 ```{r, fig.width=8, fig.height=6, fig.align="center"}
 vsd <- vst(dds, blind = TRUE)
-pcaData <- plotPCA(vsd, intgroup = c("media", "exp"), returnData = TRUE)
+pcaData <- plotPCA(vsd, intgroup = c("culture", "exp"), returnData = TRUE)
 percentVar <- round(100 * attr(pcaData, "percentVar"))
-Media_colors <- c("#2e67f2", "#1e439d")
-Media_fill <- c("white", "#1e439d")
+Culture_colors <- c("#2e67f2", "#1e439d")
+Culture_fill <- c("white", "#1e439d")
 
 ggplot(pcaData, aes(PC1, PC2)) +
-  geom_point(aes(fill = media, color = media, 
+  geom_point(aes(fill = culture, color = culture, 
                  shape = exp), 
              size = 4, stroke = 1) +  
   scale_shape_manual(values = c(23, 25, 21)) + 
-  scale_color_manual(values = Media_colors) + 
-  scale_fill_manual(values = Media_fill) +
+  scale_color_manual(values = Culture_colors) + 
+  scale_fill_manual(values = Culture_fill) +
   ggtitle("Principal Component Analysis (blind = TRUE)") +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
@@ -298,18 +299,18 @@ ggplot(pcaData, aes(PC1, PC2)) +
     panel.grid.minor = element_blank()
   ) +
   guides(
-    color = guide_legend(title = "media", override.aes = list(color = Media_colors, shape = 22))
+    color = guide_legend(title = "culture", override.aes = list(color = Culture_colors, shape = 22))
   )
 ```
 
 ## Step 4. Differential Expression Analysis {#example1-step4}
 
-The design from [Step 3](#example1-step3) already captures all the variables of interest, so we use the same `dds` to extract the single contrast, LAC on HNO vs LAC alone in EBSS, with [`run_contrast_analysis()`](#run-contrast-analysis). `resultsNames(dds)` lists the available coefficients.
+The design from [Step 3](#example1-step3) already captures all the variables of interest, so we use the same `dds` to extract the single contrast, the strain in the host model vs the strain alone in its inoculum, with [`run_contrast_analysis()`](#run-contrast-analysis). `resultsNames(dds)` lists the available coefficients.
 
 ```{r}
 resultsNames(dds)
 
-contrasts_df <- run_contrast_analysis(dds, contrast_name = "HNOvsEBSS", coef = "media_HNO_vs_EBSS")
+contrasts_df <- run_contrast_analysis(dds, contrast_name = "HostvsInoculum", coef = "culture_Host_vs_Inoculum")
 ```
 
 ### Rename Columns for CONTENTO {#rename-columns}
@@ -351,7 +352,7 @@ saveRDS(SE, file.path(SE_DIR, "Example1_SE.rds"))
 
 # Example 2 {#example-2}
 
-A more complex experiment examining RSV infection across four bacterial conditions (NB, Spn, Hin, and Dpi) in HNO-ALI cultures. The design models virus status, bacterial condition, and their interaction while accounting for variation across independent experiments.
+A multi-factor experiment in which a host model was infected or not with a virus, either alone or precolonized with one of three bacterial species, in three independent experiments. Host reads were quantified with RSEM. The design models virus status, bacterial condition and their interaction while accounting for variation between experiments, and produces several related contrasts plus variance partitioning results.
 
 ## Step 1. Metadata Preparation
 
@@ -364,7 +365,7 @@ meta <- read_csv(file.path(SE_DIR, "Example2_metadata.csv"))
 # Create unique condition and label for each sample. This will be used by CONTENTO for visualization.
 meta <- meta |>
   mutate(
-    bacteria = factor(bacteria, levels = c("NB", "Spn", "Hin", "Dpi")), # NB (No-Bacteria) is the reference level
+    bacteria = factor(bacteria, levels = c("NoBac", "Bac1", "Bac2", "Bac3")), # NoBac (no bacteria) is the reference level
     virus = factor(virus, levels = c("FALSE", "TRUE")),
     exp = factor(exp),
     condition = interaction(bacteria, virus, sep = "_"), # unique condition for each sample
@@ -506,15 +507,15 @@ dds <- DESeq(dds)
 
 This section tests the effect of virus infection (TRUE vs FALSE) within each bacterial species specifically:
 
-- For the reference bacteria condition (NB), the virus effect is captured by the main coefficient `virus_TRUE_vs_FALSE`.
-- For other bacteria conditions (Spn, Hin, Dpi), the virus effect is a combination of the main virus effect plus the interaction term (e.g., `virusTRUE.bacteriaDpi`).
+- For the reference bacteria condition (NoBac), the virus effect is captured by the main coefficient `virus_TRUE_vs_FALSE`.
+- For other bacteria conditions (Bac1, Bac2, Bac3), the virus effect is a combination of the main virus effect plus the interaction term (e.g., `virusTRUE.bacteriaBac3`).
 
 ```{r}
 contrast_list_Virus_TvsF <- list(
-  VirusTvsF_NB  = "virus_TRUE_vs_FALSE",                                   
-  VirusTvsF_Spn = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaSpn")), 
-  VirusTvsF_Hin = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaHin")), 
-  VirusTvsF_Dpi = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaDpi"))  
+  VirusTvsF_NoBac  = "virus_TRUE_vs_FALSE",                                   
+  VirusTvsF_Bac1 = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaBac1")), 
+  VirusTvsF_Bac2 = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaBac2")), 
+  VirusTvsF_Bac3 = list(c("virus_TRUE_vs_FALSE", "virusTRUE.bacteriaBac3"))  
 )
 results_Virus_TvsF <- imap(contrast_list_Virus_TvsF, function(contrast_val, name) {
   if (is.character(contrast_val)) {
@@ -525,49 +526,49 @@ results_Virus_TvsF <- imap(contrast_list_Virus_TvsF, function(contrast_val, name
 })
 ```
 
-#### Difference in Virus Effect Compared to NB
+#### Difference in Virus Effect Compared to NoBac
 
-Here we focus on whether the virus effect differs between each bacteria condition and relative to the reference NB. This highlights species-specific modulation of virus response by comparing the virus effect in each bacteria against the baseline virus effect in NB.
+Here we focus on whether the virus effect differs between each bacteria condition and relative to the reference NoBac. This highlights species-specific modulation of virus response by comparing the virus effect in each bacteria against the baseline virus effect in NoBac.
 
-- We use the interaction terms alone (e.g., `virusTRUE.bacteriaDpi`), which quantify how much the virus effect in each species deviates from that in NB.
-
-```{r}
-contrast_list_VirusInteract_vsNB <- list(
-  VirusInteract_Dpi = "virusTRUE.bacteriaDpi",
-  VirusInteract_Spn = "virusTRUE.bacteriaSpn",
-  VirusInteract_Hin = "virusTRUE.bacteriaHin"
-)
-results_VirusInteract_vsNB <- imap(contrast_list_VirusInteract_vsNB, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x,))
-```
-
-#### Bacteria vs NB in Virus FALSE
-
-This comparison evaluates how each bacterial species differs from the reference NB when virus is absent (`virus = FALSE`). This reveals baseline species-specific gene expression differences without virus influence.
-
-- Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., `bacteria_Dpi_vs_NB`).
+- We use the interaction terms alone (e.g., `virusTRUE.bacteriaBac3`), which quantify how much the virus effect in each species deviates from that in NoBac.
 
 ```{r}
-contrast_list_Bacteria_vsNB_VF <- list(
-  DpivsNB_VF = "bacteria_Dpi_vs_NB",
-  SpnvsNB_VF = "bacteria_Spn_vs_NB",
-  HinvsNB_VF = "bacteria_Hin_vs_NB"
+contrast_list_VirusInteract_vsNoBac <- list(
+  VirusInteract_Bac3 = "virusTRUE.bacteriaBac3",
+  VirusInteract_Bac1 = "virusTRUE.bacteriaBac1",
+  VirusInteract_Bac2 = "virusTRUE.bacteriaBac2"
 )
-results_Species_vsNB_VF <- imap(contrast_list_Bacteria_vsNB_VF, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x))
+results_VirusInteract_vsNoBac <- imap(contrast_list_VirusInteract_vsNoBac, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x,))
 ```
 
-#### Bacteria vs NB in Virus TRUE
+#### Bacteria vs NoBac in Virus FALSE
+
+This comparison evaluates how each bacterial species differs from the reference NoBac when virus is absent (`virus = FALSE`). This reveals baseline species-specific gene expression differences without virus influence.
+
+- Because virus FALSE is the baseline in the model, these contrasts use only the main bacteria effects (e.g., `bacteria_Bac3_vs_NoBac`).
+
+```{r}
+contrast_list_Bacteria_vsNoBac_VF <- list(
+  Bac3vsNoBac_VF = "bacteria_Bac3_vs_NoBac",
+  Bac1vsNoBac_VF = "bacteria_Bac1_vs_NoBac",
+  Bac2vsNoBac_VF = "bacteria_Bac2_vs_NoBac"
+)
+results_Species_vsNoBac_VF <- imap(contrast_list_Bacteria_vsNoBac_VF, ~ run_contrast_analysis(dds, contrast_name = .y, coef = .x))
+```
+
+#### Bacteria vs NoBac in Virus TRUE
 
 Here we test the bacteria differences under virus infection (virus = TRUE). This reveals species-specific gene expression differences that might occur under virus influence.
 
-- These contrasts combine the main bacteria effect plus the interaction with virus (e.g., `bacteria_Dpi_vs_NB` + `virusTRUE.bacteriaDpi`).
+- These contrasts combine the main bacteria effect plus the interaction with virus (e.g., `bacteria_Bac3_vs_NoBac` + `virusTRUE.bacteriaBac3`).
 
 ```{r}
-contrast_list_Bacteria_vsNB_VT <- list(
-  DpivsNB_VT = list(c("bacteria_Dpi_vs_NB", "virusTRUE.bacteriaDpi")),
-  SpnvsNB_VT = list(c("bacteria_Spn_vs_NB", "virusTRUE.bacteriaSpn")),
-  HinvsNB_VT = list(c("bacteria_Hin_vs_NB", "virusTRUE.bacteriaHin"))
+contrast_list_Bacteria_vsNoBac_VT <- list(
+  Bac3vsNoBac_VT = list(c("bacteria_Bac3_vs_NoBac", "virusTRUE.bacteriaBac3")),
+  Bac1vsNoBac_VT = list(c("bacteria_Bac1_vs_NoBac", "virusTRUE.bacteriaBac1")),
+  Bac2vsNoBac_VT = list(c("bacteria_Bac2_vs_NoBac", "virusTRUE.bacteriaBac2"))
 )
-results_Bacteria_vsNB_VT <- imap(contrast_list_Bacteria_vsNB_VT, ~ run_contrast_analysis(dds, contrast_name = .y, contrast = .x))
+results_Bacteria_vsNoBac_VT <- imap(contrast_list_Bacteria_vsNoBac_VT, ~ run_contrast_analysis(dds, contrast_name = .y, contrast = .x))
 ```
 
 #### Combine All Contrast Results
@@ -575,9 +576,9 @@ results_Bacteria_vsNB_VT <- imap(contrast_list_Bacteria_vsNB_VT, ~ run_contrast_
 ```{r}
 all_contrast_results <- list(
   results_Virus_TvsF,
-  results_VirusInteract_vsNB,
-  results_Species_vsNB_VF,
-  results_Bacteria_vsNB_VT
+  results_VirusInteract_vsNoBac,
+  results_Species_vsNoBac_VF,
+  results_Bacteria_vsNoBac_VT
   ) %>% flatten() 
 
 all_contrast_df <- bind_rows(all_contrast_results)
