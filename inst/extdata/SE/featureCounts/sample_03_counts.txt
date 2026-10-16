@@ -1,5 +1,5 @@
-# Program:featureCounts v1.6.4; Command:"featureCounts" "-p" "-s" "2" "-T" "4" "-t" "gene" "-M" "--primary" "-Q" "20" "-a" "/project/kplemon/RefGenomes/BacterialGenomes/renamed/Sau_KPL4403.gtf" "-o" "featureCounts/Sau_KPL4403/8873_002Reseq_S1_index_Sau_KPL4403_counts.txt" "star_bacteria/Sau_KPL4403/8873_002Reseq_S1_index_Sau_KPL4403_Aligned.sortedByCoord.out.bam" 
-Geneid	Chr	Start	End	Strand	Length	star_bacteria/Sau_KPL4403/8873_002Reseq_S1_index_Sau_KPL4403_Aligned.sortedByCoord.out.bam
+# Program:featureCounts v1.6.4; Command:"featureCounts" "-p" "-s" "2" "-t" "gene" "-M" "--primary" "-Q" "20" "-a" "annotation.gtf" "-o" "sample_03_counts.txt" "sample_03.bam" 
+Geneid	Chr	Start	End	Strand	Length	sample_03.bam
 SAUSA300_RS00010	NC_007793.1	544	1905	+	1362	4173
 SAUSA300_RS00015	NC_007793.1	2183	3316	+	1134	4874
 SAUSA300_RS00020	NC_007793.1	3697	3942	+	246	241
