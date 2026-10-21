@@ -29,7 +29,7 @@ A CONTENTO-compatible SE has four required components:
 | Feature | Required SE component |
 |------------------------------------|------------------------------------|
 | DE tables & volcano plots | rowData contrast columns |
-| Expression Plot / Heatmap / GESECA [@korotkevich2016] | `expr_matrix` assay |
+| Expression Plot / Heatmap / GESECA [@korotkevich2021] | `expr_matrix` assay |
 | Variance Decomposition tab | optional `varpart_*` rowData columns |
 | MSigDB GSEA | `metadata(se)$organism` matching a valid `msigdbr` species (`metadata(se)$db_species` optionally overrides which source database — human or mouse — is queried) |
 | Neighborhood Analysis (bacteria) | `metadata(se)$organism == "Bacteria"` + annotation with coordinates |
@@ -348,7 +348,8 @@ SE = convert_to_SE(
   annotation = "Sau_KPL4403_annot",
   dataset_name = "Example1"
 )
-saveRDS(SE, file.path(SE_DIR, "Example1_SE.rds"))
+# Uncomment to save the SE file (left commented so rendering the tutorial doesn't overwrite the example files)
+#saveRDS(SE, file.path(SE_DIR, "Example1_SE.rds"))
 ```
 
 # Example 2 {#example-2}
@@ -614,7 +615,8 @@ SE = convert_to_SE(
   annotation = "Homo_sapiens.GRCh38.113_annot",
   dataset_name = "Example2"
 )
-saveRDS(SE, file.path(SE_DIR, "Example2_SE.rds"))
+# Uncomment to save the SE file (left commented so rendering the tutorial doesn't overwrite the example files)
+#saveRDS(SE, file.path(SE_DIR, "Example2_SE.rds"))
 ```
 
 # Verify Your SE Object

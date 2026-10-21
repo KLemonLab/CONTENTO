@@ -35,7 +35,7 @@ Full documentation, including tutorials for creating SE and annotation files, is
 
 CONTENTO can be run in two ways. We recommend the container, since it ships with R [@R], Bioconductor [@huber2015], and every dependency pre-installed, and behaves identically on any operating system.
 
-CONTENTO is built with shiny [@shiny] and uses DESeq2 [@Love2014], fgsea [@korotkevich2016], msigdbr [@msigdbr], ComplexHeatmap [@gu2016], circlize [@gu2014] and ComplexUpset [@complexupset; @lex2014] for its analyses and visualizations.
+CONTENTO is built with shiny [@shiny] and uses DESeq2 [@Love2014], fgsea [@korotkevich2021], msigdbr [@msigdbr], ComplexHeatmap [@gu2016], circlize [@gu2014] and ComplexUpset [@complexupset; @lex2014] for its analyses and visualizations.
 
 ### *Option 1:* Run the container (recommended)
 

@@ -17,7 +17,7 @@ bibliography: references.bib
 
 Annotation files are optional in CONTENTO, but they enable many of the platform's most useful features. Depending on your organism and the identifiers used in your SummarizedExperiment (SE) object, functionality may be limited without an annotation file. In particular, annotation files are used for:
 
-- Functional enrichment analysis (GSEA [@subramanian2005] and GESECA, run with fgsea [@korotkevich2016])
+- Functional enrichment analysis (GSEA [@subramanian2005] and GESECA, run with fgsea [@korotkevich2021])
 - Displaying informative gene labels and symbols
 - Genomic neighborhood analysis (bacterial genomes only)
 
