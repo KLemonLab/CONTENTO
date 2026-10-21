@@ -16,12 +16,15 @@
   "license": "GPL-3.0-or-later",
   "keywords": [
     "RNA-seq",
-    "omics",
-    "bioinformatics",
-    "shiny",
-    "multiple contrasts",
     "differential expression",
-    "functional analysis"
+    "multiple contrasts",
+    "gene set enrichment analysis",
+    "R Shiny",
+    "interactive visualization",
+    "SummarizedExperiment",
+    "omics",
+    "multifactorial design",
+    "host-microbe interactions"
   ],
   "upload_type": "software",
   "access_right": "open",
