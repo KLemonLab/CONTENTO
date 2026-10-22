@@ -63,7 +63,7 @@ podman run --rm -p 3838:3838 contento
 
 ### *Option 2:* Run locally within R/RStudio
 
-Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop). This requires R ≥ 4.4 and Bioconductor ≥ 3.19, the versions used in the container.
+Some users may prefer to execute **CONTENTO** directly from an existing R installation, usually used in conjunction with the popular IDE [RStudio](https://posit.co/download/rstudio-desktop). This requires R ≥ 4.6 and Bioconductor ≥ 3.23, the versions used in the container.
 
 Clone the CONTENTO repository:
 

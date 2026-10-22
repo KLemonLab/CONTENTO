@@ -1,4 +1,4 @@
-FROM bioconductor/bioconductor_docker:RELEASE_3_19
+FROM bioconductor/bioconductor_docker:RELEASE_3_23
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfontconfig1-dev \
     libfreetype6-dev \
     libpng-dev \
-    libtiff5-dev \
+    libtiff-dev \
     libjpeg-dev \
     libcairo2-dev \
     libharfbuzz-dev \
@@ -19,15 +19,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgit2-dev \
     libglpk-dev \
     pandoc \
-    pandoc-citeproc \
     && rm -rf /var/lib/apt/lists/*
 
-# CRAN packages
+# CRAN packages, from a dated CRAN snapshot so rebuilding the image gives the same versions.
+ARG CRAN_REPO=https://packagemanager.posit.co/cran/2026-10-21
 RUN R -e " \
     pkgs <- c('shiny','shinydashboard','shinycssloaders','DT','plotly','tidyverse', \
               'purrr','viridis','RColorBrewer','ComplexUpset','scales','ggiraph', \
               'gridExtra','patchwork'); \
-    install.packages(pkgs, repos = 'https://cloud.r-project.org'); \
+    install.packages(pkgs, repos = '${CRAN_REPO}'); \
     missing <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]; \
     if (length(missing) > 0) stop('Failed to install: ', paste(missing, collapse = ', '))"
 
@@ -40,6 +40,7 @@ RUN mkdir -p /root/.R && echo "CXX11STD = -std=gnu++17" > /root/.R/Makevars
 
 RUN R -e " \
     pkgs <- c('ComplexHeatmap','DESeq2','fgsea','msigdbr','circlize','SummarizedExperiment'); \
+    options(repos = c(CRAN = '${CRAN_REPO}')); \
     BiocManager::install(pkgs, ask = FALSE, update = FALSE); \
     missing <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]; \
     if (length(missing) > 0) stop('Failed to install: ', paste(missing, collapse = ', '))"
