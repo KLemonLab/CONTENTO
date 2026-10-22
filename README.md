@@ -4,6 +4,12 @@
 
 > *CONTrast ExploratioN Toolkit for Omics*
 
+## Overview
+
+CONTENTO reads a SummarizedExperiment (SE) file with differential expression results for any number of contrasts, plus an optional annotation file with gene labels and gene sets (A), and explores them in three modules: Explore by Contrast, Compare Contrasts, and Explore by Gene (B).
+
+![CONTENTO inputs and outputs](docs-src/images/contento_overview.png)
+
 ## Documentation
 
 Full documentation, including tutorials for creating SE and annotation files, is available at: <https://klemonlab.github.io/CONTENTO/>

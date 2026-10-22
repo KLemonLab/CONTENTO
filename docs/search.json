@@ -243,5 +243,12 @@
     "title": "Introduction",
     "section": "Funding",
     "text": "Funding\nThis work was supported by the National Institute of General Medical Sciences (NIGMS) of the National Institutes of Health under award number R35GM141806, and by the National Institute of Allergy and Infectious Diseases (NIAID) under award number U19AI157981. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health."
+  },
+  {
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "Introduction",
+    "section": "Overview",
+    "text": "Overview\nCONTENTO reads a SummarizedExperiment (SE) file with differential expression results for any number of contrasts, plus an optional annotation file with gene labels and gene sets (A), and explores them in three modules: Explore by Contrast, Compare Contrasts, and Explore by Gene (B)."
   }
 ]
